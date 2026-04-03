@@ -5,7 +5,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { toast } from "react-hot-toast";
 
 // Public routes that don't require authentication
-const PUBLIC_ROUTES = ["/login", "/internship/register"];
+const PUBLIC_ROUTES = ["/login", "/internship/register", "/internship/verify-otp"];
 
 export function SessionManager() {
     const router = useRouter();

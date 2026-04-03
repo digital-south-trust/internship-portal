@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -9,6 +8,21 @@ import { toast } from "react-hot-toast";
 export default function AdminLayout({ children }) {
     const router = useRouter();
     const [authorized, setAuthorized] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const savedState = localStorage.getItem('adminSidebarCollapsed');
+            if (savedState) setIsCollapsed(JSON.parse(savedState));
+        }
+    }, []);
+
+    const toggleSidebar = (state) => {
+        setIsCollapsed(state);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem('adminSidebarCollapsed', JSON.stringify(state));
+        }
+    };
 
     useEffect(() => {
         const checkAuth = async () => {
@@ -23,6 +37,12 @@ export default function AdminLayout({ children }) {
             try {
                 const res = await fetch(`/api/user/me?email=${email}`);
                 if (res.ok) {
+                    const contentType = res.headers.get("content-type");
+                    if (!contentType || !contentType.includes("application/json")) {
+                        console.warn("Auth check: Non-JSON response received. Likely a redirect.");
+                        router.push("/login?redirect=/admin");
+                        return;
+                    }
                     const user = await res.json();
                     if (user.role !== 'admin') {
                         toast.error("Unauthorized Access: Admins only.");
@@ -60,14 +80,15 @@ export default function AdminLayout({ children }) {
         );
     }
 
+
     return (
-        <div className="flex bg-transparent min-h-screen relative">
+        <div className="flex bg-white min-h-screen relative overflow-hidden">
             {/* Admin Sidebar */}
-            <AdminSidebar />
+            <AdminSidebar isCollapsed={isCollapsed} setIsCollapsed={toggleSidebar} />
 
             {/* Main Content Area */}
-            <main className="flex-1 md:ml-64 transition-all duration-300">
-                <div className="p-8 max-w-7xl mx-auto space-y-8 animate-fade-in">
+            <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-64'} min-h-screen bg-white shadow-[0_0_50px_rgba(0,0,0,0.05)] border-l border-gray-100`}>
+                <div className="animate-fade-in h-full p-8">
                     {children}
                 </div>
             </main>

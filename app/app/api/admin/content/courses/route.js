@@ -36,3 +36,17 @@ export async function PUT(req) {
         return NextResponse.json({ message: "Error updating course" }, { status: 500 });
     }
 }
+
+export async function DELETE(req) {
+    try {
+        await dbConnect();
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get('id');
+        if (!id) return NextResponse.json({ message: "Course ID is required" }, { status: 400 });
+
+        await LiveBookCourse.findByIdAndDelete(id);
+        return NextResponse.json({ message: "Course deleted successfully" }, { status: 200 });
+    } catch (error) {
+        return NextResponse.json({ message: "Error deleting course" }, { status: 500 });
+    }
+}

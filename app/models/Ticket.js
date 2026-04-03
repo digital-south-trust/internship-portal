@@ -4,7 +4,7 @@ import mongoose from 'mongoose';
 const TicketSchema = new mongoose.Schema({
     type: {
         type: String,
-        enum: ['Bug Report', 'Suggest a Feature (UI)', 'Change Problem Statement', 'Others'],
+        enum: ['Bug Report', 'Suggest a Feature (UI)', 'Change Problem Statement', 'Intern Doubt', 'Others'],
         required: true,
     },
     description: {

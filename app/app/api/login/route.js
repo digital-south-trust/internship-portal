@@ -1,4 +1,3 @@
-
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import { NextResponse } from "next/server";
@@ -43,10 +42,29 @@ export async function POST(req) {
         const userObj = user.toObject();
         delete userObj.password;
 
-        return NextResponse.json({
+        // Determine redirection based on status
+        const roadmap = {
+            'OTP_VERIFIED': '/assessment',
+            'ASSESSMENT_COMPLETED': '/internship/result-pending',
+            'SELECTED': '/dashboard/complete-profile',
+            'PROFILE_PENDING': '/dashboard/complete-profile',
+            'REJECTED': '/internship/rejected',
+            'ACTIVE': '/dashboard'
+        };
+
+        const redirectTo = user.role === 'admin' ? '/admin' : (roadmap[user.status] || '/dashboard');
+
+        const response = NextResponse.json({
             message: "Login successful",
-            user: userObj
+            user: userObj,
+            redirectTo
         }, { status: 200 });
+
+        // Set cookies locally for the middleware to use
+        response.cookies.set('userRole', user.role, { path: '/', maxAge: 10800 });
+        response.cookies.set('userEmail', user.email, { path: '/', maxAge: 10800 });
+
+        return response;
 
     } catch (error) {
         console.error("Login error:", error);

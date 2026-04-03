@@ -1,32 +1,60 @@
-
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { scheduleMonthlyReviews } from "@/lib/scheduleReviews";
+import { sendOTPEmail } from "@/lib/mailer";
 
 export async function POST(req) {
     try {
         await dbConnect();
         const body = await req.json();
 
-        // Check if user already exists
-        const existingUser = await User.findOne({ email: body.email });
+        const PendingUser = (await import("@/models/PendingUser")).default;
+
+        // Check if user already exists in permanent User records
+        const existingUser = await User.findOne({ 
+            $or: [{ email: body.email }, { phone: body.phone }] 
+        });
         if (existingUser) {
-            return NextResponse.json({ message: "User already registered with this email" }, { status: 400 });
+            return NextResponse.json({ message: "Already account is there" }, { status: 400 });
+        }
+
+        if (!body.email || !body.password || !body.track || !body.fullName) {
+            return NextResponse.json({ message: "Email, password, track, and full name are required" }, { status: 400 });
         }
 
         const hashedPassword = body.password ? await bcrypt.hash(body.password, 10) : undefined;
-        const newUser = await User.create({ ...body, password: hashedPassword });
+        
+        // Generate a 6-digit random number for OTP
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const otpExpiration = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
-        // Auto-schedule 4 weekly reviews starting from today
-        if (newUser.role === 'intern' || !newUser.role) {
-            scheduleMonthlyReviews(newUser, new Date())
-                .then(created => console.log(`Auto-scheduled ${created.length} reviews for ${newUser.fullName}`))
-                .catch(e => console.error('Auto-schedule on register failed:', e.message));
+        // 1. Safe only to Pending collection temporarily
+        await PendingUser.deleteMany({ email: body.email }); // Clear previous attempts if any
+        
+        await PendingUser.create({
+            fullName: body.fullName,
+            email: body.email,
+            password: hashedPassword,
+            track: body.track,
+            phone: body.phone,
+            otp: otpCode,
+            otpExpires: otpExpiration,
+        });
+
+        // 2. Send the OTP via email
+        try {
+            await sendOTPEmail(body.email, otpCode);
+        } catch (mailError) {
+            console.error("Failed to send OTP email:", mailError);
         }
 
-        return NextResponse.json({ message: "User registered successfully", user: newUser }, { status: 201 });
+        return NextResponse.json({ 
+            message: "Account created! A verification code has been sent to your email. Please verify to continue.", 
+            email: body.email,
+            status: "PENDING_OTP" // Informative status for frontend
+        }, { status: 201 });
+
     } catch (error) {
         console.error("Error registering user:", error);
         return NextResponse.json({ message: "Error registering user", error: error.message }, { status: 500 });

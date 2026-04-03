@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-    ArrowLeft, Mail, Calendar, Phone, Award, Activity,User ,
+    ArrowLeft, Mail, Calendar, Phone, Award, Activity, User,
     CheckCircle, RefreshCw, UserCog, ChevronDown, ShieldOff, ShieldCheck, X, AlertTriangle,
-    Github, ExternalLink
+    Github, ExternalLink, KeyRound, Copy, Eye, EyeOff
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
+import CertificateIssuer from "@/components/CertificateIssuer";
 
 
 
@@ -39,8 +40,14 @@ export default function InternDetailsPage() {
     const [terminating, setTerminating] = useState(false);
 
     // Certificate modal
-    const [showCertModal, setShowCertModal] = useState(false);
-    const [isIssuing, setIsIssuing] = useState(false);
+    const [showCertsListModal, setShowCertsListModal] = useState(false);
+    const [certificates, setCertificates] = useState([]);
+
+    // Password reset state
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [resettingPassword, setResettingPassword] = useState(false);
+    const [newPassword, setNewPassword] = useState(null);
+    const [showNewPassword, setShowNewPassword] = useState(false);
 
     const openProject = (project) => {
         setSelectedProject(project);
@@ -76,6 +83,48 @@ export default function InternDetailsPage() {
         };
         fetchDetails();
     }, [id]);
+
+    useEffect(() => {
+        if (!user?.email) return;
+        const fetchCerts = async () => {
+             try {
+                const res = await fetch(`/api/admin/certificates?email=${user.email}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setCertificates(data);
+                }
+             } catch (err) { console.error(err); }
+        };
+        fetchCerts();
+    }, [user?.email, user?.track]);
+
+    /* ─── Reset password ─── */
+    const handleResetPassword = async () => {
+        setResettingPassword(true);
+        setNewPassword(null);
+        try {
+            const res = await fetch('/api/admin/users/reset-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: id })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setNewPassword(data.newPassword);
+                setShowNewPassword(true);
+                toast.success(`Password reset & emailed to ${user.fullName}`);
+            } else {
+                const err = await res.json();
+                toast.error(err.message || 'Failed to reset password');
+            }
+        } catch { toast.error('Error resetting password'); }
+        finally { setResettingPassword(false); }
+    };
+
+    const copyToClipboard = (text) => {
+        navigator.clipboard.writeText(text);
+        toast.success('Password copied to clipboard!');
+    };
 
     /* ─── Save assigned admin ─── */
     const handleSaveAdmin = async () => {
@@ -182,27 +231,30 @@ export default function InternDetailsPage() {
                         <ArrowLeft className="w-4 h-4" /> Back to Users
                     </button>
 
-                    {user.role?.toLowerCase() === 'intern' && (
-                        <div className="flex items-center gap-3">
-                            {/* Issue Certificate */}
-                            <button onClick={() => setShowCertModal(true)}
-                                className="bg-emerald-50 text-emerald-600 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all flex items-center gap-2 border border-emerald-100 shadow-sm">
-                                <Award className="w-4 h-4" /> Issue Certificate
+                    <div className="flex items-center gap-3">
+                        {/* Unified Certificates Button */}
+                        <button onClick={() => setShowCertsListModal(true)}
+                            className="bg-gray-50 text-gray-600 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-900 hover:text-white transition-all flex items-center gap-2 border border-gray-200 shadow-sm">
+                            <Award className="w-4 h-4" /> Certificates{certificates.length > 0 && <span className="bg-black text-white text-[8px] px-1.5 py-0.5 rounded-full ml-1">{certificates.length}</span>}
+                        </button>
+                        {/* Change Password */}
+                        <button onClick={() => { setShowPasswordModal(true); setNewPassword(null); setShowNewPassword(false); }}
+                            className="bg-amber-50 text-amber-600 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-600 hover:text-white transition-all flex items-center gap-2 border border-amber-100 shadow-sm">
+                            <KeyRound className="w-4 h-4" /> Change Password
+                        </button>
+                        {/* Terminate / Reactivate */}
+                        {isTerminated ? (
+                            <button onClick={handleReactivate}
+                                className="bg-blue-50 text-blue-600 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2 border border-blue-100 shadow-sm">
+                                <ShieldCheck className="w-4 h-4" /> Reactivate
                             </button>
-                            {/* Terminate / Reactivate */}
-                            {isTerminated ? (
-                                <button onClick={handleReactivate}
-                                    className="bg-blue-50 text-blue-600 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2 border border-blue-100 shadow-sm">
-                                    <ShieldCheck className="w-4 h-4" /> Reactivate
-                                </button>
-                            ) : (
-                                <button onClick={() => setShowTerminateModal(true)}
-                                    className="bg-red-50 text-red-600 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all flex items-center gap-2 border border-red-100 shadow-sm">
-                                    <ShieldOff className="w-4 h-4" /> Terminate
-                                </button>
-                            )}
-                        </div>
-                    )}
+                        ) : (
+                            <button onClick={() => setShowTerminateModal(true)}
+                                className="bg-red-50 text-red-600 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all flex items-center gap-2 border border-red-100 shadow-sm">
+                                <ShieldOff className="w-4 h-4" /> Terminate
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Avatar + Info */}
@@ -219,7 +271,7 @@ export default function InternDetailsPage() {
                         <div>
                             <div className="flex items-center gap-3 mb-1 flex-wrap">
                                 <h1 className="text-3xl font-black text-gray-900 tracking-tight">{user.fullName}</h1>
-                                <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-bold border ${user.role === 'admin' ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                                <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-bold border ${user.role?.toLowerCase() === 'admin' ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
                                     {user.role}
                                 </span>
                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${isTerminated ? 'text-red-700 bg-red-50 border border-red-100' :
@@ -292,8 +344,8 @@ export default function InternDetailsPage() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {projects.map(project => (
-                            <div key={project._id} onClick={() => openProject(project)}
+                        {projects.map((project, idx) => (
+                            <div key={project._id || `project-${idx}`} onClick={() => openProject(project)}
                                 className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
                                 <div className="flex justify-between items-start mb-4">
                                     <h3 className="font-black text-gray-900 group-hover:text-black">{project.projectName}</h3>
@@ -316,12 +368,14 @@ export default function InternDetailsPage() {
                 )}
             </div>
 
+
+
             {/* ════ MODALS ════ */}
             <AnimatePresence>
 
                 {/* ── Project Detail Modal ── */}
                 {selectedProject && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <motion.div key="project-detail-modal" className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             onClick={() => setSelectedProject(null)}
                             className="absolute inset-0 bg-black/60 backdrop-blur-md" />
@@ -465,13 +519,13 @@ export default function InternDetailsPage() {
                                 </div>
                             </div>
                         </motion.div>
-                    </div>
+                    </motion.div>
                 )}
 
 
                 {/* ── Change Admin Confirmation Modal ── */}
                 {showAdminModal && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <motion.div key="change-admin-modal" className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             onClick={() => setShowAdminModal(false)}
                             className="absolute inset-0 bg-black/60 backdrop-blur-md" />
@@ -502,8 +556,8 @@ export default function InternDetailsPage() {
                                         className="w-full appearance-none bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 pr-10 text-sm font-bold text-gray-700 focus:outline-none focus:ring-4 focus:ring-black/5 cursor-pointer"
                                     >
                                         <option value="gauthamram.um@gmail.com">Gauthamram (Default)</option>
-                                        {admins.filter(a => a.email !== 'gauthamram.um@gmail.com').map(a => (
-                                            <option key={a._id} value={a.email}>
+                                        {admins.filter(a => a.email !== 'gauthamram.um@gmail.com').map((a, idx) => (
+                                            <option key={a._id || `admin-${idx}`} value={a.email}>
                                                 {a.fullName ? `${a.fullName} — ${a.email}` : a.email}
                                             </option>
                                         ))}
@@ -522,12 +576,12 @@ export default function InternDetailsPage() {
                                 </div>
                             </div>
                         </motion.div>
-                    </div>
+                    </motion.div>
                 )}
 
                 {/* ── Terminate Confirmation Modal ── */}
                 {showTerminateModal && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <motion.div key="terminate-modal" className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             onClick={() => setShowTerminateModal(false)}
                             className="absolute inset-0 bg-black/60 backdrop-blur-md" />
@@ -571,39 +625,113 @@ export default function InternDetailsPage() {
                                 </div>
                             </div>
                         </motion.div>
-                    </div>
+                    </motion.div>
                 )}
 
-                {/* ── Certificate Modal ── */}
-                {showCertModal && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                {/* ── Unified Certificate Issuer Component ── */}
+                <CertificateIssuer
+                    key="certificate-issuer"
+                    user={user}
+                    projects={projects}
+                    certificates={certificates}
+                    setCertificates={setCertificates}
+                    showModal={showCertsListModal}
+                    setShowModal={setShowCertsListModal}
+                />
+
+                {/* ── Password Reset Modal ── */}
+                {showPasswordModal && (
+                    <motion.div key="password-reset-modal" className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            onClick={() => setShowCertModal(false)}
+                            onClick={() => setShowPasswordModal(false)}
                             className="absolute inset-0 bg-black/60 backdrop-blur-md" />
                         <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-                            className="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl p-8 space-y-6">
-                            <div className="text-center">
-                                <div className="w-16 h-16 bg-emerald-50 rounded-3xl flex items-center justify-center mx-auto mb-4 border border-emerald-100">
-                                    <Award className="w-8 h-8 text-emerald-600" />
+                            className="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden">
+                            <div className="p-6 bg-amber-50/60 border-b border-amber-100 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-amber-500 rounded-2xl flex items-center justify-center shadow-lg shadow-amber-500/20">
+                                        <KeyRound className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Change Password</h3>
+                                        <p className="text-[10px] text-amber-600 font-medium">For {user.fullName}</p>
+                                    </div>
                                 </div>
-                                <h3 className="text-lg font-black text-gray-900">Issue Certificate</h3>
-                                <p className="text-sm text-gray-500 mt-1">Issue completion certificate to <strong>{user.fullName}</strong>?</p>
+                                <button onClick={() => setShowPasswordModal(false)}
+                                    className="w-8 h-8 bg-white border border-gray-100 rounded-xl flex items-center justify-center text-gray-400 hover:text-red-500 transition-all">
+                                    <X className="w-4 h-4" />
+                                </button>
                             </div>
-                            <div className="flex gap-3">
-                                <button onClick={() => setShowCertModal(false)}
-                                    className="flex-1 py-3 bg-gray-50 text-gray-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-all">
-                                    Cancel
-                                </button>
-                                <button onClick={() => { setIsIssuing(true); setTimeout(() => { toast.success(`Certificate issued to ${user.fullName}!`); setIsIssuing(false); setShowCertModal(false); }, 1200); }}
-                                    disabled={isIssuing}
-                                    className="flex-1 py-3 bg-emerald-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all disabled:opacity-50 shadow-lg">
-                                    {isIssuing ? 'Issuing...' : 'Issue Certificate'}
-                                </button>
+                            <div className="p-6 space-y-5">
+                                {!newPassword ? (
+                                    <>
+                                        <p className="text-sm text-gray-700 font-medium leading-relaxed">
+                                            This will generate a <strong>new random password</strong> for <strong>{user.fullName}</strong> and email it to:
+                                        </p>
+                                        <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 flex items-center gap-3">
+                                            <Mail className="w-5 h-5 text-gray-400 shrink-0" />
+                                            <span className="text-sm font-bold text-gray-800 truncate">{user.email}</span>
+                                        </div>
+                                        <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 space-y-1">
+                                            <p className="text-xs font-black text-amber-700">⚠️ Important:</p>
+                                            <ul className="text-xs text-amber-600 font-medium space-y-0.5 list-disc list-inside">
+                                                <li>The old password will stop working immediately</li>
+                                                <li>New password will be emailed to the intern</li>
+                                                <li>You will also see it on-screen after reset</li>
+                                            </ul>
+                                        </div>
+                                        <div className="flex gap-3 pt-2">
+                                            <button onClick={() => setShowPasswordModal(false)}
+                                                className="flex-1 py-3 bg-gray-50 text-gray-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-all">
+                                                Cancel
+                                            </button>
+                                            <button onClick={handleResetPassword} disabled={resettingPassword}
+                                                className="flex-1 py-3 bg-amber-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-amber-600 transition-all disabled:opacity-50 shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
+                                                {resettingPassword ? (
+                                                    <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Resetting...</>
+                                                ) : (
+                                                    <><KeyRound className="w-3.5 h-3.5" /> Reset Now</>
+                                                )}
+                                            </button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="text-center space-y-2">
+                                            <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
+                                                <CheckCircle className="w-7 h-7 text-emerald-600" />
+                                            </div>
+                                            <p className="text-sm font-black text-emerald-700 uppercase tracking-widest">Password Reset Successful</p>
+                                            <p className="text-xs text-gray-500 font-medium">Email sent to {user.email}</p>
+                                        </div>
+                                        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-3">
+                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">New Password</p>
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-mono text-lg font-black tracking-widest text-gray-900 overflow-hidden">
+                                                    {showNewPassword ? newPassword : '••••••••••••'}
+                                                </div>
+                                                <button onClick={() => setShowNewPassword(!showNewPassword)}
+                                                    className="w-10 h-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-400 hover:text-black transition-all shrink-0"
+                                                    title={showNewPassword ? "Hide" : "Show"}>
+                                                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                </button>
+                                                <button onClick={() => copyToClipboard(newPassword)}
+                                                    className="w-10 h-10 bg-black text-white rounded-xl flex items-center justify-center hover:scale-105 transition-all shrink-0 shadow-lg"
+                                                    title="Copy to clipboard">
+                                                    <Copy className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => setShowPasswordModal(false)}
+                                            className="w-full py-3 bg-black text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg">
+                                            Done
+                                        </button>
+                                    </>
+                                )}
                             </div>
                         </motion.div>
-                    </div>
+                    </motion.div>
                 )}
-
             </AnimatePresence>
         </div>
     );

@@ -18,6 +18,8 @@ export async function GET(req) {
                 regexPattern = "Gen\\s*AI";
             } else if (trackParam.includes("App Development") || trackParam.includes("App Dev")) {
                 regexPattern = "App Development";
+            } else if (trackParam === "AI/ML" || trackParam === "Artificial Intelligence") {
+                regexPattern = "(AI/ML|Artificial Intelligence)";
             }
 
             query.track = { $regex: new RegExp(regexPattern, 'i') };

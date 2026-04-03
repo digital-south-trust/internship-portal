@@ -10,7 +10,10 @@ export function SystemCron() {
             if (!mounted) return;
             try {
                 // Fire and forget - runs in the background
-                await fetch('/api/cron/reminders?key=ds_intern_cron_2026');
+                await Promise.all([
+                    fetch('/api/cron/reminders?key=ds_intern_cron_2026'),
+                    fetch('/api/cron/assessment?key=ds_intern_cron_2026')
+                ]);
             } catch (err) {
                 console.error("System Cron execution failed:", err);
             }

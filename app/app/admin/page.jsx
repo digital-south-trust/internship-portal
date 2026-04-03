@@ -2,9 +2,10 @@
 
 import {
     Activity, BarChart2, Users, UserCheck, TrendingUp,
-    FolderKanban, CheckCircle2, Clock, ArrowUpRight,
+    CheckCircle2, Clock, ArrowUpRight,
     Zap, Award, Calendar, ChevronRight, User 
 } from "lucide-react";
+import MacOSFolder from "@/components/MacOSFolder";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -38,8 +39,11 @@ export default function AdminDashboard() {
                     const users = await usersRes.json();
                     const projects = await projectsRes.json();
 
-                    const interns = users.filter(u => u.role === 'intern');
-                    const activeInterns = interns.filter(u => u.status === 'Active');
+                    const interns = users.filter(u => 
+                        u.role === 'intern' && 
+                        (u.selectionStatus === 'Selected' || u.status === 'ACTIVE')
+                    );
+                    const activeInterns = interns.filter(u => u.status === 'ACTIVE' || u.status === 'Active');
                     const completedProjects = projects.filter(p => p.progress === 100 || p.status === 'Approved');
                     const completionRate = projects.length > 0
                         ? ((completedProjects.length / projects.length) * 100).toFixed(1)
@@ -97,7 +101,7 @@ export default function AdminDashboard() {
             link: "/admin/users"
         },
         {
-            label: "Projects Done", value: stats.placements, icon: FolderKanban,
+            label: "Projects Done", value: stats.placements, icon: MacOSFolder,
             accent: "from-violet-500 to-violet-600", badge: "Completed",
             link: "/admin/projects"
         },
@@ -127,9 +131,15 @@ export default function AdminDashboard() {
                             className="bg-white rounded-[1.75rem] p-6 border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer group relative overflow-hidden"
                         >
                             <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${card.accent} opacity-[0.06] rounded-full -translate-y-1/3 translate-x-1/3`} />
-                            <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${card.accent} flex items-center justify-center mb-4 shadow-lg`}>
-                                <Icon className="w-5 h-5 text-white" />
-                            </div>
+                            {Icon === MacOSFolder ? (
+                                <div className="mb-4">
+                                    <Icon size={44} />
+                                </div>
+                            ) : (
+                                <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${card.accent} flex items-center justify-center mb-4 shadow-lg`}>
+                                    <Icon className="w-5 h-5 text-white" />
+                                </div>
+                            )}
                             <p className="text-3xl font-black text-gray-900 tracking-tighter leading-none">
                                 {loading ? <span className="inline-block w-12 h-8 bg-gray-100 rounded-lg animate-pulse" /> : card.value}
                             </p>
@@ -246,7 +256,7 @@ export default function AdminDashboard() {
                     <div className="border-t border-gray-50 pt-4 space-y-2">
                         {[
                             { label: "Manage Users", icon: Users, link: "/admin/users" },
-                            { label: "View Projects", icon: FolderKanban, link: "/admin/projects" },
+                            { label: "View Projects", icon: MacOSFolder, link: "/admin/projects" },
                             { label: "Manage Tracks", icon: Award, link: "/admin/tracks" },
                             { label: "Open Tickets", icon: CheckCircle2, link: "/admin/tickets" },
                         ].map(({ label, icon: Icon, link }) => (

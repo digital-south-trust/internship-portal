@@ -26,7 +26,16 @@ export async function PATCH(req, { params }) {
 
         const allowedFields = {};
         if (body.assignedAdmin !== undefined) allowedFields.assignedAdmin = body.assignedAdmin;
-        if (body.status !== undefined) allowedFields.status = body.status;
+        if (body.status !== undefined) {
+            allowedFields.status = body.status;
+            if (['SELECTED', 'PROFILE_PENDING', 'VERIFIED', 'ACTIVE'].includes(body.status)) {
+                allowedFields.selectionStatus = 'Selected';
+                allowedFields.isApproved = true;
+            } else if (body.status === 'REJECTED') {
+                allowedFields.selectionStatus = 'Rejected';
+                allowedFields.isApproved = false;
+            }
+        }
 
         if (Object.keys(allowedFields).length === 0) {
             return NextResponse.json({ message: "No valid fields to update" }, { status: 400 });

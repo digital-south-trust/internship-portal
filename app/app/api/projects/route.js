@@ -31,7 +31,18 @@ export async function POST(req) {
         await dbConnect();
         const body = await req.json();
 
-        const { internEmail, title, description, colorHex, techStack, repoLink, deployLink, documentFile, documentLink, solution, progress, track, category, isPreset } = body;
+        const { 
+            internEmail, title, description, colorHex, techStack, repoLink, deployLink, documentFile, documentLink, 
+            solution, progress, track, category, isPreset,
+            realWorld, matters, existingSolutions, objectives, features, apis, dataset, blockchainNetwork,
+            smartContractLang, targetPlatform, researchBackground, hypothesis, innovation, relevance,
+            researchOutput, startDate, endDate, milestones,
+            // Track specifics
+            tokenStandard, walletIntegration, storageUsed, deploymentNetwork, useCase, targetUsers,
+            modelUsed, aiTools, vectorDatabase, deploymentPlatform, mlTaskType, algorithms,
+            mlFramework, trainingEnvironment, appCategory,
+            formPhases, dynamicFields
+        } = body;
 
         if (!internEmail || !title || !description) {
             return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
@@ -57,9 +68,14 @@ export async function POST(req) {
             documentFile,
             documentLink,
             solution,
+            realWorld, matters, existingSolutions, objectives, features, apis, dataset, blockchainNetwork,
+            smartContractLang, targetPlatform, researchBackground, hypothesis, innovation, relevance,
+            researchOutput, startDate, endDate, milestones,
+            tokenStandard, walletIntegration, storageUsed, deploymentNetwork, useCase, targetUsers,
+            modelUsed, aiTools, vectorDatabase, deploymentPlatform, mlTaskType, algorithms,
+            mlFramework, trainingEnvironment, appCategory,
+            formPhases, dynamicFields,
             progress: progress || 10,
-            // Preset projects (from admin pool) are auto-approved.
-            // Only custom project submissions go through pending review.
             status: isPreset ? 'Approved' : 'Pending',
             projectType: isPreset ? 'preset' : 'custom'
         });
@@ -75,13 +91,34 @@ export async function PUT(req) {
     try {
         await dbConnect();
         const body = await req.json();
-        const { id, title, description, colorHex, techStack, repoLink, deployLink, documentFile, documentLink, solution, progress, status, adminFeedback, category } = body;
+        const { 
+            id, title, description, colorHex, techStack, repoLink, deployLink, documentFile, documentLink, 
+            solution, progress, status, adminFeedback, category,
+            realWorld, matters, existingSolutions, objectives, features, apis, dataset, blockchainNetwork,
+            smartContractLang, targetPlatform, researchBackground, hypothesis, innovation, relevance,
+            researchOutput, startDate, endDate, milestones,
+            // Track specifics
+            tokenStandard, walletIntegration, storageUsed, deploymentNetwork, useCase, targetUsers,
+            modelUsed, aiTools, vectorDatabase, deploymentPlatform, mlTaskType, algorithms,
+            mlFramework, trainingEnvironment, appCategory,
+            formPhases, dynamicFields
+        } = body;
 
         if (!id) {
             return NextResponse.json({ message: "Project ID required" }, { status: 400 });
         }
 
-        const updateData = { projectName: title, description, colorHex, techStack, repoLink, deployLink, documentFile, documentLink, solution, progress };
+        const updateData = { 
+            projectName: title, description, colorHex, techStack, repoLink, deployLink, documentFile, 
+            documentLink, solution, progress, 
+            realWorld, matters, existingSolutions, objectives, features, apis, dataset, blockchainNetwork,
+            smartContractLang, targetPlatform, researchBackground, hypothesis, innovation, relevance,
+            researchOutput, startDate, endDate, milestones,
+            tokenStandard, walletIntegration, storageUsed, deploymentNetwork, useCase, targetUsers,
+            modelUsed, aiTools, vectorDatabase, deploymentPlatform, mlTaskType, algorithms,
+            mlFramework, trainingEnvironment, appCategory,
+            formPhases, dynamicFields
+        };
         if (category) updateData.category = category;
         if (status) updateData.status = status;
         if (adminFeedback !== undefined) updateData.adminFeedback = adminFeedback;

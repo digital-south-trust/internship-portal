@@ -95,3 +95,25 @@ export async function GET(req) {
         return NextResponse.json({ message: "Failed to fetch schedules" }, { status: 500 });
     }
 }
+export async function PATCH(req) {
+    try {
+        await connectMongo();
+        const { id, date, time, meetingLink } = await req.json();
+
+        const updates = {};
+        if (date) updates.date = new Date(date);
+        if (time) updates.time = time;
+        if (meetingLink) updates.meetingLink = meetingLink;
+
+        const updated = await Schedule.findByIdAndUpdate(id, { $set: updates }, { new: true });
+
+        if (!updated) {
+            return NextResponse.json({ message: "Schedule not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({ message: "Schedule updated successfully!", schedule: updated }, { status: 200 });
+    } catch (error) {
+        console.error("Failed to update schedule:", error);
+        return NextResponse.json({ message: "Failed to update schedule" }, { status: 500 });
+    }
+}
