@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import {
     Plus,
     Youtube,
-    FileText,
+    FileText,Globe,
     Eye,
     CheckCircle2,
     Trash2,
@@ -27,12 +27,14 @@ import {
     Layers,
     Link as LinkIcon2,
     Minus,
-    Image as ImageIcon
+    Image as ImageIcon,
+    Zap,
+    Blocks
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 
-// Removed MOCK_TOPICS
+
 
 export default function AdminLiveBookPage() {
     const [view, setView] = useState("library"); // library, course, module, editor
@@ -42,10 +44,14 @@ export default function AdminLiveBookPage() {
     const [isEditing, setIsEditing] = useState(false);
     const [isAddCourseModalOpen, setIsAddCourseModalOpen] = useState(false);
     const [isAddModuleModalOpen, setIsAddModuleModalOpen] = useState(false);
-    const [newCourseData, setNewCourseData] = useState({ title: "", desc: "", tracks: [] });
+    const [newCourseData, setNewCourseData] = useState({ title: "", desc: "", tracks: [], icon: "BookOpen" });
     const [newModuleData, setNewModuleData] = useState({ title: "", desc: "" });
+    const [editingCourseId, setEditingCourseId] = useState(null);
+    const [editingModuleId, setEditingModuleId] = useState(null);
     const [courses, setCourses] = useState([]);
-    const [availableTracks, setAvailableTracks] = useState([]);
+    const [availableTracks, setAvailableTracks] = useState({ CODING: [], RESEARCH: [] });
+    const [sortBy, setSortBy] = useState("name"); // name, track
+    const [searchQuery, setSearchQuery] = useState("");
 
     useEffect(() => {
         const fetchContent = async () => {
@@ -59,10 +65,10 @@ export default function AdminLiveBookPage() {
                 if (tRes.ok) setTopics(await tRes.json());
                 if (trRes.ok) {
                     const data = await trRes.json();
-                    const extracted = [];
-                    if (data.CODING) data.CODING.forEach(t => extracted.push(t.name));
-                    if (data.RESEARCH) data.RESEARCH.forEach(t => extracted.push(t.name));
-                    setAvailableTracks(extracted);
+                    setAvailableTracks({
+                        CODING: data.CODING?.map(t => t.name) || [],
+                        RESEARCH: data.RESEARCH?.map(t => t.name) || []
+                    });
                 }
             } catch (err) {
                 console.error("Fetch content error:", err);
@@ -167,6 +173,72 @@ export default function AdminLiveBookPage() {
         }
     };
 
+    const handleCourseStatusToggle = async (course) => {
+        const newStatus = course.status === 'Published' ? 'Frozen' : 'Published';
+        try {
+            const res = await fetch('/api/admin/content/courses', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: course._id, status: newStatus })
+            });
+            if (res.ok) {
+                const updated = await res.json();
+                setCourses(prev => prev.map(c => c._id === updated._id ? updated : c));
+                toast.success(newStatus === 'Published' ? "LiveBook Live." : "LiveBook Frozen.");
+            }
+        } catch (e) {
+            toast.error("Status Sync Failed.");
+        }
+    };
+
+    const handleDeleteTopic = async (topicId) => {
+        if (!confirm("Are you sure you want to permanently delete this topic?")) return;
+        try {
+            const res = await fetch(`/api/admin/content/topics?id=${topicId}`, { method: 'DELETE' });
+            if (res.ok) {
+                setTopics(prev => prev.filter(t => t._id !== topicId));
+                toast.success("Topic Purged.");
+            }
+        } catch (e) {
+            toast.error("Failed to delete topic.");
+        }
+    };
+
+    const handleDeleteCourse = async (courseId) => {
+        if (!confirm("Delete entire LiveBook? All embedded modules will be lost.")) return;
+        try {
+            const res = await fetch(`/api/admin/content/courses?id=${courseId}`, { method: 'DELETE' });
+            if (res.ok) {
+                setCourses(prev => prev.filter(c => c._id !== courseId));
+                setSelectedCourse(null);
+                setView("library");
+                toast.success("LiveBook Purged.");
+            }
+        } catch (e) {
+            toast.error("Failed to delete course.");
+        }
+    };
+
+    const handleDeleteModule = async (moduleId) => {
+        if (!confirm("Remove this module? Topics will remain but will be unlinked.")) return;
+        try {
+            const newModules = selectedCourse.modules.filter(m => m.id !== moduleId);
+            const res = await fetch('/api/admin/content/courses', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: selectedCourse._id, modules: newModules })
+            });
+            if (res.ok) {
+                const updated = await res.json();
+                setCourses(prev => prev.map(c => c._id === updated._id ? updated : c));
+                setSelectedCourse(updated);
+                toast.success("Module Unlinked.");
+            }
+        } catch (e) {
+            toast.error("Failed to remove module.");
+        }
+    };
+
     const getYoutubeId = (url) => {
         const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
         const match = url?.match(regExp);
@@ -174,91 +246,174 @@ export default function AdminLiveBookPage() {
     };
 
     const renderHeader = () => (
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-10">
-            <div className="space-y-2">
-                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-300">
-                    <span
-                        className="cursor-pointer hover:text-black transition-colors"
-                        onClick={() => { setView("library"); setSelectedCourse(null); setSelectedModule(null); }}
-                    >Admin</span>
-                    {(selectedCourse && view !== "library") && (
-                        <>
-                            <ChevronRight className="w-3 h-3" />
-                            <span
-                                className="cursor-pointer hover:text-black transition-colors"
-                                onClick={() => { setView("course"); setSelectedModule(null); }}
-                            >
-                                {selectedCourse.title}
-                            </span>
-                        </>
-                    )}
-                    {(selectedModule && (view === "module" || view === "editor" || view === "preview")) && (
-                        <>
-                            <ChevronRight className="w-3 h-3" />
-                            <span className="text-black">{selectedModule.title}</span>
-                        </>
-                    )}
+        <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-2.5 border-b border-gray-100 shadow-sm mb-6 animate-in slide-in-from-top duration-500">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 w-full">
+                <div className="flex flex-col gap-1.5 w-full md:w-auto">
+                    <h1 className="text-xl font-bold text-black tracking-tight uppercase leading-none">
+                        {view === "library" ? "LIVEBOOK" : view === "course" ? selectedCourse?.title : selectedModule?.title || "Intel Terminal"}
+                    </h1>
+                    <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
+                        <span className="cursor-pointer hover:text-black transition-colors" onClick={() => { setView("library"); setSelectedCourse(null); setSelectedModule(null); }}>Livebook</span>
+                        <span className="opacity-20 mx-1">/</span>
+                        <span className="cursor-pointer hover:text-white transition-colors" onClick={() => { setView("library"); setSelectedCourse(null); setSelectedModule(null); }}>Center</span>
+                        {selectedCourse && (
+                            <>
+                                <span className="opacity-20 mx-1">/</span>
+                                <span className="cursor-pointer hover:text-black transition-colors" title={selectedCourse.title} onClick={() => { setView("course"); setSelectedModule(null); }}>
+                                    {selectedCourse.title.length > 20 ? selectedCourse.title.substring(0, 20) + "..." : selectedCourse.title}
+                                </span>
+                            </>
+                        )}
+                        {selectedModule && (
+                            <>
+                                <span className="opacity-20 mx-1">/</span>
+                                <span className="text-black" title={selectedModule.title}>
+                                    {selectedModule.title.length > 20 ? selectedModule.title.substring(0, 20) + "..." : selectedModule.title}
+                                </span>
+                            </>
+                        )}
+                    </div>
                 </div>
-                <h1 className="text-3xl font-black text-gray-900 tracking-tighter uppercase leading-none">
-                    {view === "library" ? "LiveBook Central" : view === "course" ? selectedCourse?.title : selectedModule?.title || "Editor"}
-                </h1>
-            </div>
 
-            <div className="flex gap-4">
-                {view === "library" && (
-                    <button
-                        onClick={() => setIsAddCourseModalOpen(true)}
-                        className="bg-black text-white px-6 py-3 rounded-xl flex items-center gap-2 font-black uppercase text-[9px] tracking-widest shadow-xl hover:scale-105 transition-all"
-                    >
-                        <Plus className="w-4 h-4" /> New LiveBook
-                    </button>
-                )}
-                {view === "course" && (
-                    <button
-                        onClick={() => setIsAddModuleModalOpen(true)}
-                        className="bg-black text-white px-6 py-3 rounded-xl flex items-center gap-2 font-black uppercase text-[9px] tracking-widest shadow-xl hover:scale-105 transition-all"
-                    >
-                        <Plus className="w-4 h-4" /> Add Module
-                    </button>
-                )}
-                {view === "module" && (
-                    <button
-                        onClick={() => {
-                            setActiveTopic({ id: null, title: "", status: "Draft", blocks: [{ type: "text", content: "" }] });
-                            setIsEditing(true);
-                            setView("editor");
-                        }}
-                        className="bg-black text-white px-6 py-3 rounded-xl flex items-center gap-2 font-black uppercase text-[9px] tracking-widest shadow-xl hover:scale-105 transition-all"
-                    >
-                        <Plus className="w-4 h-4" /> New Topic
-                    </button>
-                )}
+                <div className="flex items-center gap-4 w-full md:w-auto">
+                    {view === "library" && (
+                        <div className="relative group w-full md:w-64">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 group-focus-within:text-black transition-colors" />
+                            <input 
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder="Locate Intel..."
+                                className="w-full bg-gray-50 border border-gray-100/50 rounded-2xl pl-10 pr-4 py-3 text-[10px] font-bold outline-none focus:ring-4 focus:ring-black/5 transition-all"
+                            />
+                        </div>
+                    )}
+                    
+                    <div className="h-8 w-px bg-gray-100 hidden md:block" />
+
+                    <div className="flex gap-4">
+                        {view === "library" && (
+                            <button
+                                onClick={() => { setEditingCourseId(null); setNewCourseData({ title: "", desc: "", tracks: [], icon: "BookOpen" }); setIsAddCourseModalOpen(true); }}
+                                className="bg-black text-white px-8 py-4 rounded-2xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all group"
+                            >
+                                <Plus className="w-4 h-4" /> New LiveBook
+                            </button>
+                        )}
+                        {view === "course" && (
+                            <button
+                                onClick={() => { setEditingModuleId(null); setNewModuleData({ title: "", desc: "" }); setIsAddModuleModalOpen(true); }}
+                                className="bg-black text-white px-8 py-4 rounded-2xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all group"
+                            >
+                                <Plus className="w-4 h-4" /> Integrate Module
+                            </button>
+                        )}
+                        {view === "module" && (
+                            <button
+                                onClick={() => {
+                                    setActiveTopic({ id: null, title: "", status: "Draft", blocks: [{ type: "text", content: "" }] });
+                                    setIsEditing(true);
+                                    setView("editor");
+                                }}
+                                className="bg-black text-white px-8 py-4 rounded-2xl flex items-center gap-2 font-black uppercase text-[10px] tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all group"
+                            >
+                                <Plus className="w-4 h-4" /> Deploy Intel
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );
 
     return (
-        <div className="relative min-h-screen">
-            <div className="fixed inset-0 pointer-events-none z-[-1] opacity-[0.2]"
-                style={{
-                    backgroundImage: `radial-gradient(#000 1px, transparent 1px)`,
-                    backgroundSize: '32px 32px'
-                }}
-            />
-
-            <div className="p-8 lg:p-12 space-y-10 max-w-[1600px] mx-auto">
-                {renderHeader()}
-
+        <div className="animate-in fade-in duration-500 min-h-screen">
+            {renderHeader()}
+            
+            <div className="px-8 lg:px-12 py-6 space-y-10 max-w-[1750px] mx-auto">
                 <AnimatePresence mode="wait">
                     {view === "library" && (
                         <motion.div key="library" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {courses.map(course => (
-                                <div key={course._id} onClick={() => { setSelectedCourse(course); setView("course"); }} className="group bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-xl hover:shadow-2xl hover:translate-y-[-5px] transition-all cursor-pointer relative overflow-hidden">
-                                    <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.1] transition-opacity">
-                                        <BookOpen className="w-32 h-32" />
-                                    </div>
-                                    <h3 className="text-xl font-black text-gray-900 uppercase tracking-tighter mb-2">{course.title}</h3>
-                                    <p className="text-xs text-gray-400 font-medium mb-6">{course.desc}</p>
+                            {courses
+                                .filter(c => 
+                                    c.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                    c.desc.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                    (c.tracks || []).some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))
+                                )
+                                .sort((a, b) => {
+                                    if (sortBy === "name") return a.title.localeCompare(b.title);
+                                    if (sortBy === "track") return (a.tracks?.[0] || "").localeCompare(b.tracks?.[0] || "");
+                                    return 0;
+                                })
+                                .map(course => (
+                                    <div key={course._id} onClick={() => { setSelectedCourse(course); setView("course"); }} className="group bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl hover:translate-y-[-5px] transition-all cursor-pointer relative overflow-hidden">
+                                        <div className="absolute top-4 right-4 flex gap-2 transition-all z-20">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); handleCourseStatusToggle(course); }}
+                                                className={`p-2 rounded-lg shadow-md border transition-all ${course.status === 'Published' ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-orange-500 hover:text-white' : 'bg-orange-50 text-orange-600 border-orange-100 hover:bg-emerald-500 hover:text-white'}`}
+                                                title={course.status === 'Published' ? "Freeze LiveBook" : "Distribute to Interns"}
+                                            >
+                                                {course.status === 'Published' ? <Zap className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                                            </button>
+                                            <button 
+                                                onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    setNewCourseData({ title: course.title, desc: course.desc, tracks: course.tracks || [], icon: course.icon || "BookOpen" });
+                                                    setEditingCourseId(course._id);
+                                                    setIsAddCourseModalOpen(true);
+                                                }}
+                                                className="p-2 bg-white text-black rounded-lg shadow-md border border-gray-100 hover:bg-black hover:text-white transition-all"
+                                            >
+                                                <Sparkles className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteCourse(course._id); }}
+                                                className="p-2 bg-white text-red-500 rounded-lg shadow-md border border-red-50 hover:bg-red-500 hover:text-white transition-all"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                        <div className="absolute top-0 left-0 p-8 opacity-[0.03] group-hover:opacity-[0.1] transition-opacity">
+                                            {(() => {
+                                                const Icon = {
+                                                    'Brain': Brain,
+                                                    'Monitor': Monitor,
+                                                    'Database': Database,
+                                                    'Blocks': Blocks,
+                                                    'Zap': Zap,
+                                                    'Layers': Layers,
+                                                    'Cpu': Cpu,
+                                                    'Sparkles': Sparkles,
+                                                    'BookOpen': BookOpen
+                                                }[course.icon] || BookOpen;
+                                                return <Icon className="w-32 h-32" />;
+                                            })()}
+                                        </div>
+                                        <div className="mb-6 relative z-10">
+                                            <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform">
+                                                {(() => {
+                                                    const Icon = {
+                                                        'Brain': Brain,
+                                                        'Monitor': Monitor,
+                                                        'Database': Database,
+                                                        'Blocks': Blocks,
+                                                        'Zap': Zap,
+                                                        'Layers': Layers,
+                                                        'Cpu': Cpu,
+                                                        'Sparkles': Sparkles,
+                                                        'BookOpen': BookOpen
+                                                    }[course.icon] || BookOpen;
+                                                    return <Icon className="w-6 h-6 text-black" />;
+                                                })()}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className={`w-2 h-2 rounded-full animate-pulse ${course.status === 'Published' ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-orange-400'}`} />
+                                            <span className="text-[8px] font-black uppercase tracking-[0.2em] text-gray-400">
+                                                {course.status === 'Published' ? 'DEPLOYED' : 'DRAFT'}
+                                            </span>
+                                        </div>
+                                        <h3 className="text-xl font-black text-gray-900 uppercase tracking-tighter mb-2">{course.title}</h3>
+                                        <p className="text-xs text-gray-400 font-medium mb-6">{course.desc}</p>
                                     <div className="flex flex-col gap-3">
                                         <div className="flex items-center gap-2 text-[10px] font-black text-gray-300 uppercase tracking-widest">
                                             <Layers className="w-4 h-4" /> {course.modules.length} Modules
@@ -267,8 +422,8 @@ export default function AdminLiveBookPage() {
                                             {(!course.tracks || course.tracks.length === 0) ? (
                                                 <span className="px-2 py-0.5 bg-gray-100 text-gray-400 rounded text-[8px] font-black uppercase tracking-widest shadow-sm">All Tracks</span>
                                             ) : (
-                                                course.tracks.map(t => (
-                                                    <span key={t} className="px-2 py-0.5 bg-black text-white rounded text-[8px] font-black uppercase tracking-widest shadow-sm">{t}</span>
+                                                course.tracks.map((t, idx) => (
+                                                    <span key={`${course._id}-${t}-${idx}`} className="px-2 py-0.5 bg-black text-white rounded text-[8px] font-black uppercase tracking-widest shadow-sm">{t}</span>
                                                 ))
                                             )}
                                         </div>
@@ -285,7 +440,26 @@ export default function AdminLiveBookPage() {
                             </button>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 {selectedCourse.modules.map((mod, i) => (
-                                    <div key={mod.id} onClick={() => { setSelectedModule(mod); setView("module"); }} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-lg hover:border-black transition-all cursor-pointer">
+                                    <div key={mod._id || mod.id || i} onClick={() => { setSelectedModule(mod); setView("module"); }} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-lg hover:border-black transition-all cursor-pointer group relative">
+                                        <div className="absolute top-3 right-3 flex gap-1 transition-all">
+                                            <button 
+                                                onClick={(e) => { 
+                                                    e.stopPropagation(); 
+                                                    setNewModuleData({ title: mod.title, desc: mod.desc || "" });
+                                                    setEditingModuleId(mod.id);
+                                                    setIsAddModuleModalOpen(true);
+                                                }}
+                                                className="p-1.5 text-gray-400 hover:text-black"
+                                            >
+                                                <Sparkles className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); handleDeleteModule(mod.id); }}
+                                                className="p-1.5 text-gray-300 hover:text-red-500"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
                                         <span className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-1 block">Module {i + 1}</span>
                                         <h4 className="text-lg font-black text-gray-900 uppercase tracking-tighter">{mod.title}</h4>
                                     </div>
@@ -302,7 +476,7 @@ export default function AdminLiveBookPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                                 {topics.filter(t => t.course === selectedCourse.title && t.module === selectedModule.title).map(topic => (
                                     <div
-                                        key={topic.id}
+                                        key={topic._id || topic.id}
                                         onClick={() => { setActiveTopic(topic); setView("preview"); }}
                                         className="bg-white p-8 rounded-[3rem] border border-gray-100 shadow-xl flex flex-col justify-between group h-full hover:shadow-2xl hover:border-black transition-all cursor-pointer"
                                     >
@@ -325,18 +499,27 @@ export default function AdminLiveBookPage() {
                                                 <span>Updated {new Date(topic.updatedAt).toLocaleDateString()}</span>
                                             </div>
 
-                                            <div className="flex gap-3">
+                                            <div className="flex gap-2">
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); setActiveTopic(topic); setIsEditing(true); setView("editor"); }}
-                                                    className="flex-1 py-3 bg-gray-50 text-gray-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all shadow-sm flex items-center justify-center gap-2"
+                                                    className="flex-[2] py-3 bg-gray-50 text-gray-900 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all shadow-sm flex items-center justify-center gap-2"
                                                 >
                                                     <ExternalLink className="w-3 h-3" /> Modify Intel
                                                 </button>
 
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleDeleteTopic(topic._id); }}
+                                                    className="flex-1 py-3 bg-red-50 text-red-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-sm flex items-center justify-center"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+
+                                            <div className="flex gap-3">
                                                 {topic.status === 'Draft' && (
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); handlePublish(topic._id || topic.id); }}
-                                                        className="flex-1 py-3 bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+                                                        className="w-full py-3 bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
                                                     >
                                                         <Send className="w-3 h-3" /> Distribute
                                                     </button>
@@ -609,72 +792,171 @@ export default function AdminLiveBookPage() {
                 {isAddCourseModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddCourseModalOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-2xl" />
-                        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="relative bg-white rounded-[2.5rem] p-8 max-w-sm w-full shadow-2xl border border-gray-100">
-                            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tighter mb-6">Initialize New LiveBook</h3>
+                        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="relative bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-gray-100">
+                            <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tighter mb-6">Initialize New LiveBook</h3>
                             <div className="space-y-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">LiveBook Title</label>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">LiveBook Title</label>
                                     <input
                                         autoFocus
                                         value={newCourseData.title}
                                         onChange={(e) => setNewCourseData({ ...newCourseData, title: e.target.value })}
-                                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-[12px] font-bold focus:ring-4 focus:ring-black/5 outline-none"
+                                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold focus:ring-4 focus:ring-black/5 outline-none"
                                         placeholder="E.g. Quantum Computing..."
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Directive / Description</label>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Directive / Description</label>
                                     <textarea
                                         value={newCourseData.desc}
                                         onChange={(e) => setNewCourseData({ ...newCourseData, desc: e.target.value })}
-                                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-[12px] font-bold focus:ring-4 focus:ring-black/5 outline-none resize-none"
+                                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold focus:ring-4 focus:ring-black/5 outline-none resize-none"
                                         rows="3"
                                         placeholder="Core objective of this asset..."
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Assigned Tracks</label>
-                                    <div className="flex flex-wrap gap-2 pt-1 max-h-32 overflow-y-auto custom-scrollbar pr-2">
-                                        {availableTracks.map(track => {
-                                            const isSelected = newCourseData.tracks.includes(track);
-                                            return (
-                                                <button
-                                                    key={track}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        const fresh = [...newCourseData.tracks];
-                                                        if (isSelected) {
-                                                            fresh.splice(fresh.indexOf(track), 1);
-                                                        } else {
-                                                            fresh.push(track);
-                                                        }
-                                                        setNewCourseData({ ...newCourseData, tracks: fresh });
-                                                    }}
-                                                    className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow-sm ${isSelected ? 'bg-black text-white hover:bg-gray-800' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
-                                                >
-                                                    {track}
-                                                </button>
-                                            );
-                                        })}
-                                        {availableTracks.length === 0 && <span className="text-xs text-gray-400">Loading tracks...</span>}
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Symbol / Icon</label>
+                                    <div className="grid grid-cols-5 gap-2 pb-2">
+                                        {[
+                                            { name: 'Blocks', icon: Blocks, label: 'Blockchain' },
+                                            { name: 'Brain', icon: Brain, label: 'AI' },
+                                            { name: 'Monitor', icon: Monitor, label: 'Full Stack' },
+                                            { name: 'Database', icon: Database, label: 'Data' },
+                                            { name: 'Zap', icon: Zap, label: 'Performance' },
+                                            { name: 'Layers', icon: Layers, label: 'Infras' },
+                                            { name: 'Cpu', icon: Cpu, label: 'Systems' },
+                                            { name: 'Sparkles', icon: Sparkles, label: 'GenAI' },
+                                            { name: 'BookOpen', icon: BookOpen, label: 'General' }
+                                        ].map((item) => (
+                                            <button
+                                                key={item.name}
+                                                type="button"
+                                                onClick={() => setNewCourseData({ ...newCourseData, icon: item.name })}
+                                                className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all border ${newCourseData.icon === item.name ? 'bg-black text-white border-black shadow-md' : 'bg-gray-50 text-gray-400 border-gray-100 hover:text-black hover:border-black'}`}
+                                            >
+                                                <item.icon className="w-4 h-4" />
+                                                <span className="text-[8px] font-black tracking-tighter truncate w-full uppercase">{item.label}</span>
+                                            </button>
+                                        ))}
                                     </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Deployment Status</label>
+                                    <div className="flex gap-2">
+                                        {["Draft", "Published", "Frozen"].map(stat => (
+                                            <button
+                                                key={stat}
+                                                type="button"
+                                                onClick={() => setNewCourseData({ ...newCourseData, status: stat })}
+                                                className={`flex-1 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${newCourseData.status === stat ? 'bg-black text-white border-black shadow-lg' : 'bg-gray-50 text-gray-400 border-gray-100 hover:text-black'}`}
+                                            >
+                                                {stat}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="space-y-4 pt-1 max-h-64 overflow-y-auto custom-scrollbar pr-2">
+                                    <div className="space-y-2">
+                                        <label className="text-[8px] font-black text-gray-300 uppercase tracking-widest ml-1">Universal Deployment</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setNewCourseData({ ...newCourseData, tracks: [] })}
+                                            className={`w-full py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-md group border-2 ${newCourseData.tracks.length === 0 ? 'bg-black text-white border-black' : 'bg-white text-gray-400 border-gray-50 hover:border-black hover:text-black'}`}
+                                        >
+                                            <div className="flex items-center justify-center gap-3">
+                                                <Globe className="w-3.5 h-3.5" />
+                                                Global Asset — All Tracks
+                                            </div>
+                                        </button>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[8px] font-black text-gray-300 uppercase tracking-widest ml-1">Coding Architecture</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {availableTracks.CODING.map(track => {
+                                                const isSelected = newCourseData.tracks.includes(track);
+                                                return (
+                                                    <button
+                                                        key={track}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const fresh = [...newCourseData.tracks];
+                                                            if (isSelected) {
+                                                                fresh.splice(fresh.indexOf(track), 1);
+                                                            } else {
+                                                                fresh.push(track);
+                                                            }
+                                                            setNewCourseData({ ...newCourseData, tracks: fresh });
+                                                        }}
+                                                        className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow-sm ${isSelected ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                                                    >
+                                                        {track}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[8px] font-black text-gray-300 uppercase tracking-widest ml-1">Research Strategy</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {availableTracks.RESEARCH.map(track => {
+                                                const isSelected = newCourseData.tracks.includes(track);
+                                                return (
+                                                    <button
+                                                        key={track}
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const fresh = [...newCourseData.tracks];
+                                                            if (isSelected) {
+                                                                fresh.splice(fresh.indexOf(track), 1);
+                                                            } else {
+                                                                fresh.push(track);
+                                                            }
+                                                            setNewCourseData({ ...newCourseData, tracks: fresh });
+                                                        }}
+                                                        className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow-sm ${isSelected ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}
+                                                    >
+                                                        {track}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                    {(availableTracks.CODING.length === 0 && availableTracks.RESEARCH.length === 0) && <span className="text-xs text-gray-400">Syncing tracks...</span>}
                                 </div>
                                 <button
                                     onClick={async () => {
                                         if (newCourseData.title.trim()) {
-                                            const newCourse = { title: newCourseData.title, desc: newCourseData.desc, tracks: newCourseData.tracks, modules: [] };
                                             try {
-                                                const res = await fetch('/api/admin/content/courses', {
-                                                    method: 'POST',
-                                                    headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify(newCourse)
-                                                });
-                                                if (res.ok) {
-                                                    const saved = await res.json();
-                                                    setCourses(prev => [...prev, saved]);
-                                                    setNewCourseData({ title: "", desc: "", tracks: [] });
-                                                    setIsAddCourseModalOpen(false);
-                                                    toast.success("Intelligence Asset Initialized.");
+                                                if (editingCourseId) {
+                                                    const res = await fetch('/api/admin/content/courses', {
+                                                        method: 'PUT',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ id: editingCourseId, ...newCourseData })
+                                                    });
+                                                    if (res.ok) {
+                                                        const saved = await res.json();
+                                                        setCourses(prev => prev.map(c => c._id === saved._id ? saved : c));
+                                                        setNewCourseData({ title: "", desc: "", tracks: [] });
+                                                        setEditingCourseId(null);
+                                                        setIsAddCourseModalOpen(false);
+                                                        toast.success("Intelligence Refined.");
+                                                    }
+                                                } else {
+                                                    const res = await fetch('/api/admin/content/courses', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({ ...newCourseData, modules: [] })
+                                                    });
+                                                    if (res.ok) {
+                                                        const saved = await res.json();
+                                                        setCourses(prev => [...prev, saved]);
+                                                        setNewCourseData({ title: "", desc: "", tracks: [] });
+                                                        setIsAddCourseModalOpen(false);
+                                                        toast.success("Intelligence Asset Initialized.");
+                                                    }
                                                 }
                                             } catch (e) {
                                                 toast.error("Network Error.");
@@ -683,7 +965,7 @@ export default function AdminLiveBookPage() {
                                     }}
                                     className="w-full py-4 bg-black text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg hover:scale-[1.01] transition-all"
                                 >
-                                    Confirm Protocol
+                                    {editingCourseId ? "Update Intelligence" : "Confirm Protocol"}
                                 </button>
                             </div>
                         </motion.div>
@@ -695,25 +977,25 @@ export default function AdminLiveBookPage() {
                 {isAddModuleModalOpen && (
                     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddModuleModalOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-2xl" />
-                        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="relative bg-white rounded-[2rem] p-8 max-w-sm w-full shadow-2xl border border-gray-100">
-                            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tighter mb-6">Create New Module</h3>
+                        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="relative bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl border border-gray-100">
+                            <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tighter mb-6">Create New Module</h3>
                             <div className="space-y-4">
                                 <div className="space-y-1.5">
-                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Module Title</label>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Module Title</label>
                                     <input
                                         autoFocus
                                         value={newModuleData.title}
                                         onChange={(e) => setNewModuleData({ ...newModuleData, title: e.target.value })}
-                                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-[12px] font-bold focus:ring-4 focus:ring-black/5 outline-none"
+                                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold focus:ring-4 focus:ring-black/5 outline-none"
                                         placeholder="E.g. Advanced Cryptography..."
                                     />
                                 </div>
                                 <div className="space-y-1.5 mt-4">
-                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Module Description</label>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Module Description</label>
                                     <textarea
                                         value={newModuleData.desc}
                                         onChange={(e) => setNewModuleData({ ...newModuleData, desc: e.target.value })}
-                                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-[12px] font-bold focus:ring-4 focus:ring-black/5 outline-none resize-none"
+                                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold focus:ring-4 focus:ring-black/5 outline-none resize-none"
                                         rows="3"
                                         placeholder="Summarize the core topics in this module..."
                                     />
@@ -721,21 +1003,28 @@ export default function AdminLiveBookPage() {
                                 <button
                                     onClick={async () => {
                                         if (newModuleData.title.trim() && newModuleData.desc.trim()) {
-                                            const newModule = { id: Date.now().toString(), title: newModuleData.title.trim(), desc: newModuleData.desc.trim() };
                                             try {
-                                                const updatedCourse = { ...selectedCourse, modules: [...selectedCourse.modules, newModule] };
+                                                let updatedModules;
+                                                if (editingModuleId) {
+                                                    updatedModules = selectedCourse.modules.map(m => m.id === editingModuleId ? { ...m, title: newModuleData.title.trim(), desc: newModuleData.desc.trim() } : m);
+                                                } else {
+                                                    const newModule = { id: Date.now().toString(), title: newModuleData.title.trim(), desc: newModuleData.desc.trim() };
+                                                    updatedModules = [...selectedCourse.modules, newModule];
+                                                }
+
                                                 const res = await fetch('/api/admin/content/courses', {
                                                     method: 'PUT',
                                                     headers: { 'Content-Type': 'application/json' },
-                                                    body: JSON.stringify({ id: selectedCourse._id, modules: updatedCourse.modules })
+                                                    body: JSON.stringify({ id: selectedCourse._id, modules: updatedModules })
                                                 });
                                                 if (res.ok) {
                                                     const saved = await res.json();
                                                     setCourses(prev => prev.map(c => c._id === saved._id ? saved : c));
                                                     setSelectedCourse(saved);
                                                     setNewModuleData({ title: "", desc: "" });
+                                                    setEditingModuleId(null);
                                                     setIsAddModuleModalOpen(false);
-                                                    toast.success("Intelligence Module Integrated.");
+                                                    toast.success(editingModuleId ? "Module Logic Refined." : "Intelligence Module Integrated.");
                                                 }
                                             } catch (e) {
                                                 toast.error("Network Error.");
@@ -746,7 +1035,7 @@ export default function AdminLiveBookPage() {
                                     }}
                                     className="w-full py-3 bg-black text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg hover:scale-[1.01] transition-all"
                                 >
-                                    Confirm Integration
+                                    {editingModuleId ? "Update Logic" : "Confirm Integration"}
                                 </button>
                             </div>
                         </motion.div>

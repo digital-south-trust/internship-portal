@@ -6,7 +6,10 @@ export async function GET() {
     try {
         await dbConnect();
 
-        const users = await User.find({}).select('-password').sort({ createdAt: -1 });
+        const users = await User.find({ 
+            status: { $ne: 'REJECTED' },
+            selectionStatus: { $ne: 'Rejected' } 
+        }).select('-password').sort({ createdAt: -1 });
         return NextResponse.json(users, { status: 200 });
     } catch (error) {
         console.error("Error fetching users:", error);

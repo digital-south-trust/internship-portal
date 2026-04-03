@@ -370,30 +370,35 @@ export function FullScreenCalendar({
                                       )}
                                     </div>
 
-                                    {event.tag === 'review' && event.status === 'Scheduled' && (
+                                    {event.status === 'Scheduled' || event.tag === 'meeting' ? (
                                       <div className="flex items-center gap-3">
-                                        <button
-                                          onClick={() => onEventAction?.('attended', event)}
-                                          className="flex-1 inline-flex justify-center items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-3.5 rounded-xl border border-emerald-100 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100/80 transition-all hover:scale-[1.02] active:scale-95 shadow-sm"
-                                        >
-                                          <CheckCircle2 className="w-4 h-4" /> Attended
-                                        </button>
-                                        <button
-                                          onClick={() => onEventAction?.('missed', event)}
-                                          className="flex-1 inline-flex justify-center items-center gap-2 bg-red-50 text-red-700 px-4 py-3.5 rounded-xl border border-red-100 text-[10px] font-black uppercase tracking-widest hover:bg-red-100/80 transition-all hover:scale-[1.02] active:scale-95 shadow-sm"
-                                        >
-                                          <AlertTriangle className="w-4 h-4" /> Missed
-                                        </button>
+                                        {event.tag === 'review' && (
+                                          <>
+                                            <button
+                                              onClick={() => onEventAction?.('attended', event)}
+                                              className="flex-1 inline-flex justify-center items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-3.5 rounded-xl border border-emerald-100 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-100/80 transition-all hover:scale-[1.02] active:scale-95 shadow-sm"
+                                            >
+                                              <CheckCircle2 className="w-4 h-4" /> Attended
+                                            </button>
+                                            <button
+                                              onClick={() => onEventAction?.('missed', event)}
+                                              className="flex-1 inline-flex justify-center items-center gap-2 bg-red-50 text-red-700 px-4 py-3.5 rounded-xl border border-red-100 text-[10px] font-black uppercase tracking-widest hover:bg-red-100/80 transition-all hover:scale-[1.02] active:scale-95 shadow-sm"
+                                            >
+                                              <AlertTriangle className="w-4 h-4" /> Missed
+                                            </button>
+                                          </>
+                                        )}
                                         <button
                                           onClick={() => onEventAction?.('postpone_request', event)}
-                                          className="inline-flex justify-center items-center bg-gray-50 text-gray-700 w-12 h-[42px] rounded-xl border border-gray-200 hover:bg-gray-100 transition-all hover:scale-[1.02] active:scale-95 shadow-sm"
-                                          aria-label="Postpone"
-                                          title="Postpone"
+                                          className={`inline-flex justify-center items-center bg-gray-50 text-gray-700 ${event.tag === 'meeting' ? 'flex-1 h-[42px]' : 'w-12 h-[42px]'} rounded-xl border border-gray-200 hover:bg-gray-100 transition-all hover:scale-[1.02] active:scale-95 shadow-sm`}
+                                          aria-label="Edit / Postpone"
+                                          title="Edit / Postpone"
                                         >
                                           <CalendarIcon className="w-4 h-4" />
+                                          {event.tag === 'meeting' && <span className="ml-2 text-[10px] font-black uppercase tracking-widest">Edit / Reschedule</span>}
                                         </button>
                                       </div>
-                                    )}
+                                    ) : null}
 
                                     {event.meetingLink && (
                                       <a

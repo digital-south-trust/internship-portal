@@ -1,8 +1,7 @@
 "use client";
 
-import { Award, Download, ExternalLink, Calendar, X,ShieldCheck } from "lucide-react";
+import { Award, Download, ExternalLink, Calendar, X, ShieldCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
 import { useState, useEffect } from "react";
 
 export default function CertificatePage() {
@@ -11,23 +10,21 @@ export default function CertificatePage() {
 
     useEffect(() => {
         const fetchCertificates = async () => {
-            const email = localStorage.getItem("userEmail");
+            const email = localStorage.getItem("userEmail") || localStorage.getItem("email");
             if (!email) return;
             try {
-                const res = await fetch(`/api/projects?email=${email}`);
+                const res = await fetch(`/api/admin/certificates?email=${email}`);
                 if (res.ok) {
                     const data = await res.json();
-                    const completed = data
-                        .filter(p => p.progress === 100 || p.status === 'Approved')
-                        .map((p, i) => ({
-                            id: `CERT-${new Date(p.updatedAt || Date.now()).getFullYear()}-${String(i + 1).padStart(3, '0')}`,
-                            title: p.projectName,
-                            issuedDate: new Date(p.updatedAt || Date.now()).toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' }),
-                            issuer: "Umgauthamram",
-                            type: "Completion",
-                            image: "/cert-preview.png"
-                        }));
-                    setIssuedCertificates(completed);
+                    const formatted = data.map(cert => ({
+                        id: cert.certificateId,
+                        title: cert.title,
+                        issuedDate: new Date(cert.issuedDate).toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' }),
+                        issuer: cert.issuer,
+                        type: cert.type || "Completion",
+                        image: "/cert-preview.png"
+                    }));
+                    setIssuedCertificates(formatted);
                 }
             } catch (error) {
                 console.error("Failed to fetch certificates:", error);
@@ -41,20 +38,17 @@ export default function CertificatePage() {
     };
 
     return (
-        <div className="relative min-h-screen p-6">
-            <div className="relative z-10 max-w-6xl mx-auto space-y-8">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-end gap-4 border-b border-gray-50 pb-8">
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.4em] text-gray-300">
-                            <ShieldCheck className="w-3 h-3" /> Professional Credentials
-                        </div>
-                        <h1 className="text-3xl font-black text-gray-900 tracking-tighter uppercase leading-none">
-                            Certifications
-                        </h1>
-                    </div>
+        <div className="space-y-8">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
+                <div className="flex items-center gap-4">
+                    <div className="w-2 h-8 bg-black rounded-full" />
+                    <div>
+                        <h1 className="text-3xl font-black text-gray-900 tracking-tighter uppercase leading-none">Certifications</h1>
+                       </div>
                 </div>
+            </div>
 
+            <div className="w-full relative z-10 space-y-8">
                 {issuedCertificates.length > 0 ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 w-full relative z-10">
                         {issuedCertificates.map((cert) => (
@@ -130,18 +124,14 @@ export default function CertificatePage() {
                                     </button>
                                 </div>
                                 <div className="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar flex flex-col lg:flex-row gap-10 bg-white relative z-10 text-left">
-                                    {/* Preview container representing the physical cert */}
                                     <div className="flex-[2] bg-gray-50 rounded-[2.5rem] border-2 border-dashed border-gray-200 flex flex-col items-center justify-center p-12 aspect-[4/3] relative group shadow-inner overflow-hidden text-center">
                                         <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-[80px] rounded-full pointer-events-none" />
                                         <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-500/5 blur-[80px] rounded-full pointer-events-none" />
-
                                         <Award className="w-24 h-24 text-gray-200 group-hover:text-gray-300 transition-colors mb-6 relative z-10 drop-shadow-sm" />
                                         <h4 className="text-2xl font-black text-gray-400 uppercase tracking-widest text-center opacity-50 relative z-10">{selectedCert.title}<br /><span className="text-sm tracking-normal mt-2 block opacity-80">(Certificate Document Render Area)</span></h4>
                                         <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
                                         <div className="absolute top-6 left-6 px-3 py-1.5 bg-gray-100 text-gray-400 rounded-xl text-[9px] font-black uppercase tracking-widest border border-gray-200 shadow-sm opacity-50">DOCUMENT PREVIEW</div>
                                     </div>
-
-                                    {/* Actions */}
                                     <div className="flex-1 space-y-8 flex flex-col text-left">
                                         <div className="p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 space-y-6 flex-1 shadow-sm">
                                             <div className="space-y-2">

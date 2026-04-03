@@ -25,43 +25,67 @@ export async function POST(req) {
             );
         }
 
-        // 2. Generate Credentials
-        const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
-        const password = Math.random().toString(36).slice(-8) + "!Aa1";
+        // 2. Update User Status
+        const dbConnect = (await import('@/lib/mongodb')).default;
+        const User = (await import('@/models/User')).default;
+        await dbConnect();
 
-        // 3. Send Email
-        // Configure transporter (Using Gmail example, requires App Password)
-        const transporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASS,
-            },
-        });
+        const user = await User.findOne({ email });
+        if (!user) {
+            return NextResponse.json({ error: "User not found" }, { status: 404 });
+        }
 
-        const mailOptions = {
-            from: process.env.EMAIL_USER,
-            to: email,
-            subject: 'Internship Portal Registration - Credentials',
-            html: `
-                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
-                    <h2 style="color: #000;">Welcome to Internship Portal, ${fullName}!</h2>
-                    <p>Your payment was successful and your account has been created.</p>
-                    <div style="background: #f4f4f4; padding: 15px; border-radius: 5px; margin: 20px 0;">
-                        <p><strong>Username:</strong> ${username}</p>
-                        <p><strong>Password:</strong> ${password}</p>
-                    </div>
-                    <p>Please log in at <a href="${process.env.NEXT_PUBLIC_APP_URL}/login">Internship Portal Login</a>.</p>
-                    <p>Best regards,<br/>The Team</p>
-                </div>
-            `,
+        user.status = 'ACTIVE';
+        user.isApproved = true;
+        user.paymentDetails = {
+            orderId: razorpay_order_id,
+            paymentId: razorpay_payment_id,
+            date: new Date()
         };
+        await user.save();
 
-        await transporter.sendMail(mailOptions);
+        // 3. Send Confirmation Email (Wrapped in try-catch so it doesn't block the response)
+        try {
+            const hasSmtpConfig = process.env.EMAIL_HOST && process.env.EMAIL_USER;
+            if (hasSmtpConfig) {
+                const transporter = nodemailer.createTransport({
+                    host: process.env.EMAIL_HOST,
+                    port: parseInt(process.env.EMAIL_PORT) || 465,
+                    secure: process.env.EMAIL_PORT == "465", 
+                    auth: {
+                        user: process.env.EMAIL_USER,
+                        pass: process.env.EMAIL_PASS,
+                    },
+                });
+
+                const mailOptions = {
+                    from: `"Digital South" <${process.env.EMAIL_USER}>`,
+                    to: email,
+                    subject: 'Internship Portal - Payment Successful',
+                    html: `
+                        <div style="font-family: Arial, sans-serif; padding: 20px; color: #333;">
+                            <h2 style="color: #000;">Welcome to the Program, ${fullName}!</h2>
+                            <p>Your payment was successful and your account is now <strong>ACTIVE</strong>.</p>
+                            <p>You can now access your full dashboard and start your internship tasks.</p>
+                            <div style="background: #f4f4f4; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                                <p><strong>Order ID:</strong> ${razorpay_order_id}</p>
+                                <p><strong>Payment ID:</strong> ${razorpay_payment_id}</p>
+                            </div>
+                            <p>Please log in at <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard">Internship Portal</a>.</p>
+                            <p>Best regards,<br/>The Onboarding Team</p>
+                        </div>
+                    `,
+                };
+                await transporter.sendMail(mailOptions);
+            }
+        } catch (emailErr) {
+            console.error("Email sending failed:", emailErr);
+            // We don't return error here because the payment IS verified in DB
+        }
 
         return NextResponse.json({
             success: true,
-            message: "Payment verified and credentials sent",
+            message: "Payment verified and account activated",
         });
 
     } catch (error) {

@@ -36,3 +36,17 @@ export async function PUT(req) {
         return NextResponse.json({ message: "Error updating topic" }, { status: 500 });
     }
 }
+
+export async function DELETE(req) {
+    try {
+        await dbConnect();
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get('id');
+        if (!id) return NextResponse.json({ message: "Topic ID is required" }, { status: 400 });
+
+        await LiveBookTopic.findByIdAndDelete(id);
+        return NextResponse.json({ message: "Topic deleted successfully" }, { status: 200 });
+    } catch (error) {
+        return NextResponse.json({ message: "Error deleting topic" }, { status: 500 });
+    }
+}

@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     BookOpen,
     Play,
@@ -11,6 +11,7 @@ import {
     User,
     Sparkles,
     Search,
+    ChevronRight,
     ChevronDown,
     MoreHorizontal,
     LayoutGrid,
@@ -22,17 +23,23 @@ import {
     Cpu,
     CheckCircle2,
     Diamond,
-    Zap
+    Zap,
+    GraduationCap,
+    Lightbulb,
+    Target,
+    Blocks
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
 
-// Configuration for Semester Structure
-const SEMESTERS = [
-    { id: 4, name: "Semester 4", status: "Current", active: true, icons: [Brain, Cpu, Database] },
-    { id: 3, name: "Semester 3", status: "Completed", icons: [Monitor, Layers, Database] },
-    { id: 2, name: "Semester 2", status: "Completed", icons: [Cpu, LayoutGrid, Layers] },
-    { id: 1, name: "Semester 1", status: "Completed", icons: [FileText, LayoutGrid, Database] },
+// Configuration for Categories/Semesters (Kalvium Style)
+const SIDEBAR_CATEGORIES = [
+    { id: 4, name: "Semester 4", status: "Current", icons: [<GraduationCap key="4-1" className="w-4 h-4" />, <Brain key="4-2" className="w-4 h-4" />, <Cpu key="4-3" className="w-4 h-4" />], colors: ["bg-gray-100 text-gray-500", "bg-gray-200/50 text-gray-600", "bg-gray-100 text-gray-900"] },
+    { id: 3, name: "Semester 3", status: "Completed", icons: [<Monitor key="3-1" className="w-4 h-4" />, <Layers key="3-2" className="w-4 h-4" />, <Database key="3-3" className="w-4 h-4" />], colors: ["bg-gray-50 text-gray-400", "bg-gray-100/50 text-gray-500", "bg-gray-50 text-gray-900"] },
+    { id: 2, name: "Semester 2", status: "Completed", icons: [<Lightbulb key="2-1" className="w-4 h-4" />, <Target key="2-2" className="w-4 h-4" />, <Cpu key="2-3" className="w-4 h-4" />], colors: ["bg-gray-50 text-gray-400", "bg-gray-100/50 text-gray-500", "bg-gray-50 text-gray-900"] },
+    { id: 1, name: "Semester 1", status: "Completed", icons: [<FileText key="1-1" className="w-4 h-4" />, <LayoutGrid key="1-2" className="w-4 h-4" />, <Database key="1-3" className="w-4 h-4" />], colors: ["bg-gray-50 text-gray-400", "bg-gray-100/50 text-gray-500", "bg-gray-50 text-gray-900"] },
 ];
+
+const CARD_ICONS = [Brain, Lightbulb, Monitor, Cpu, Database, Layers];
 
 // Format content helper
 const formatBlockContent = (content) => {
@@ -74,9 +81,97 @@ const formatBlockContent = (content) => {
     );
 };
 
+function LessonView({ selectedLesson, selectedCourse, topics, setView, formatBlockContent }) {
+    const containerRef = useRef(null);
+    const { scrollYProgress } = useScroll({ 
+        container: containerRef,
+        layoutEffect: false // Helps with hydration timing
+    });
+    
+    const scaleX = useSpring(scrollYProgress, {
+        stiffness: 100,
+        damping: 30,
+        restDelta: 0.001
+    });
+
+    return (
+        <motion.div
+            key="lesson"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, y: 30 }}
+            className="flex flex-col h-screen"
+        >
+            <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-5 border-b border-gray-100 shadow-sm mb-12">
+                <div className="max-w-5xl mx-auto px-8 w-full flex items-center justify-between">
+                    <div className="flex items-center gap-6">
+                        <button onClick={() => setView("overview")} className="p-2.5 bg-white border border-gray-100 rounded-xl hover:bg-black hover:text-white transition-all shadow-sm">
+                            <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <div className="flex flex-col">
+                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 ml-0.5">
+                                <span className="cursor-pointer hover:text-black transition-colors" onClick={() => setView("library")}>Livebook</span>
+                                <span className="opacity-20 mx-1">/</span>
+                                <span className="cursor-pointer hover:text-black transition-colors" onClick={() => setView("overview")} title={selectedCourse?.title}>
+                                    {selectedCourse?.title.length > 20 ? selectedCourse.title.substring(0, 20) + "..." : selectedCourse?.title}
+                                </span>
+                                <span className="opacity-20 mx-1">/</span>
+                                <span className="text-black" title={selectedLesson?.title}>
+                                    {selectedLesson?.title.length > 15 ? selectedLesson.title.substring(0, 15) + "..." : selectedLesson?.title}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <motion.div 
+                    className="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500 origin-left z-[60]"
+                    style={{ scaleX }}
+                />
+            </header>
+
+            <div ref={containerRef} className="flex-1 p-8 overflow-y-auto style-scrollbar scroll-smooth">
+                <div className="max-w-5xl mx-auto px-8 mb-32 text-left">
+                    <div className="relative z-10 space-y-16">
+                        <div className="flex items-center gap-8 mb-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            <div className="w-16 h-16 bg-emerald-600 text-white rounded-2xl flex items-center justify-center text-xl font-black tracking-tighter shadow-xl shadow-emerald-500/20 shrink-0">
+                                {(() => {
+                                    const moduleIdx = selectedCourse?.modules?.findIndex(m => m.title === selectedLesson?.module) ?? 0;
+                                    const lessonIdx = topics.filter(t => t.course === selectedCourse?.title && t.module === selectedLesson?.module).findIndex(t => t._id === selectedLesson?._id) ?? 0;
+                                    return `${moduleIdx + 1}.${lessonIdx + 1}`;
+                                })()}
+                            </div>
+                            <h1 className="text-6xl font-black text-gray-900 tracking-tighter uppercase leading-[0.9]">{selectedLesson?.title}</h1>
+                        </div>
+
+                        <div className="space-y-16">
+                            {selectedLesson?.blocks?.map((block, i) => (
+                                <div key={i} className="animate-fade-in group/block relative">
+                                    {block.type === 'text' ? (
+                                        <div className="prose prose-xl max-w-none text-gray-700 leading-relaxed space-y-6">
+                                            {formatBlockContent(block.content)}
+                                        </div>
+                                    ) : block.type === 'image' && block.content ? (
+                                        <div className="rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-xl transition-all hover:shadow-2xl">
+                                            <img src={block.content} className="w-full" alt="Content schematic" />
+                                        </div>
+                                    ) : block.type === 'youtube' && block.content ? (
+                                        <div className="aspect-video rounded-[2.5rem] overflow-hidden bg-black shadow-xl ring-1 ring-gray-100">
+                                            <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${block.content.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/)?.[2]}`} frameBorder="0" allowFullScreen title="Technical Briefing" />
+                                        </div>
+                                    ) : null}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
 export default function LiveBookDashboard() {
     const [view, setView] = useState("library"); // library, overview, lesson
-    const [selectedSemester, setSelectedSemester] = useState(4);
+    const [selectedCategory, setSelectedCategory] = useState(4);
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [selectedLesson, setSelectedLesson] = useState(null);
     const [expandedModule, setExpandedModule] = useState(null);
@@ -111,19 +206,9 @@ export default function LiveBookDashboard() {
                     const allCourses = await cRes.json();
 
                     const filteredCourses = allCourses.filter(c => {
+                        if (c.status !== 'Published') return false;
                         if (!c.tracks || c.tracks.length === 0) return true;
-
-                        return c.tracks.some(adminConfiguredTrack => {
-                            const adminT = adminConfiguredTrack || "";
-                            const tr = uTrack || "";
-
-                            // High flexibility error-tolerant regex matching
-                            if (tr.includes("Blockchain") && adminT.includes("Blockchain")) return true;
-                            if (tr.includes("Gen") && adminT.includes("Gen")) return true;
-                            if (tr.includes("App Development") && adminT.includes("App Development")) return true;
-
-                            return adminT.toLowerCase() === tr.toLowerCase();
-                        });
+                        return c.tracks.some(adminT => adminT?.toLowerCase().includes(uTrack?.toLowerCase()));
                     });
 
                     setCourses(filteredCourses);
@@ -137,76 +222,125 @@ export default function LiveBookDashboard() {
     }, []);
 
     return (
-        <div className="relative min-h-screen">
-            <div className="max-w-[1600px] mx-auto px-10 py-8">
+        <div className="relative min-h-screen selection:bg-black selection:text-white">
+            <div className="relative z-10 flex flex-col min-h-screen">
                 <AnimatePresence mode="wait">
                     {view === "library" && (
                         <motion.div
                             key="library"
-                            initial={{ opacity: 0, scale: 0.98 }}
-                            animate={{ opacity: 1, scale: 1 }}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.98 }}
-                            className="space-y-12"
+                            className="flex flex-col h-screen"
                         >
-                            {/* Main Grid: Courses */}
-                            <div className="space-y-12">
-                                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                                    <h1 className="text-4xl font-black text-gray-900 tracking-tighter">Livebooks</h1>
-                                    <div className="relative group w-full md:w-80">
-                                        <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300 group-focus-within:text-black transition-colors" />
-                                        <input className="w-full pl-14 pr-6 py-4 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-widest outline-none shadow-sm focus:ring-8 focus:ring-black/5 transition-all" placeholder="Ctrl K to search" />
+                            {/* Standardized Sticky Header */}
+                            <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-5 border-b border-gray-100 shadow-sm mb-8">
+                                <div className="flex items-center justify-between gap-6 w-full">
+                                    <div className="flex flex-col">
+                                        <h1 className="text-3xl font-black text-black tracking-tighter uppercase leading-none">
+                                            Livebooks
+                                        </h1>
+                                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 mt-2 ml-1">
+                                            <span className="text-black">Livebook</span>
+                                            <span className="opacity-20 mx-1">/</span>
+                                            <span className="text-gray-400">Center</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="relative w-80 group">
+                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 group-focus-within:text-black transition-colors" />
+                                        <input 
+                                            placeholder="SEARCH LIVEBOOKS..."
+                                            className="w-full bg-gray-50 border-0 rounded-xl pl-10 pr-4 py-3 text-[10px] font-black uppercase tracking-widest outline-none focus:ring-8 focus:ring-black/5 transition-all text-gray-900 placeholder:text-gray-300"
+                                        />
                                     </div>
                                 </div>
+                            </header>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
-                                    {courses.map((course) => (
-                                        <motion.div
-                                            key={course.id}
-                                            onClick={() => {
-                                                setSelectedCourse(course);
-                                                setView("overview");
-                                            }}
-                                            className="bg-gradient-to-br from-[#fffbeb] to-white rounded-[1.5rem] p-6 border border-amber-100/50 shadow-sm hover:shadow-2xl hover:shadow-amber-500/10 hover:translate-y-[-5px] transition-all cursor-pointer group flex flex-col justify-between min-h-[340px] relative overflow-hidden"
-                                        >
-                                            <div className="space-y-6 relative z-10">
-                                                <div className="p-4 rounded-xl w-fit group-hover:bg-amber-500 transition-all border border-amber-50 shadow-sm">
-                                                    <Brain className="w-8 h-8 text-amber-500 group-hover:text-white transition-colors" />
-                                                </div>
-                                                <div className="space-y-3">
-                                                    <h3 className="text-xl font-black text-gray-900 leading-[1.1] uppercase tracking-tighter group-hover:text-amber-600 transition-colors">{course.title}</h3>
-                                                    <p className="text-[12px] text-gray-400 font-medium leading-relaxed line-clamp-3 opacity-90">{course.desc}</p>
-                                                </div>
-                                            </div>
+                            <div className="px-4 pb-20">
+                                {/* Simple Course Grid */}
+                                <main className="w-full">
+                                    <div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                                            {courses.map((course, idx) => {
+                                                const Icon = CARD_ICONS[idx % CARD_ICONS.length];
+                                                const moduleCount = course.modules?.length || 0;
+                                                const topicCount = topics.filter(t => t.course === course.title).length;
+                                                const unitCount = topics.filter(t => t.course === course.title).reduce((acc, b) => acc + (b.blocks?.length || 0), 0);
+                                                
+                                                return (
+                                                    <div
+                                                        key={course._id}
+                                                        onClick={() => { setSelectedCourse(course); setView("overview"); }}
+                                                        className="bg-white border border-gray-100 rounded-[1.5rem] p-8 shadow-sm hover:shadow-xl hover:shadow-black/5 hover:border-gray-300 transition-all duration-500 cursor-pointer group relative flex flex-col justify-between h-[360px]"
+                                                    >
+                                                        <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.1] transition-opacity">
+                                                            {(() => {
+                                                                    const Icon = {
+                                                                        'Brain': Brain,
+                                                                        'Monitor': Monitor,
+                                                                        'Database': Database,
+                                                                        'Blocks': Blocks,
+                                                                        'Zap': Zap,
+                                                                        'Layers': Layers,
+                                                                        'Cpu': Cpu,
+                                                                        'Sparkles': Sparkles,
+                                                                        'BookOpen': BookOpen
+                                                                    }[course.icon] || BookOpen;
+                                                                    return <Icon className="w-32 h-32" />;
+                                                                })()}
+                                                        </div>
+                                                        <div className="space-y-6">
+                                                            <div className="w-14 h-14 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center mb-6 shadow-sm transition-all group-hover:scale-110 group-hover:border-black group-hover:bg-white">
+                                                                {(() => {
+                                                                    const Icon = {
+                                                                        'Brain': Brain,
+                                                                        'Monitor': Monitor,
+                                                                        'Database': Database,
+                                                                        'Blocks': Blocks,
+                                                                        'Zap': Zap,
+                                                                        'Layers': Layers,
+                                                                        'Cpu': Cpu,
+                                                                        'Sparkles': Sparkles,
+                                                                        'BookOpen': BookOpen
+                                                                    }[course.icon] || BookOpen;
+                                                                    return <Icon className="w-7 h-7 text-black" />;
+                                                                })()}
+                                                            </div>
+                                                            <div className="space-y-3">
+                                                                <h3 className="text-lg md:text-xl font-bold text-gray-900 leading-tight tracking-tight group-hover:text-black">{course.title}</h3>
+                                                                <p className="text-sm text-gray-400 font-medium leading-relaxed line-clamp-3">
+                                                                    {course.desc || 'Comprehensive knowledge base covering high-impact concepts and practical industry implementations.'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
 
-                                            <div className="pt-8 border-t border-amber-50/50 flex items-center justify-between relative z-10">
-                                                <div className="flex items-center gap-5">
-                                                    <div className="flex items-center gap-2" title="Modules">
-                                                        <Layers className="w-3.5 h-3.5 text-amber-400" />
-                                                        <span className="text-[12px] font-black text-gray-900 tracking-tight">{course.modules?.length || 0}</span>
+                                                        <div className="flex flex-col gap-4">
+                                                            <div className="flex items-center gap-6 pt-6 opacity-60">
+                                                                <div className="flex items-center gap-2">
+                                                                    <Diamond className="w-3.5 h-3.5 text-gray-400" />
+                                                                    <span className="text-[12px] font-bold text-gray-500">{unitCount}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <Layers className="w-3.5 h-3.5 text-gray-400" />
+                                                                    <span className="text-[12px] font-bold text-gray-500">{moduleCount}</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <BookOpen className="w-3.5 h-3.5 text-gray-400" />
+                                                                    <span className="text-[12px] font-bold text-gray-500">{topicCount}</span>
+                                                                </div>
+                                                                <div className="ml-auto flex items-center gap-2">
+                                                                    <div className="w-3 h-3 rounded-full bg-white border-2 border-black" />
+                                                                    <span className="text-[12px] font-black text-gray-900">0%</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-center gap-2" title="Topics">
-                                                        <BookOpen className="w-3.5 h-3.5 text-amber-400" />
-                                                        <span className="text-[12px] font-black text-gray-900 tracking-tight">{topics.filter(t => t.course === course.title).length}</span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2" title="Units">
-                                                        <Zap className="w-3.5 h-3.5 text-amber-400" />
-                                                        <span className="text-[12px] font-black text-gray-900 tracking-tight">
-                                                            {topics.filter(t => t.course === course.title).reduce((acc, b) => acc + (b.blocks?.length || 0), 0)}
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                <button className="p-2.5 bg-white border border-amber-100 rounded-xl text-amber-500 hover:bg-amber-500 hover:text-white transition-all shadow-sm">
-                                                    <ArrowRight className="w-4 h-4" />
-                                                </button>
-                                            </div>
-
-                                            <div className="absolute top-0 right-0 p-8 opacity-[0.02] group-hover:opacity-[0.06] transition-opacity pointer-events-none transform -rotate-12 translate-x-4 -translate-y-4">
-                                                <Brain className="w-40 h-40" />
-                                            </div>
-                                        </motion.div>
-                                    ))}
-                                </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </main>
                             </div>
                         </motion.div>
                     )}
@@ -214,98 +348,80 @@ export default function LiveBookDashboard() {
                     {view === "overview" && (
                         <motion.div
                             key="overview"
-                            initial={{ opacity: 0, y: 30 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.98 }}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
                             className="flex-1 flex flex-col"
                         >
-                            {/* Course Header: Fixed/Sticky */}
-                            <div className="px-8 py-3 sticky top-0 z-20 bg-white/80 backdrop-blur-xl border-b border-gray-50">
-                                <div className="flex items-center justify-between">
+                            {/* Standardized Sticky Header (Overview) */}
+                            <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-5 border-b border-gray-100 shadow-sm mb-8">
+                                <div className="flex items-center justify-between gap-6 w-full px-4">
                                     <div className="flex items-center gap-6">
-                                        <button onClick={() => setView("library")} className="p-2 hover:bg-gray-50 rounded-xl transition-colors text-gray-400 hover:text-black">
-                                            <ChevronLeft className="w-6 h-6" />
+                                        <button onClick={() => setView("library")} className="p-3 bg-white border border-gray-100 rounded-xl hover:bg-black hover:text-white transition-all shadow-sm">
+                                            <ChevronLeft className="w-5 h-5" />
                                         </button>
-                                        <div className="h-10 w-px bg-gray-100 mx-2" />
-                                        <div className="flex items-center gap-5">
-                                            <div className="p-2.5 bg-gradient-to-br from-amber-50 to-white rounded-xl shadow-sm border border-amber-100">
-                                                <Brain className="w-6 h-6 text-amber-500" />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <h1 className="text-xl font-black text-gray-900 tracking-tighter uppercase leading-none">{selectedCourse?.title}</h1>
+                                        <div className="flex flex-col">
+                                            <h1 className="text-3xl font-black text-black tracking-tighter uppercase leading-none">{selectedCourse?.title}</h1>
+                                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 mt-2 ml-1">
+                                                <span className="cursor-pointer hover:text-black transition-colors" onClick={() => setView("library")}>Livebook</span>
+                                                <span className="opacity-20 mx-1">/</span>
+                                                <span className="text-black" title={selectedCourse?.title}>
+                                                    {selectedCourse?.title.length > 25 ? selectedCourse.title.substring(0, 25) + "..." : selectedCourse?.title}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
+                            </header>
 
-                            <div className="flex-1 p-8 lg:p-12 flex flex-col items-center custom-scrollbar overflow-y-auto">
-                                {/* Timeline */}
-                                <div className="w-full max-w-4xl space-y-0 relative">
-                                    {/* Central Line Removed */}
-
+                            <div className="flex-1 p-12 flex flex-col items-center overflow-y-auto">
+                                <div className="w-full max-w-4xl space-y-8">
                                     {selectedCourse?.modules?.map((mod, idx) => (
-                                        <div key={mod.id} className="mb-12 bg-white/60 backdrop-blur-3xl border border-white/80 shadow-2xl shadow-gray-200/40 rounded-[2.5rem] p-8 lg:p-10 relative overflow-hidden group/module transition-all duration-500 hover:bg-white/90 w-full flex flex-col">
-                                            {/* Decorative Background for Module */}
-                                            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-gray-100/80 via-purple-50/40 to-transparent blur-[60px] rounded-full opacity-60 -translate-y-10 translate-x-10 pointer-events-none transition-opacity duration-500 group-hover/module:opacity-100" />
+                                        <div key={mod.id || idx} className="bg-white/80 backdrop-blur-2xl border border-gray-100 shadow-xl shadow-gray-200/30 rounded-[2.5rem] p-10 group overflow-hidden relative">
+                                             <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.08] transition-all pointer-events-none transform -rotate-12 translate-x-10 -translate-y-10">
+                                                <Layers className="w-64 h-64" />
+                                            </div>
 
-                                            {/* Module Header */}
-                                            <div className="flex gap-6 md:gap-8 items-start relative z-10 w-full">
-                                                <div className="w-16 h-16 md:w-20 md:h-20 bg-white border border-gray-100 rounded-[1.2rem] md:rounded-[1.5rem] flex flex-col items-center justify-center shadow-lg shadow-gray-200/30 flex-shrink-0 group-hover/module:border-gray-100 transition-colors duration-500">
-                                                    <span className="text-[6px] md:text-[7px] font-black uppercase tracking-[0.2em] text-gray-400 mb-0.5">Module</span>
-                                                    <span className="text-2xl md:text-3xl font-black text-gray-900 leading-none">{idx + 1}</span>
+                                            <div className="flex gap-8 items-start relative z-10 w-full mb-8">
+                                                <div className="w-20 h-20 bg-gray-900 border border-black rounded-[1.5rem] flex flex-col items-center justify-center shadow-2xl shrink-0">
+                                                    <span className="text-[7px] font-black uppercase tracking-[0.2em] text-gray-400 mb-0.5">Module</span>
+                                                    <span className="text-3xl font-black text-white leading-none">{idx + 1}</span>
                                                 </div>
-                                                <div className="flex-1 space-y-2 md:space-y-3 pt-1 md:pt-2 w-full">
+                                                <div className="flex-1 space-y-3 pt-3">
                                                     <div
-                                                        onClick={() => setExpandedModule(expandedModule === mod.id ? null : mod.id)}
-                                                        className="flex items-center justify-between cursor-pointer group/header w-full"
+                                                        onClick={() => setExpandedModule(expandedModule === (mod.id || mod.title) ? null : (mod.id || mod.title))}
+                                                        className="flex items-center justify-between cursor-pointer group/header"
                                                     >
-                                                        <h3 className="text-lg md:text-xl font-black text-gray-900 uppercase tracking-tight group-hover/header:text-black transition-colors duration-300">{mod.title}</h3>
-                                                        <div className={`p-2 rounded-full transition-all duration-300 shadow-sm ${expandedModule === mod.id ? 'bg-gray-100 text-black shadow-gray-200/50' : 'bg-white border border-gray-100 text-gray-400 group-hover/header:bg-gray-50'}`}>
-                                                            <ChevronDown className={`w-5 h-5 transition-transform duration-500 ${expandedModule === mod.id ? 'rotate-180' : ''}`} />
+                                                        <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tight group-hover:text-black">{mod.title}</h3>
+                                                        <div className={`p-3 rounded-2xl transition-all shadow-sm border ${expandedModule === (mod.id || mod.title) ? 'bg-black text-white border-black' : 'bg-white text-gray-400 border-gray-100'}`}>
+                                                            <ChevronDown className={`w-5 h-5 transition-transform duration-500 ${expandedModule === (mod.id || mod.title) ? 'rotate-180' : ''}`} />
                                                         </div>
                                                     </div>
-                                                    <p className="text-[11px] md:text-[12px] text-gray-500 leading-relaxed font-medium opacity-90 max-w-2xl">{mod.desc}</p>
                                                 </div>
                                             </div>
 
-                                            {/* Lessons */}
                                             <AnimatePresence>
-                                                {expandedModule === mod.id && (
+                                                {expandedModule === (mod.id || mod.title) && (
                                                     <motion.div
                                                         initial={{ height: 0, opacity: 0 }}
                                                         animate={{ height: "auto", opacity: 1 }}
                                                         exit={{ height: 0, opacity: 0 }}
-                                                        className="space-y-4 md:space-y-6 mt-8 md:mt-12 ml-4 md:ml-10 relative flex-1"
+                                                        className="space-y-4 pt-10 border-t border-gray-50 h-full overflow-hidden"
                                                     >
-                                                        {/* Line connecting lessons */}
-                                                        <div className="absolute left-[23px] top-6 bottom-6 w-px bg-gradient-to-b from-gray-200 via-gray-200 to-transparent z-0 hidden md:block" />
-
                                                         {topics.filter(t => t.course === selectedCourse.title && t.module === mod.title).map((lesson, lIdx) => (
                                                             <div
                                                                 key={lesson._id}
-                                                                onClick={() => {
-                                                                    setSelectedLesson(lesson);
-                                                                    setView("lesson");
-                                                                }}
-                                                                className="flex gap-6 md:gap-8 items-start group cursor-pointer relative p-4 md:p-6 bg-transparent hover:bg-white border border-transparent hover:border-gray-100 rounded-3xl transition-all duration-300 hover:shadow-xl hover:shadow-gray-200/50 hover:-translate-y-1 w-full"
+                                                                onClick={() => { setSelectedLesson(lesson); setView("lesson"); }}
+                                                                className="flex gap-8 items-start group cursor-pointer relative p-6 bg-transparent hover:bg-slate-50 border border-transparent hover:border-gray-100 rounded-[2rem] transition-all"
                                                             >
-                                                                {/* Lesson Bubble */}
-                                                                <div className="w-10 h-10 md:w-12 md:h-12 bg-gray-900 group-hover:bg-black text-white rounded-[1rem] flex items-center justify-center text-[12px] md:text-[14px] font-black transition-all duration-500 shadow-lg shadow-black/10 group-hover:shadow-black/30 group-hover:scale-110 z-10 shrink-0 ring-4 ring-white">
+                                                                <div className="w-12 h-12 bg-white border border-gray-100 group-hover:bg-black group-hover:border-black group-hover:text-white text-gray-400 rounded-2xl flex items-center justify-center text-sm font-black transition-all shadow-sm shrink-0">
                                                                     {idx + 1}.{lIdx + 1}
                                                                 </div>
-
-                                                                <div className="flex-1 space-y-1.5 md:space-y-2 pt-0.5 md:pt-1">
-                                                                    <div className="flex items-center gap-3">
-                                                                        <h4 className="text-sm md:text-base font-black text-gray-800 uppercase tracking-tight group-hover:text-black transition-colors duration-300">{lesson.title}</h4>
-                                                                        <div className="w-1.5 h-1.5 rounded-full bg-black opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                                                                    </div>
-                                                                    <p className="text-[10px] md:text-[12px] text-gray-500 font-medium group-hover:text-gray-600 transition-colors duration-300 leading-relaxed line-clamp-2 pr-4 md:pr-12">
-                                                                        {lesson.blocks?.find(b => b.type === 'text')?.content || 'Dive into this chapter to uncover key concepts and specialized intel.'}
-                                                                    </p>
+                                                                <div className="flex-1 pt-1.5">
+                                                                    <h4 className="text-base font-black text-gray-700 group-hover:text-black uppercase tracking-tight mb-2">{lesson.title}</h4>
+                                                                    <p className="text-xs text-gray-400 font-medium line-clamp-2">Exploring core architectural nodes and essential protocol dynamics.</p>
                                                                 </div>
-
-                                                                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 -translate-x-4 group-hover:translate-x-0 absolute right-6 top-1/2 -translate-y-1/2 shadow-inner shadow-gray-200/50">
+                                                                <div className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-sm">
                                                                     <ArrowRight className="w-4 h-4 text-black" />
                                                                 </div>
                                                             </div>
@@ -321,70 +437,25 @@ export default function LiveBookDashboard() {
                     )}
 
                     {view === "lesson" && (
-                        <motion.div
-                            key="lesson"
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, y: 50 }}
-                            className="space-y-2 pb-20"
-                        >
-                            <div className="flex items-center justify-between px-4">
-                                <button onClick={() => setView("overview")} className="flex items-center gap-3 text-[10px] font-black uppercase tracking-[0.3em] text-gray-400 hover:text-black transition-all">
-                                    <ChevronLeft className="w-5 h-5" /> Back
-                                </button>
-                                <div className="flex items-center gap-6">
-
-
-                                </div>
-                            </div>
-
-                            <div className="max-w-4xl mx-auto mt-6 bg-white border border-gray-100 shadow-2xl shadow-gray-200/40 rounded-[3rem] space-y-10 p-8 md:p-10 lg:p-16 relative overflow-hidden text-left mb-20">
-                                {/* Decorative elements */}
-                                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-gradient-to-bl from-gray-100/60 via-purple-50/30 to-transparent rounded-full blur-[100px] opacity-80 -translate-y-20 pointer-events-none" />
-
-                                <div className="space-y-6 text-left relative z-10">
-                                    <div className="w-12 h-12 bg-black text-white rounded-2xl flex items-center justify-center text-[12px] font-black shadow-lg shadow-black/30 ring-4 ring-gray-100"><BookOpen className="w-5 h-5" /></div>
-                                    <h1 className="text-[32px] md:text-[40px] font-black text-gray-900 uppercase tracking-tighter leading-[1.1]">{selectedLesson?.title || "Lesson"}</h1>
-                                </div>
-                                <div className="h-px bg-gradient-to-r from-gray-200 via-gray-100 to-transparent w-full relative z-10" />
-
-                                <div className="space-y-10 relative z-10">
-                                    {selectedLesson?.blocks?.map((block, i) => (
-                                        <div key={i} className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-                                            {block.type === 'text' ? (
-                                                <div className="h-full flex flex-col justify-center">
-                                                    {formatBlockContent(block.content)}
-                                                </div>
-                                            ) : block.type === 'image' && block.content ? (
-                                                <div className="w-full rounded-[1.5rem] overflow-hidden bg-gray-50 shadow-sm border border-gray-100">
-                                                    <img src={block.content} alt="Content" className="w-full h-auto object-cover shadow-2xl" />
-                                                </div>
-                                            ) : block.type === 'youtube' && block.content ? (
-                                                <div className="aspect-video w-full rounded-[1.5rem] overflow-hidden bg-black shadow-xl">
-                                                    {block.content.includes('youtu') ? (
-                                                        <iframe className="w-full h-full" src={`https://www.youtube.com/embed/${block.content.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/)?.[2]}`} frameBorder="0" allowFullScreen />
-                                                    ) : (
-                                                        <div className="w-full h-full flex items-center justify-center"><Play className="w-10 h-10 text-gray-500" /></div>
-                                                    )}
-                                                </div>
-                                            ) : null}
-                                        </div>
-                                    ))}
-                                </div>
-                                {/* Launch Assignment Protocol removed */}
-                            </div>
-                        </motion.div>
+                        <LessonView 
+                            selectedLesson={selectedLesson}
+                            selectedCourse={selectedCourse}
+                            topics={topics}
+                            setView={setView}
+                            formatBlockContent={formatBlockContent}
+                        />
                     )}
                 </AnimatePresence>
             </div>
 
             <style jsx global>{`
-                .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: #f3f4f6; border-radius: 20px; border: 4px solid white; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #e5e7eb; }
+                .style-scrollbar::-webkit-scrollbar { width: 4px; }
+                .style-scrollbar::-webkit-scrollbar-track { background: transparent; }
+                .style-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+                .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
+                @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
             `}</style>
-        </div >
+        </div>
     );
 }
 

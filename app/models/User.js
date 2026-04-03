@@ -16,7 +16,6 @@ const UserSchema = new mongoose.Schema({
     },
     phone: {
         type: String,
-        required: [true, 'Please provide a phone number.'],
     },
     gender: {
         type: String,
@@ -31,7 +30,6 @@ const UserSchema = new mongoose.Schema({
     },
     duration: {
         type: String,
-        required: [true, 'Please select duration.'],
     },
     mode: {
         type: String, // 'Remote', 'In-office', etc.
@@ -41,9 +39,24 @@ const UserSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    admissionId: {
+        type: String,
+        default: '',
+    },
     status: {
         type: String,
-        default: 'Active',
+        enum: ['NEW', 'OTP_VERIFIED', 'ASSESSMENT_COMPLETED', 'SELECTED', 'REJECTED', 'PROFILE_PENDING', 'VERIFIED', 'ACTIVE', 'Terminated'],
+        default: 'NEW',
+    },
+    otp: {
+        type: String,
+    },
+    otpExpires: {
+        type: Date,
+    },
+    reExamRequested: {
+        type: Boolean,
+        default: false,
     },
     password: {
         type: String,
@@ -62,7 +75,6 @@ const UserSchema = new mongoose.Schema({
     aadhaarCard: { type: String },
     educationQualification: {
         type: String,
-        enum: ['Pursuing', 'Completed', 'None'],
     },
     courseName: { type: String },
     collegeName: { type: String },
@@ -76,6 +88,43 @@ const UserSchema = new mongoose.Schema({
         default: 'gauthamram.um@gmail.com',
     },
     missedMeetings: {
+        type: Number,
+        default: 0,
+    },
+    // Assessment Fields
+    isAssessmentDone: {
+        type: Boolean,
+        default: false,
+    },
+    assessmentScore: {
+        type: Number,
+        default: 0,
+    },
+    assessmentDate: {
+        type: Date,
+    },
+    reExamApproved: {
+        type: Boolean,
+        default: false,
+    },
+    isVerified: {
+        type: Boolean,
+        default: false,
+    },
+    isApproved: {
+        type: Boolean,
+        default: false,
+    },
+    isProfileComplete: {
+        type: Boolean,
+        default: false,
+    },
+    selectionStatus: {
+        type: String,
+        enum: ['Pending Selection (24h Buffer)', 'Selected', 'Rejected'],
+        default: 'Pending Selection (24h Buffer)',
+    },
+    aadharVerificationTries: {
         type: Number,
         default: 0,
     },

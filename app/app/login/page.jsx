@@ -5,10 +5,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import Link from "next/link";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
     const [terminatedInfo, setTerminatedInfo] = useState(null); // { contact }
     const [formData, setFormData] = useState({
         email: "",
@@ -32,7 +34,10 @@ export default function LoginPage() {
             const res = await fetch("/api/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({
+                    ...formData,
+                    email: formData.email.trim()
+                })
             });
 
             const data = await res.json();
@@ -46,14 +51,28 @@ export default function LoginPage() {
                 document.cookie = `userRole=${data.user.role || 'intern'}; path=/; max-age=10800`;
                 document.cookie = `userEmail=${data.user.email}; path=/; max-age=10800`;
 
-                if (data.user.role === 'admin') {
-                    router.push("/admin");
+                if (data.redirectTo) {
+                    router.push(data.redirectTo);
                 } else {
-                    router.push("/dashboard");
+                    router.push(data.user.role === 'admin' ? "/admin" : "/dashboard");
                 }
-            } else if (res.status === 403 && data.terminated) {
-                // Terminated account — show inline banner
-                setTerminatedInfo({ contact: data.contact });
+            } else if (res.status === 403) {
+                const errorData = data;
+                if (errorData.status === 'pending_assessment') {
+                    toast.error("Please complete the assessment first");
+                    setTimeout(() => router.push("/assessment"), 2000);
+                } else if (errorData.status === 'profile_incomplete') {
+                    toast.error("Please complete your profile first");
+                    setTimeout(() => router.push(errorData.redirectTo), 2000);
+                } else if (errorData.status === 'unverified') {
+                    toast.error("Please verify your identity");
+                    setTimeout(() => router.push(errorData.redirectTo), 2000);
+                } else if (errorData.terminated) {
+                    // Terminated account — show inline banner
+                    setTerminatedInfo({ contact: errorData.contact });
+                } else {
+                    toast.error(errorData.message || "Login Failed");
+                }
             } else {
                 toast.error(data.message || "Login Failed");
             }
@@ -65,26 +84,22 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="relative min-h-screen w-screen bg-slate-50 font-sans flex items-center justify-center overflow-hidden p-4">
-
-            {/* Premium Animated Gradient Blobs */}
-            <div className="absolute inset-0 z-0 pointer-events-none">
-                <div className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] bg-purple-300/40 rounded-full mix-blend-multiply filter blur-[80px] opacity-70 animate-pulse" style={{ animationDuration: '7s' }}></div>
-                <div className="absolute top-[20%] right-[-10%] w-[50vw] h-[50vw] max-w-[600px] max-h-[600px] bg-sky-300/40 rounded-full mix-blend-multiply filter blur-[80px] opacity-70 animate-pulse" style={{ animationDuration: '5s' }}></div>
-                <div className="absolute bottom-[-20%] left-[20%] w-[70vw] h-[70vw] max-w-[900px] max-h-[900px] bg-indigo-300/40 rounded-full mix-blend-multiply filter blur-[80px] opacity-70 animate-pulse" style={{ animationDuration: '9s' }}></div>
-            </div>
+        <div
+            className="relative min-h-screen w-screen font-sans flex items-center justify-center overflow-hidden p-4 bg-center"
+            style={{
+                backgroundImage: 'url(/background4.svg)',
+                backgroundSize: '200px',
+                backgroundRepeat: 'repeat'
+            }}
+        >
+            {/* Subtle Overlay */}
+            <div className="absolute inset-0 z-0 pointer-events-none bg-white/30"></div>
 
             <div className="w-full max-w-md bg-white/70 backdrop-blur-3xl rounded-[2.5rem] shadow-[0_8px_40px_rgba(0,0,0,0.08)] border border-white/60 p-8 space-y-6 relative z-10">
                 <div className="text-center">
-                    <div className="w-12 h-12 bg-black rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-gray-900/10">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5" />
-                            <path d="M9 18h6" />
-                            <path d="M10 22h4" />
-                        </svg>
-                    </div>
-                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Welcome Back</h1>
-                    <p className="text-gray-500 mt-2 text-sm">Sign in to your Intern Portal account</p>
+
+                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Digital South </h1>
+                    <h3 className="text-xl  text-gray-900 tracking-tight">Internship Portal </h3>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -102,14 +117,23 @@ export default function LoginPage() {
 
                     <div>
                         <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5 ml-1">Password</label>
-                        <input
-                            type="password"
-                            required
-                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-gray-900"
-                            placeholder="Enter your password"
-                            value={formData.password}
-                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        />
+                        <div className="relative">
+                            <input
+                                type={showPassword ? "text" : "password"}
+                                required
+                                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all text-gray-900 pr-12"
+                                placeholder="Enter your password"
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-black transition-colors"
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        </div>
                     </div>
 
                     {terminatedInfo && (

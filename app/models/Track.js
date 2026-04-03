@@ -4,7 +4,7 @@ const TrackSchema = new mongoose.Schema({
     category: {
         type: String,
         required: true,
-        enum: ['CODING', 'RESEARCH']
+        uppercase: true
     },
     name: {
         type: String,
@@ -13,6 +13,24 @@ const TrackSchema = new mongoose.Schema({
     description: {
         type: String,
         required: true
+    },
+    formPhases: [
+        {
+            name: String,
+            description: String,
+            fields: [
+                { 
+                    label: String, 
+                    type: { type: String }
+                }
+            ]
+        }
+    ],
+    status: {
+        type: String,
+        enum: ['ACTIVE', 'FROZEN'],
+        default: 'ACTIVE',
+        uppercase: true
     }
 }, { timestamps: true });
 

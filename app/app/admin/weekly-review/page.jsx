@@ -143,27 +143,28 @@ export default function WeeklyReviewPage() {
     };
 
     return (
-        <div className="space-y-8 pb-10">
-
-            {/* ── Header ── */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl font-black text-gray-900 tracking-tight flex items-center gap-2">
-                        <CalendarCheck className="w-6 h-6" /> Weekly Review
+        <div className="animate-in fade-in duration-500">
+            {/* Sticky Header */}
+            <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-5 border-b border-gray-100 shadow-sm mb-8">
+                <div className="flex items-center justify-between gap-6 w-full px-4">
+                    <h1 className="text-xl font-bold text-black tracking-tight uppercase leading-none">
+                        Review Hub
                     </h1>
-                    <p className="text-sm text-gray-400 font-medium mt-0.5">Auto-schedule reviews for all active interns · track progress each week</p>
+
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => loadReviews(filterWeek)}
+                            className="p-2.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-400 hover:text-black hover:border-black transition-all shadow-sm">
+                            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                        </button>
+                        <button onClick={() => setShowScheduleForm(true)}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-black text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:scale-[1.05] active:scale-95 transition-all shadow-lg">
+                            <Zap className="w-4 h-4" /> Auto-Schedule Week
+                        </button>
+                    </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <button onClick={() => loadReviews(filterWeek)}
-                        className="p-2.5 bg-white border border-gray-100 rounded-xl text-gray-400 hover:text-black hover:border-gray-200 transition-all shadow-sm">
-                        <RefreshCw className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => setShowScheduleForm(true)}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-black text-white rounded-xl text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-lg">
-                        <Zap className="w-4 h-4" /> Auto-Schedule Week
-                    </button>
-                </div>
-            </div>
+            </header>
+
+            <div className="px-8 pb-20 max-w-[1750px] mx-auto space-y-8">
 
             {/* ── Stat Cards ── */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -426,6 +427,7 @@ export default function WeeklyReviewPage() {
                     </div>
                 )}
             </AnimatePresence>
+            </div>
         </div>
     );
 }

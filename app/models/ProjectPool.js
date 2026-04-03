@@ -28,6 +28,36 @@ const ProjectPoolSchema = new mongoose.Schema({
     timeline: String,
     repoLink: String,
     demoLink: String,
+    blockchainNetwork: String,
+    smartContractLang: String,
+    tokenStandard: String,
+    walletIntegration: String,
+    storageUsed: String,
+    deploymentNetwork: String,
+    useCase: String,
+    targetUsers: String,
+    modelUsed: String,
+    aiTools: String,
+    vectorDatabase: String,
+    deploymentPlatform: String,
+    mlTaskType: String,
+    algorithms: String,
+    mlFramework: String,
+    trainingEnvironment: String,
+    appCategory: String,
+    customRequirements: [{ label: String, type: String, name: String }],
+    formPhases: [
+        {
+            name: { type: String, required: true },
+            description: String,
+            fields: [
+                {
+                    label: { type: String, required: true },
+                    type: { type: String, enum: ['text', 'link', 'file', 'textarea'], default: 'text' }
+                }
+            ]
+        }
+    ],
     dynamicFields: { type: Object, default: {} },
     status: { type: String, default: 'Active' },
     deadline: { type: String, default: '1 Month' },
