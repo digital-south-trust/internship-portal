@@ -251,18 +251,14 @@ export default function AdminTracksPage() {
     return (
         <div className="animate-in fade-in duration-500">
             <AnimatePresence mode="wait">
-                {/* Header */}
+                {/* Standardized Tactical Header */}
                 <header key="header" className="sticky top-0 z-50 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-5 border-b border-gray-100 shadow-sm mb-8">
-                <div className="flex items-center justify-between gap-6 w-full px-4">
-                    <div className="flex flex-col gap-1.5">
-                        <h1 className="text-xl font-bold text-black tracking-tight uppercase leading-none">
-                            Academic Tracks
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-1.5 h-8 bg-black rounded-full" />
+                        <h1 className="text-2xl font-black text-black tracking-tighter uppercase leading-none">
+                            Tracks
                         </h1>
-                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
-                            <span className="cursor-pointer hover:text-black transition-colors">Admin</span>
-                            <ChevronRight className="w-3 h-3 opacity-20" />
-                            <span className="cursor-pointer hover:text-black transition-colors">Track Center</span>
-                        </div>
                     </div>
 
                     <div className="flex items-center gap-3">
@@ -299,7 +295,7 @@ export default function AdminTracksPage() {
                             onClick={() => setIsCategoryManageModalOpen(true)}
                             className="px-6 py-3 bg-white border border-gray-100 text-black rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-gray-50 transition-all shadow-sm"
                         >
-                            <Layout className="w-4 h-4" /> Track Titles
+                            <Layout className="w-4 h-4" /> Titles
                         </button>
                         <button
                             onClick={() => { 

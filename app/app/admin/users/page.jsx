@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import {
     UserPlus,
@@ -34,9 +34,13 @@ import {
     Cpu,
     Briefcase,
     Phone,
-    Activity
+    Activity,
+    Smile,
+    Trash2
 } from "lucide-react";
 import { toast } from "react-hot-toast";
+
+const dicebear = (seed) => `https://api.dicebear.com/7.x/micah/svg?seed=${encodeURIComponent(seed)}&backgroundColor=transparent`;
 
 export default function UnifiedUsersPage() {
     const router = useRouter();
@@ -196,6 +200,23 @@ export default function UnifiedUsersPage() {
         }
     };
 
+    const handleDeleteUser = async (userId) => {
+        if (!confirm("CRITICAL WARNING: Are you ready to PERMANENTLY revoke access and DELETE this administrative record? This action cannot be reversed.")) return;
+        
+        const tid = toast.loading("Executing Access Revocation...");
+        try {
+            const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+            if (res.ok) {
+                toast.success("Security Node PURGED Successfully", { id: tid });
+                fetchUsers();
+            } else {
+                toast.error("Deletion Sequence Failed", { id: tid });
+            }
+        } catch {
+            toast.error("Network Link Unstable during deletion", { id: tid });
+        }
+    };
+
     if (viewingUserId) {
         return (
             <UserDetailView 
@@ -224,32 +245,39 @@ export default function UnifiedUsersPage() {
 
     return (
         <div className="animate-in fade-in duration-500">
-            {/* Sticky Header */}
+            {/* Standardized Tactical Header */}
             <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-5 border-b border-gray-100 shadow-sm mb-8">
-                <div className="flex items-center justify-between gap-6 w-full">
-                    <h1 className="text-xl font-bold text-black tracking-tight uppercase leading-none">
-                        User Management
-                    </h1>
-
+                <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <div className="flex bg-gray-50/50 p-1 rounded-xl border border-gray-100">
-                            <button
-                                onClick={() => setActiveTab('database')}
-                                className={`px-5 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'database' ? 'bg-black text-white shadow-lg' : 'text-gray-400 hover:text-black hover:bg-white'}`}
-                            >
-                                Users 
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('add')}
-                                className={`px-5 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${activeTab === 'add' ? 'bg-black text-white shadow-lg' : 'text-gray-400 hover:text-black hover:bg-white'}`}
-                            >
-                                Add User
-                            </button>
+                        <div className="w-1.5 h-8 bg-black rounded-full" />
+                        <h1 className="text-2xl font-black text-black tracking-tighter uppercase leading-none">
+                            Users
+                        </h1>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <div className="flex bg-gray-50/50 p-1 rounded-xl border border-gray-100 shadow-sm">
+                            {[
+                                { id: 'database', label: 'Database Access' },
+                                { id: 'add', label: 'Provision Entry' }
+                            ].map(item => (
+                                <button
+                                    key={item.id}
+                                    onClick={() => setActiveTab(item.id)}
+                                    className={`px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                                        activeTab === item.id 
+                                        ? 'bg-black text-white shadow-xl' 
+                                        : 'text-gray-400 hover:text-black hover:bg-white'
+                                    }`}
+                                >
+                                    {item.label}
+                                </button>
+                            ))}
                         </div>
                         <button
                             onClick={fetchUsers}
                             disabled={loading}
-                            className={`p-2.5 bg-gray-50 hover:bg-black hover:text-white rounded-xl transition-all border border-gray-100 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`p-2.5 bg-gray-50 hover:bg-black hover:text-white rounded-xl transition-all border border-gray-100 shadow-sm ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                         </button>
@@ -326,8 +354,13 @@ export default function UnifiedUsersPage() {
                                             <tr key={user._id} className="group hover:bg-gray-50/50 transition-all cursor-pointer" onClick={() => router.push(`/admin/users/${user._id}`)}>
                                                 <td className="p-6">
                                                     <div className="flex items-center gap-4">
-                                                        <div className={`w-10 h-10 rounded-xl text-white flex items-center justify-center font-black text-[11px] shadow-lg shadow-black/10 transition-transform group-hover:scale-105 ${user.role === 'admin' ? 'bg-purple-600' : 'bg-black'}`}>
-                                                            {user.fullName?.charAt(0)}
+                                                        <div className={`w-12 h-12 rounded-2xl overflow-hidden border-2 shadow-sm transition-transform group-hover:scale-105 flex items-center justify-center bg-gray-50 ${user.role === 'admin' ? 'border-purple-100' : 'border-gray-100'}`}>
+                                                            <img 
+                                                                src={user.profilePicture || dicebear(user.avatarSeed || user.fullName?.split(' ')[0] || "User")} 
+                                                                alt="U" 
+                                                                className="w-full h-full object-cover"
+                                                                onError={(e) => { e.target.src = dicebear("User"); }}
+                                                            />
                                                         </div>
                                                         <div className="space-y-0.5">
                                                             <p className="text-xs font-black text-black uppercase tracking-tight flex items-center gap-2">
@@ -358,8 +391,15 @@ export default function UnifiedUsersPage() {
                                                             </>
                                                         )}
                                                         <button 
-                                                            onClick={() => router.push(`/admin/users/${user._id}`)}
-                                                            className="p-2 bg-white border border-gray-100 text-gray-400 hover:text-black hover:border-black rounded-lg transition-all shadow-sm"
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteUser(user._id); }}
+                                                            className="p-2 bg-white border border-gray-100 text-gray-300 hover:text-red-500 hover:border-red-500 rounded-lg transition-all shadow-sm group"
+                                                            title="Purge Identity Access"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); router.push(`/admin/users/${user._id}`); }}
+                                                            className="p-2 bg-white border border-gray-100 text-gray-300 hover:text-black hover:border-black rounded-lg transition-all shadow-sm"
                                                             title="View Full Profile"
                                                         >
                                                             <Eye className="w-4 h-4" />
@@ -486,7 +526,16 @@ export default function UnifiedUsersPage() {
                                             <p className="text-[9px] text-gray-400 font-bold tracking-tight">{admin.email}</p>
                                         </div>
                                     </div>
-                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 bg-black text-white rounded-lg">Admin</span>
+                                    <div className="flex items-center gap-2">
+                                        <button 
+                                            onClick={() => handleDeleteUser(admin._id)}
+                                            className="p-2 text-gray-300 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                                            title="Revoke Admin Access"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 bg-black text-white rounded-lg">Admin</span>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -594,8 +643,13 @@ function UserDetailView({ data, loading, onBack }) {
 
             {/* Profile Header Block */}
             <div className="bg-white p-12 rounded-[3.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row items-center gap-12 relative overflow-hidden">
-                <div className="w-32 h-32 rounded-3xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-200 relative z-10">
-                    <UserCircle className="w-20 h-20" strokeWidth={1} />
+                <div className="w-32 h-32 rounded-3xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden relative z-10 shadow-xl">
+                    <img 
+                        src={user?.profilePicture || dicebear(user?.avatarSeed || user?.fullName?.split(' ')[0] || "User")} 
+                        alt="Profile" 
+                        className="w-full h-full object-cover scale-110"
+                        onError={(e) => { e.target.src = dicebear("User"); }}
+                    />
                 </div>
 
                 <div className="flex-1 space-y-8 relative z-10 w-full">

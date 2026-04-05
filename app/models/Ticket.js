@@ -1,7 +1,16 @@
-
 import mongoose from 'mongoose';
 
+const ReplySchema = new mongoose.Schema({
+    message: { type: String, required: true },
+    repliedBy: { type: String },
+    repliedAt: { type: Date, default: Date.now },
+});
+
 const TicketSchema = new mongoose.Schema({
+    title: {
+        type: String,
+        required: true,
+    },
     type: {
         type: String,
         enum: ['Bug Report', 'Suggest a Feature (UI)', 'Change Problem Statement', 'Intern Doubt', 'Others'],
@@ -17,8 +26,9 @@ const TicketSchema = new mongoose.Schema({
         default: 'Open',
     },
     reportedBy: {
-        type: String, // Email or User ID if authenticated
+        type: String, // Email of the intern
     },
+    replies: [ReplySchema],
     createdAt: {
         type: Date,
         default: Date.now,

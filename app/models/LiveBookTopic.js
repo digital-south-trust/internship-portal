@@ -7,7 +7,9 @@ const LiveBookTopicSchema = new mongoose.Schema({
     module: { type: String, required: true },
     blocks: [{
         type: { type: String, required: true },
-        content: { type: String }
+        content: { type: String },
+        width: { type: Number, default: 100 },
+        theme: { type: String, default: 'transparent' }
     }]
 }, { timestamps: true });
 

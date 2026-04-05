@@ -124,18 +124,25 @@ export default function AdminAssessmentSubmissionsPage() {
 
     return (
         <div className="animate-in fade-in duration-500">
-            {/* Sticky Header */}
+            {/* Standardized Tactical Header */}
             <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-5 border-b border-gray-100 shadow-sm mb-8">
-                <div className="flex items-center justify-between gap-6 w-full px-4">
-                    <h1 className="text-xl font-bold text-black tracking-tight uppercase leading-none">
-                        Submissions Hub
-                    </h1>
-
+                <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
+                        <div className="w-1.5 h-8 bg-black rounded-full" />
+                        <h1 className="text-2xl font-black text-black tracking-tighter uppercase leading-none">
+                            Submissions Intelligence
+                        </h1>
+                    </div>
+
+                    <div className="flex items-center gap-3">
+                        <div className="px-4 py-2 bg-gray-50 border border-gray-100 rounded-xl flex items-center gap-2">
+                             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                             <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">Pipeline Active</span>
+                        </div>
                         <button
                             onClick={fetchSubmissions}
                             disabled={loading}
-                            className={`p-2.5 bg-gray-50 hover:bg-black hover:text-white rounded-xl transition-all border border-gray-100 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`p-2.5 bg-gray-50 hover:bg-black hover:text-white rounded-xl transition-all border border-gray-100 shadow-sm ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                         </button>

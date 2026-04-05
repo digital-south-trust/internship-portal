@@ -10,6 +10,8 @@ import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 
+const dicebear = (seed) => `https://api.dicebear.com/7.x/micah/svg?seed=${encodeURIComponent(seed)}&backgroundColor=transparent`;
+
 const fadeUp = (delay = 0) => ({
     initial: { opacity: 0, y: 16 },
     animate: { opacity: 1, y: 0 },
@@ -77,7 +79,9 @@ export default function AdminDashboard() {
                         action: p.status === 'Pending' ? `Requested "${p.projectName}"` : `${p.status} "${p.projectName}"`,
                         status: p.status === 'Pending' ? 'Pending' : p.status === 'Approved' ? 'Approved' : 'Rejected',
                         date: new Date(p.requestedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
-                        track: p.track || '—'
+                        track: p.track || '—',
+                        photo: p.internId?.profilePicture,
+                        seed: p.internId?.avatarSeed
                     }));
                     setRecentActivity(logs);
                 }
@@ -184,8 +188,13 @@ export default function AdminDashboard() {
                             {recentActivity.map((row, i) => (
                                 <div key={i} className="flex items-center justify-between px-6 py-4 hover:bg-gray-50/50 transition-colors">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-9 h-9 rounded-xl bg-gray-100 flex items-center justify-center text-sm font-black text-gray-500 shrink-0">
-                                            {row.user.charAt(0).toUpperCase()}
+                                        <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center overflow-hidden shrink-0 shadow-sm transition-transform group-hover:scale-105">
+                                            <img 
+                                                src={row.photo || dicebear(row.seed || row.user?.split(' ')[0] || "User")} 
+                                                alt="User" 
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => { e.target.src = dicebear("User"); }}
+                                            />
                                         </div>
                                         <div>
                                             <p className="text-xs font-black text-gray-900">{row.user}</p>

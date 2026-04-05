@@ -41,11 +41,22 @@ const SIDEBAR_CATEGORIES = [
 
 const CARD_ICONS = [Brain, Lightbulb, Monitor, Cpu, Database, Layers];
 
-// Format content helper
-const formatBlockContent = (content) => {
+const formatBlockContent = (content, theme = 'transparent') => {
     if (!content) return null;
+    
+    let normalText = "text-gray-700";
+    let boldText = "text-gray-900";
+    
+    if (theme === 'black') {
+        normalText = "text-gray-300";
+        boldText = "text-white";
+    } else if (theme !== 'transparent' && theme !== 'white') {
+        normalText = "opacity-80 text-inherit";
+        boldText = "opacity-100 font-bold text-inherit";
+    }
+
     if (/<[a-z][\s\S]*>/i.test(content)) {
-        return <div dangerouslySetInnerHTML={{ __html: content }} className="prose max-w-none text-gray-700" />;
+        return <div dangerouslySetInnerHTML={{ __html: content }} className={`prose max-w-none ${normalText}`} />;
     }
     return (
         <div className="space-y-2">
@@ -57,25 +68,25 @@ const formatBlockContent = (content) => {
                     const rest = parts.slice(1).join(':');
                     if (rest.trim()) {
                         return (
-                            <p key={j} className="text-[15px] text-gray-700 leading-relaxed">
-                                <strong className="text-black font-bold">{key}:</strong>{rest}
+                            <p key={j} className={`text-[15px] leading-relaxed ${normalText}`}>
+                                <strong className={`font-bold ${boldText}`}>{key}:</strong>{rest}
                             </p>
                         );
                     } else {
-                        return <h4 key={j} className="text-[16px] font-black text-gray-900 mt-4 tracking-tight uppercase">{line}</h4>;
+                        return <h4 key={j} className={`text-[16px] font-black mt-4 tracking-tight uppercase ${boldText}`}>{line}</h4>;
                     }
                 }
                 if (line.trim().match(/^[-*•]\s+/)) {
-                    return <li key={j} className="ml-6 text-[15px] text-gray-700 leading-relaxed list-disc">{line.replace(/^[-*•]\s+/, '')}</li>;
+                    return <li key={j} className={`ml-6 text-[15px] leading-relaxed list-disc ${normalText}`}>{line.replace(/^[-*•]\s+/, '')}</li>;
                 }
                 if (line.trim().match(/^\d+\.\s+/)) {
-                    return <li key={j} className="ml-6 text-[15px] text-gray-700 leading-relaxed list-decimal">{line.replace(/^\d+\.\s+/, '')}</li>;
+                    return <li key={j} className={`ml-6 text-[15px] leading-relaxed list-decimal ${normalText}`}>{line.replace(/^\d+\.\s+/, '')}</li>;
                 }
                 // Short lines without punctuation might be headers
                 if (line.length > 2 && line.length < 40 && !line.includes('.') && !line.includes(',')) {
-                    return <h4 key={j} className="text-[16px] font-black text-gray-900 mt-4 tracking-tight uppercase">{line}</h4>;
+                    return <h4 key={j} className={`text-[16px] font-black mt-4 tracking-tight uppercase ${boldText}`}>{line}</h4>;
                 }
-                return <p key={j} className="text-[15px] text-gray-700 leading-relaxed">{line}</p>;
+                return <p key={j} className={`text-[15px] leading-relaxed ${normalText}`}>{line}</p>;
             })}
         </div>
     );
@@ -102,24 +113,33 @@ function LessonView({ selectedLesson, selectedCourse, topics, setView, formatBlo
             exit={{ opacity: 0, y: 30 }}
             className="flex flex-col h-screen"
         >
-            <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-5 border-b border-gray-100 shadow-sm mb-12">
+            <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-5 border-b border-gray-100 shadow-sm mb-8">
                 <div className="max-w-5xl mx-auto px-8 w-full flex items-center justify-between">
-                    <div className="flex items-center gap-6">
-                        <button onClick={() => setView("overview")} className="p-2.5 bg-white border border-gray-100 rounded-xl hover:bg-black hover:text-white transition-all shadow-sm">
-                            <ChevronLeft className="w-5 h-5" />
-                        </button>
+                    <div className="flex items-center gap-4">
+                        <div className="w-1.5 h-8 bg-black rounded-full" />
                         <div className="flex flex-col">
                             <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 ml-0.5">
                                 <span className="cursor-pointer hover:text-black transition-colors" onClick={() => setView("library")}>Livebook</span>
-                                <span className="opacity-20 mx-1">/</span>
-                                <span className="cursor-pointer hover:text-black transition-colors" onClick={() => setView("overview")} title={selectedCourse?.title}>
-                                    {selectedCourse?.title.length > 20 ? selectedCourse.title.substring(0, 20) + "..." : selectedCourse?.title}
-                                </span>
-                                <span className="opacity-20 mx-1">/</span>
-                                <span className="text-black" title={selectedLesson?.title}>
-                                    {selectedLesson?.title.length > 15 ? selectedLesson.title.substring(0, 15) + "..." : selectedLesson?.title}
-                                </span>
+                                {selectedCourse && (
+                                    <>
+                                        <ChevronRight className="w-3 h-3 opacity-20" />
+                                        <span className="cursor-pointer hover:text-black transition-colors" onClick={() => setView("overview")} title={selectedCourse?.title}>
+                                            {selectedCourse?.title.length > 20 ? selectedCourse.title.substring(0, 20) + "..." : selectedCourse?.title}
+                                        </span>
+                                    </>
+                                )}
+                                {selectedLesson && (
+                                    <>
+                                        <ChevronRight className="w-3 h-3 opacity-20" />
+                                        <span className="text-black" title={selectedLesson?.title}>
+                                            {selectedLesson?.title.length > 15 ? selectedLesson.title.substring(0, 15) + "..." : selectedLesson?.title}
+                                        </span>
+                                    </>
+                                )}
                             </div>
+                            <h1 className="text-2xl font-black text-black tracking-tighter uppercase leading-none mt-1">
+                                {selectedLesson?.title}
+                            </h1>
                         </div>
                     </div>
                 </div>
@@ -129,8 +149,12 @@ function LessonView({ selectedLesson, selectedCourse, topics, setView, formatBlo
                 />
             </header>
 
-            <div ref={containerRef} className="flex-1 p-8 overflow-y-auto style-scrollbar scroll-smooth">
-                <div className="max-w-5xl mx-auto px-8 mb-32 text-left">
+            <div ref={containerRef} className="flex-1 p-4 overflow-y-auto style-scrollbar scroll-smooth">
+                <div className="max-w-5xl mx-auto px-4 mb-25 text-left">
+                    <button onClick={() => setView("overview")} className="flex items-center gap-3 px-6 py-3 bg-white border border-gray-100 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-black hover:bg-gray-50 transition-all shadow-sm group mb-4">
+                        <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+                        Return
+                    </button>
                     <div className="relative z-10 space-y-16">
                         <div className="flex items-center gap-8 mb-20 animate-in fade-in slide-in-from-bottom-4 duration-700">
                             <div className="w-16 h-16 bg-emerald-600 text-white rounded-2xl flex items-center justify-center text-xl font-black tracking-tighter shadow-xl shadow-emerald-500/20 shrink-0">
@@ -143,24 +167,56 @@ function LessonView({ selectedLesson, selectedCourse, topics, setView, formatBlo
                             <h1 className="text-6xl font-black text-gray-900 tracking-tighter uppercase leading-[0.9]">{selectedLesson?.title}</h1>
                         </div>
 
-                        <div className="space-y-16">
-                            {selectedLesson?.blocks?.map((block, i) => (
-                                <div key={i} className="animate-fade-in group/block relative">
+                        <div className="flex flex-wrap gap-8 items-start w-full">
+                            {selectedLesson?.blocks?.map((block, i) => {
+                                const w = block.width || 100;
+                                const flexBasis = w === 100 ? '100%' : `calc(${w}% - 1rem)`;
+                                
+                                return (
+                                <div key={i} className="animate-fade-in group/block relative" style={{ flexBasis, maxWidth: flexBasis }}>
                                     {block.type === 'text' ? (
-                                        <div className="prose prose-xl max-w-none text-gray-700 leading-relaxed space-y-6">
-                                            {formatBlockContent(block.content)}
+                                        <div className={`prose prose-xl max-w-none leading-relaxed transition-all ${
+                                            block.theme === 'yellow' ? 'bg-[#fff9c4] text-[#827717] p-8 rounded-3xl border border-[#fff59d] shadow-sm' :
+                                            block.theme === 'green' ? 'bg-[#e8f5e9] text-[#1b5e20] p-8 rounded-3xl border border-[#c8e6c9] shadow-sm' :
+                                            block.theme === 'red' ? 'bg-[#ffebee] text-[#b71c1c] p-8 rounded-3xl border border-[#ffcdd2] shadow-sm' :
+                                            block.theme === 'blue' ? 'bg-[#e3f2fd] text-[#0d47a1] p-8 rounded-3xl border border-[#bbdefb] shadow-sm' :
+                                            block.theme === 'black' ? 'bg-gray-900 text-white p-8 rounded-3xl shadow-xl border border-black' :
+                                            block.theme === 'white' ? 'bg-white text-gray-900 p-8 rounded-3xl shadow-xl border border-gray-100' :
+                                            'bg-transparent text-gray-700 p-0'
+                                        }`}>
+                                            {formatBlockContent(block.content, block.theme)}
                                         </div>
                                     ) : block.type === 'image' && block.content ? (
                                         <div className="rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-xl transition-all hover:shadow-2xl">
                                             <img src={block.content} className="w-full" alt="Content schematic" />
                                         </div>
                                     ) : block.type === 'youtube' && block.content ? (
-                                        <div className="aspect-video rounded-[2.5rem] overflow-hidden bg-black shadow-xl ring-1 ring-gray-100">
+                                        <div className="aspect-video w-full rounded-[2.5rem] overflow-hidden bg-black shadow-xl ring-1 ring-gray-100">
                                             <iframe width="100%" height="100%" src={`https://www.youtube.com/embed/${block.content.match(/^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/)?.[2]}`} frameBorder="0" allowFullScreen title="Technical Briefing" />
                                         </div>
-                                    ) : null}
+                                    ) : block.type === 'gap' ? (
+                                        <div style={{ height: '1cm' }} />
+                                    ) : block.type === 'link' ? (() => {
+                                        const parts = (block.content || "").split('|');
+                                        const label = parts[0] || "Reference Link";
+                                        const url = parts[1] || parts[0];
+                                        return (
+                                            <a href={url} target="_blank" rel="noopener noreferrer"
+                                                className="flex items-center gap-6 bg-slate-50 border border-gray-100 rounded-[2rem] px-8 py-6 hover:bg-black hover:text-white transition-all group shadow-sm">
+                                                <div className="w-12 h-12 bg-white group-hover:bg-gray-800 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-colors">
+                                                    <Sparkles className="w-6 h-6 text-black group-hover:text-white" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-lg font-black tracking-tight truncate">{label}</p>
+                                                    <p className="text-xs opacity-50 font-medium truncate mt-1">{url}</p>
+                                                </div>
+                                                <ArrowRight className="w-5 h-5 opacity-20 group-hover:opacity-100 transition-opacity" />
+                                            </a>
+                                        );
+                                    })() : null}
                                 </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
@@ -236,14 +292,15 @@ export default function LiveBookDashboard() {
                             {/* Standardized Sticky Header */}
                             <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-5 border-b border-gray-100 shadow-sm mb-8">
                                 <div className="flex items-center justify-between gap-6 w-full">
-                                    <div className="flex flex-col">
-                                        <h1 className="text-3xl font-black text-black tracking-tighter uppercase leading-none">
-                                            Livebooks
-                                        </h1>
-                                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 mt-2 ml-1">
-                                            <span className="text-black">Livebook</span>
-                                            <span className="opacity-20 mx-1">/</span>
-                                            <span className="text-gray-400">Center</span>
+                                    <div className="flex items-center gap-6">
+                                        <div className="w-1.5 h-8 bg-black rounded-full" />
+                                        <div className="flex flex-col">
+                                            <h1 className="text-2xl font-black text-black tracking-tighter uppercase leading-none">
+                                                Livebooks
+                                            </h1>
+                                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 mt-2 ml-1">
+                                                <span className="text-black uppercase">Livebook</span>
+                                            </div>
                                         </div>
                                     </div>
 
@@ -360,14 +417,15 @@ export default function LiveBookDashboard() {
                                         <button onClick={() => setView("library")} className="p-3 bg-white border border-gray-100 rounded-xl hover:bg-black hover:text-white transition-all shadow-sm">
                                             <ChevronLeft className="w-5 h-5" />
                                         </button>
-                                        <div className="flex flex-col">
-                                            <h1 className="text-3xl font-black text-black tracking-tighter uppercase leading-none">{selectedCourse?.title}</h1>
-                                            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 mt-2 ml-1">
-                                                <span className="cursor-pointer hover:text-black transition-colors" onClick={() => setView("library")}>Livebook</span>
-                                                <span className="opacity-20 mx-1">/</span>
-                                                <span className="text-black" title={selectedCourse?.title}>
-                                                    {selectedCourse?.title.length > 25 ? selectedCourse.title.substring(0, 25) + "..." : selectedCourse?.title}
-                                                </span>
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-[1.5px] h-8 bg-black rounded-full" />
+                                            <div className="flex flex-col">
+                                                <h1 className="text-2xl font-black text-black tracking-tighter uppercase leading-none">{selectedCourse?.title}</h1>
+                                                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 mt-2 ml-1">
+                                                    <span className="cursor-pointer hover:text-black transition-colors" onClick={() => setView("library")}>Livebook</span>
+                                                    <ChevronRight className="w-3 h-3 opacity-20" />
+                                                    <span className="text-black">{selectedCourse?.title}</span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

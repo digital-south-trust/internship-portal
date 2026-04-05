@@ -252,6 +252,7 @@ export default function AIAssistantPage() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     type: 'Intern Doubt',
+                    title: `Intern Doubt: ${lastQuestion.slice(0, 50)}${lastQuestion.length > 50 ? '...' : ''}`,
                     description: `AI Assistant was unable to resolve a doubt. 
                     User Email: ${userEmail}
                     Latest Question: ${lastQuestion}
