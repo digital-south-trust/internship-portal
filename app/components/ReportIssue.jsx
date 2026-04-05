@@ -10,6 +10,7 @@ export function ReportIssue() {
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
     const [type, setType] = useState("Bug Report");
+    const [title, setTitle] = useState("");
     const [description, setDescription] = useState("");
 
     const options = [
@@ -26,6 +27,7 @@ export function ReportIssue() {
         try {
             const formData = {
                 type,
+                title: type === "Others" ? title : type, // Use custom title for Others, else use type as title
                 description,
                 reportedBy: typeof window !== 'undefined' ? localStorage.getItem('userEmail') : 'Anonymous'
             };
@@ -40,6 +42,7 @@ export function ReportIssue() {
                 toast.success("Thank you! Your report has been submitted.");
                 setIsOpen(false);
                 setDescription("");
+                setTitle("");
                 setType("Bug Report");
             } else {
                 toast.error("Something went wrong. Please try again.");
@@ -121,6 +124,24 @@ export function ReportIssue() {
                                         ))}
                                     </div>
                                 </div>
+
+                                {type === "Others" && (
+                                    <motion.div 
+                                        initial={{ opacity: 0, y: -10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        className="space-y-3"
+                                    >
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Issue Title</label>
+                                        <input
+                                            type="text"
+                                            value={title}
+                                            onChange={(e) => setTitle(e.target.value)}
+                                            className="w-full bg-gray-50 border-0 rounded-2xl p-4 text-xs font-bold text-gray-900 focus:ring-2 focus:ring-black transition-all shadow-inner"
+                                            placeholder="What is this regarding?"
+                                            required={type === "Others"}
+                                        />
+                                    </motion.div>
+                                )}
 
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Detailed Description</label>

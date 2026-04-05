@@ -288,17 +288,13 @@ export default function AdminSchedulePage() {
 
     return (
         <div className="animate-in fade-in duration-500">
-            <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-4 border-b border-gray-100 shadow-sm mb-8">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6 w-full">
-                    <div className="flex flex-col gap-1.5 w-full md:w-auto">
-                        <h1 className="text-xl font-bold text-black tracking-tight uppercase leading-none">
+            <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-5 border-b border-gray-100 shadow-sm mb-8">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-1.5 h-8 bg-black rounded-full" />
+                        <h1 className="text-2xl font-black text-black tracking-tighter uppercase leading-none">
                             Schedule Hub
                         </h1>
-                        <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400">
-                            <span className="cursor-pointer hover:text-black transition-colors">Admin</span>
-                            <ChevronRight className="w-3 h-3 opacity-20" />
-                            <span className="text-black">Logistics Control</span>
-                        </div>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -343,7 +339,7 @@ export default function AdminSchedulePage() {
                                         <Clock className="w-48 h-48 -mr-16 -mt-16" />
                                     </div>
 
-                                    <div className="flex flex-col lg:flex-row gap-12 relative z-10">
+                                    <div className="flex flex-col lg:flex-row gap-8 relative z-10">
                                         {/* Left Column: Selector & Action */}
                                         <div className="w-full lg:w-[400px] flex flex-col gap-8">
                                             <div className="space-y-1 border-b border-gray-100 pb-4">

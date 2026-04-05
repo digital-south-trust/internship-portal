@@ -82,13 +82,23 @@ export default function AdminLayout({ children }) {
 
 
     return (
-        <div className="flex bg-white min-h-screen relative overflow-hidden">
+        <div className="flex min-h-screen relative overflow-hidden bg-gray-50/20">
+            {/* Global Background Pattern */}
+            <div 
+                className="fixed inset-0 z-0 pointer-events-none opacity-20" 
+                style={{ 
+                    backgroundImage: "url('/background7.svg')", 
+                    backgroundSize: '100px',
+                    backgroundRepeat: 'repeat'
+                }} 
+            />
+
             {/* Admin Sidebar */}
             <AdminSidebar isCollapsed={isCollapsed} setIsCollapsed={toggleSidebar} />
 
             {/* Main Content Area */}
-            <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-64'} min-h-screen bg-white shadow-[0_0_50px_rgba(0,0,0,0.05)] border-l border-gray-100`}>
-                <div className="animate-fade-in h-full p-8">
+            <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-64'} min-h-screen relative z-10 flex flex-col`}>
+                <div className="animate-fade-in flex-1 p-8">
                     {children}
                 </div>
             </main>

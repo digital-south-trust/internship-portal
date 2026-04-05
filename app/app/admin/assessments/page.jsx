@@ -458,33 +458,37 @@ export default function UnifiedAssessmentsPage() {
 
     return (
         <div className="animate-in fade-in duration-500">
-            {/* Sticky Header */}
+            {/* Standardized Tactical Header */}
             <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-5 border-b border-gray-100 shadow-sm mb-8">
-                <div className="flex items-center justify-between gap-6 w-full">
-                    <div>
-                        <h1 className="text-xl font-bold text-black tracking-tight uppercase leading-none">
-                            Question Paper Hub
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="w-1.5 h-8 bg-black rounded-full" />
+                        <h1 className="text-2xl font-black text-black tracking-tighter uppercase leading-none">
+                            Assessment 
                         </h1>
-                        {selectedTrack && (
-                            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-1.5 flex items-center gap-1.5">
-                                 Tracks / {selectedTrack} {selectedExam && `/ ${selectedExam.title}`}
-                            </p>
-                        )}
                     </div>
 
-                    <div className="flex items-center gap-6">
-                        <nav className="flex items-center bg-gray-50/50 p-1 rounded-xl border border-gray-100">
+                    <div className="flex items-center gap-3">
+                        <nav className="flex bg-gray-50/50 p-1 rounded-xl border border-gray-100 shadow-sm">
                             <button
                                 onClick={() => setActiveTab('submissions')}
-                                className={`px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'submissions' ? 'bg-black text-white shadow-lg' : 'text-gray-400 hover:text-black hover:bg-white'}`}
+                                className={`px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                                    activeTab === 'submissions' 
+                                    ? 'bg-black text-white shadow-xl' 
+                                    : 'text-gray-400 hover:text-black hover:bg-white'
+                                }`}
                             >
-                                Submissions
+                                Intelligence
                             </button>
                             <button
                                 onClick={() => setActiveTab('build')}
-                                className={`px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === 'build' ? 'bg-black text-white shadow-lg' : 'text-gray-400 hover:text-black hover:bg-white'}`}
+                                className={`px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                                    activeTab === 'build' 
+                                    ? 'bg-black text-white shadow-xl' 
+                                    : 'text-gray-400 hover:text-black hover:bg-white'
+                                }`}
                             >
-                                Question Bank
+                                Repository
                             </button>
                         </nav>
 
@@ -507,7 +511,7 @@ export default function UnifiedAssessmentsPage() {
                         <button
                             onClick={fetchTracks}
                             disabled={loading}
-                            className={`p-2.5 bg-gray-50 hover:bg-black hover:text-white rounded-xl transition-all border border-gray-100 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            className={`p-2.5 bg-gray-50 hover:bg-black hover:text-white rounded-xl transition-all border border-gray-100 shadow-sm ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                         >
                             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
                         </button>

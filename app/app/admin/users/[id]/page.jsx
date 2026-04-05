@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import CertificateIssuer from "@/components/CertificateIssuer";
 
+const dicebear = (seed) => `https://api.dicebear.com/7.x/micah/svg?seed=${encodeURIComponent(seed)}&backgroundColor=transparent`;
+
 
 
 export default function InternDetailsPage() {
@@ -225,52 +227,31 @@ export default function InternDetailsPage() {
                 <div className="absolute inset-0 bg-gradient-to-br from-gray-50 via-white to-emerald-50/50 pointer-events-none" />
 
                 {/* Top bar */}
-                <div className="w-full relative z-10 flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+                {/* Top bar */}
+                <div className="w-full relative z-10 flex items-center justify-between mb-8">
                     <button onClick={() => router.push('/admin/users')}
-                        className="flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-black transition-colors w-fit">
-                        <ArrowLeft className="w-4 h-4" /> Back to Users
+                        className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 hover:text-black transition-all group">
+                        <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" /> Back to Users
                     </button>
-
-                    <div className="flex items-center gap-3">
-                        {/* Unified Certificates Button */}
-                        <button onClick={() => setShowCertsListModal(true)}
-                            className="bg-gray-50 text-gray-600 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-gray-900 hover:text-white transition-all flex items-center gap-2 border border-gray-200 shadow-sm">
-                            <Award className="w-4 h-4" /> Certificates{certificates.length > 0 && <span className="bg-black text-white text-[8px] px-1.5 py-0.5 rounded-full ml-1">{certificates.length}</span>}
-                        </button>
-                        {/* Change Password */}
-                        <button onClick={() => { setShowPasswordModal(true); setNewPassword(null); setShowNewPassword(false); }}
-                            className="bg-amber-50 text-amber-600 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-600 hover:text-white transition-all flex items-center gap-2 border border-amber-100 shadow-sm">
-                            <KeyRound className="w-4 h-4" /> Change Password
-                        </button>
-                        {/* Terminate / Reactivate */}
-                        {isTerminated ? (
-                            <button onClick={handleReactivate}
-                                className="bg-blue-50 text-blue-600 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2 border border-blue-100 shadow-sm">
-                                <ShieldCheck className="w-4 h-4" /> Reactivate
-                            </button>
-                        ) : (
-                            <button onClick={() => setShowTerminateModal(true)}
-                                className="bg-red-50 text-red-600 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all flex items-center gap-2 border border-red-100 shadow-sm">
-                                <ShieldOff className="w-4 h-4" /> Terminate
-                            </button>
-                        )}
-                    </div>
                 </div>
 
-                {/* Avatar + Info */}
+                {/* Avatar + Info + Actions Grid */}
                 <div className="flex flex-col md:flex-row gap-8 items-start relative z-10">
-                    <div className="w-32 h-32 md:w-40 md:h-40 bg-gray-50 rounded-[2.5rem] border-2 border-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] flex items-center justify-center shrink-0 z-20">
-                        {user.profilePicture ? (
-                            <img src={user.profilePicture} alt="Profile" className="w-full h-full object-cover rounded-[2.5rem]" />
-                        ) : (
-                            <User className="w-12 h-12 text-gray-300" strokeWidth={1.5} />
-                        )}
+                    {/* Avatar */}
+                    <div className="w-32 h-32 md:w-36 md:h-36 bg-gray-50 rounded-[2.5rem] border-2 border-white shadow-xl flex items-center justify-center shrink-0 z-20 overflow-hidden">
+                        <img 
+                            src={user.profilePicture || dicebear(user.avatarSeed || user.fullName?.split(' ')[0] || "User")} 
+                            alt="Profile" 
+                            className="w-full h-full object-cover" 
+                            onError={(e) => { e.target.src = dicebear("User"); }}
+                        />
                     </div>
 
-                    <div className="flex-1 space-y-5 w-full pt-2">
+                    {/* Middle Info Section */}
+                    <div className="flex-1 space-y-5 w-full">
                         <div>
                             <div className="flex items-center gap-3 mb-1 flex-wrap">
-                                <h1 className="text-3xl font-black text-gray-900 tracking-tight">{user.fullName}</h1>
+                                <h1 className="text-3xl font-black text-gray-900 tracking-tight leading-none uppercase">{user.fullName}</h1>
                                 <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-bold border ${user.role?.toLowerCase() === 'admin' ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
                                     {user.role}
                                 </span>
@@ -283,52 +264,64 @@ export default function InternDetailsPage() {
                                 </span>
                             </div>
                             <p className="text-sm font-bold text-gray-400 flex items-center gap-2">
-                                <Mail className="w-4 h-4" /> {user.email}
+                                <Mail className="w-4 h-4 text-black/10" /> {user.email}
                             </p>
                         </div>
 
-                        {/* Stats grid — 5 cols on md, now includes Assigned Admin */}
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-6 pt-5 border-t border-gray-50">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-5 border-t border-gray-50">
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Track</p>
-                                <p className="text-sm font-bold text-gray-900">{user.track || 'Unassigned'}</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Track</p>
+                                <p className="text-xs font-bold text-gray-900 truncate">{user.track || 'Unassigned'}</p>
                             </div>
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Phone</p>
-                                <p className="text-sm font-bold text-gray-900 flex items-center gap-1">
-                                    <Phone className="w-3 h-3 text-gray-400" /> {user.phone || 'N/A'}
-                                </p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Duration</p>
+                                <p className="text-xs font-bold text-gray-900">{user.duration || 'N/A'}</p>
                             </div>
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Duration</p>
-                                <p className="text-sm font-bold text-gray-900">{user.duration || 'N/A'}</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Assigned Admin</p>
+                                <button
+                                    onClick={() => { setPendingAdmin(assignedAdmin); setShowAdminModal(true); }}
+                                    className="text-xs font-bold text-black border-b border-black/20 hover:border-black transition-all flex items-center gap-1"
+                                >
+                                    {getAdminLabel()}
+                                </button>
                             </div>
-
-                            {/* ── Assigned Admin (inline, clickable) ── */}
-                            {user.role?.toLowerCase() === 'intern' && (
-                                <div>
-                                    <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5 flex items-center gap-1">
-                                        <UserCog className="w-3 h-3" /> Assigned Admin
-                                    </p>
-                                    <button
-                                        onClick={() => { setPendingAdmin(assignedAdmin); setShowAdminModal(true); }}
-                                        className="text-sm font-black text-black hover:text-blue-600 flex items-center gap-1 underline-offset-2 hover:underline transition-colors"
-                                    >
-                                        {getAdminLabel()}
-                                        <ChevronDown className="w-3.5 h-3.5 opacity-50" />
-                                    </button>
-                                    <p className="text-[9px] text-gray-400 font-medium mt-0.5">Click to change</p>
-                                </div>
-                            )}
-
                             <div>
-                                <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1.5">Internship Period</p>
-                                <p className="text-xs font-bold text-gray-500 flex items-center gap-1.5">
-                                    <Calendar className="w-3.5 h-3.5" />
-                                    {new Date(user.joinDate).toLocaleDateString()} → {calculateEndDate(user.joinDate, user.duration)}
-                                </p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Phone</p>
+                                <p className="text-xs font-bold text-gray-900">{user.phone || 'N/A'}</p>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Right Vertical Action Stack */}
+                    <div className="flex flex-col gap-2 w-full md:w-48 pt-2">
+                        {/* Unified Certificates Button */}
+                        <button onClick={() => setShowCertsListModal(true)}
+                            className="bg-gray-50 text-gray-600 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all flex items-center justify-between border border-gray-200">
+                            <div className="flex items-center gap-2">
+                                <Award className="w-4 h-4" /> Certificates
+                            </div>
+                            {certificates.length > 0 && <span className="bg-black/10 group-hover:bg-white/20 px-1.5 py-0.5 rounded text-[8px]">{certificates.length}</span>}
+                        </button>
+
+                        {/* Change Password */}
+                        <button onClick={() => { setShowPasswordModal(true); setNewPassword(null); setShowNewPassword(false); }}
+                            className="bg-amber-50 text-amber-600 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-500 hover:text-white transition-all flex items-center gap-2 border border-amber-100">
+                            <KeyRound className="w-4 h-4" /> Change Password
+                        </button>
+
+                        {/* Terminate / Reactivate */}
+                        {isTerminated ? (
+                            <button onClick={handleReactivate}
+                                className="bg-blue-50 text-blue-600 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2 border border-blue-100">
+                                <ShieldCheck className="w-4 h-4" /> Reactivate
+                            </button>
+                        ) : (
+                            <button onClick={() => setShowTerminateModal(true)}
+                                className="bg-red-50 text-red-600 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all flex items-center gap-2 border border-red-100">
+                                <ShieldOff className="w-4 h-4" /> Terminate
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

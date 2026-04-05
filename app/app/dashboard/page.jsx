@@ -124,10 +124,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 function DashboardSkeleton() {
     return (
         <div className="p-8 space-y-8 animate-in fade-in duration-500">
-            <div className="flex justify-between items-center mb-8">
-                <div className="space-y-2">
-                    <Skeleton className="h-8 w-64" />
-                    <Skeleton className="h-4 w-48" />
+            <div className="flex justify-between items-center mb-8 border-b border-gray-100 pb-5 -mx-8 px-8">
+                <div className="flex items-center gap-4">
+                    <Skeleton className="w-1.5 h-8 bg-gray-100 rounded-full" />
+                    <div className="space-y-2">
+                        <Skeleton className="h-8 w-64" />
+                    </div>
                 </div>
                 <Skeleton className="h-10 w-32 rounded-full" />
             </div>
@@ -269,21 +271,10 @@ export default function StudentDashboard() {
 
     // Support ticket stats
     const openTickets = tickets.filter(t => t.status === 'Open').length;
-    const inProgressTickets = tickets.filter(t => t.status === 'In Progress').length;
     const resolvedTickets = tickets.filter(t => t.status === 'Resolved').length;
 
-    // Time calculations
-    const lastUpdateDate = mainProject ? new Date(mainProject.updatedAt || mainProject.requestedAt).toLocaleDateString("en-US", { month: 'short', day: 'numeric' }) : "";
-
     return (
-        <div className="space-y-8">
-            {hasProjects && (
-                <div className="flex items-center gap-3">
-                    <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
-                        Hello, {user.fullName?.split(' ')[0]} 👋
-                    </h1>
-                </div>
-            )}
+        <div className="space-y-8 pb-20">
 
             {!user.isAssessmentDone ? (
                 <motion.div

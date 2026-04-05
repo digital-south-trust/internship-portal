@@ -21,13 +21,13 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 
 const sidebarItems = [
-    { icon: LayoutDashboard, label: "Overview", href: "/admin" },
+    { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
     { icon: Layout, label: "Projects", href: "/admin/projects" },
     { icon: Users, label: "Users", href: "/admin/users" },
     { icon: BookOpen, label: "LiveBook", href: "/admin/content" },
     { icon: Shield, label: "Tracks", href: "/admin/tracks" },
     { icon: FileText, label: "Assessments", href: "/admin/assessments" },
-    { icon: Calendar, label: "Schedule", href: "/admin/schedule" },
+    { icon: Calendar, label: "Schedule Hub", href: "/admin/schedule" },
     { icon: Bug, label: "Tickets", href: "/admin/tickets" },
 ];
 

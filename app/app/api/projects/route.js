@@ -18,7 +18,9 @@ export async function GET(req) {
             return NextResponse.json({ message: "Email query parameter required" }, { status: 400 });
         }
 
-        const projects = await ProjectRequest.find(query).sort({ requestedAt: -1 });
+        const projects = await ProjectRequest.find(query)
+            .sort({ requestedAt: -1 })
+            .populate('internId', 'fullName profilePicture avatarSeed');
         return NextResponse.json(projects, { status: 200 });
     } catch (error) {
         console.error("Error fetching projects:", error);
