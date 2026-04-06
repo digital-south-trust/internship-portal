@@ -22,7 +22,7 @@ export async function proxy(request) {
     const publicPaths = ['/login', '/internship/register', '/', '/internship', '/internship/verify-otp'];
     
     // Auth-related API routes that must always be accessible
-    const publicApiPaths = ['/api/login', '/api/register', '/api/auth/verify-otp', '/api/user/me', '/api/tracks'];
+    const publicApiPaths = ['/api/login', '/api/register', '/api/auth/verify-otp', '/api/user/me', '/api/tracks', '/api/ambassador'];
 
     if (publicApiPaths.some(path => pathname.startsWith(path))) {
         return NextResponse.next();
@@ -103,7 +103,18 @@ export async function proxy(request) {
             console.error('Middleware Error:', err);
             return NextResponse.next();
         }
-    } else if (!publicPaths.includes(pathname)) {
+    } // <-- RESTORED MISSING BRACE
+
+    // Ambassador Workflow Logic
+    if (userRole === 'ambassador') {
+        if (pathname.startsWith('/ambassador') || publicPaths.includes(pathname)) {
+            return NextResponse.next();
+        }
+        // If they try to access standard intern/admin routes, force them back to their portal
+        return NextResponse.redirect(new URL('/ambassador/dashboard', request.url));
+    }
+
+    if (!publicPaths.includes(pathname)) {
         // Not logged in and trying to access a protected route
         return NextResponse.redirect(new URL('/login', request.url));
     }

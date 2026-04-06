@@ -9,7 +9,8 @@ export async function POST(req) {
             razorpay_payment_id,
             razorpay_signature,
             email,
-            fullName
+            fullName,
+            referralCode
         } = await req.json();
 
         // 1. Verify Signature
@@ -42,6 +43,29 @@ export async function POST(req) {
             paymentId: razorpay_payment_id,
             date: new Date()
         };
+
+        // 2.5 Handle Ambassador Commission
+        if (referralCode) {
+            const Ambassador = (await import('@/models/Ambassador')).default;
+            const ambassador = await Ambassador.findOne({ referralCode: referralCode.toUpperCase() });
+            if (ambassador) {
+                // Find what fee was actually paid (approximate based on order)
+                // In production you might want to fetch the amount from Razorpay
+                // But for now we calculate based on the tiers 4700, 9400, 14000
+                // User fee is 10% off. So 100% is approx amount / 0.9
+                // Let's calculate commission based on their duration
+                const feeMap = { '2 Months': 4700, '4 Months': 9400, '6 Months': 14000 };
+                const baseFee = feeMap[user.duration] || 4700; // default to min if somehow missing
+                
+                ambassador.userCount += 1;
+                ambassador.earnings += (baseFee * (ambassador.commissionPercentage || 10)) / 100;
+                await ambassador.save();
+                
+                // Link user to referral code for records
+                user.referralCodeUsed = referralCode;
+            }
+        }
+
         await user.save();
 
         // 3. Send Confirmation Email (Wrapped in try-catch so it doesn't block the response)

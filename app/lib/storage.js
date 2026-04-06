@@ -10,13 +10,6 @@ const s3Client = new S3Client({
     },
 });
 
-/**
- * Upload a file to Cloudflare R2
- * @param {Buffer | ReadableStream | string | Uint8Array} file - The file content
- * @param {string} fileName - The name of the file
- * @param {string} contentType - The MIME type of the file
- * @returns {Promise<string>} - The public URL of the uploaded file
- */
 export async function uploadFile(file, fileName, contentType) {
     const bucketName = process.env.R2_BUCKET_NAME;
 

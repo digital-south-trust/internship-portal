@@ -36,7 +36,12 @@ import {
     Phone,
     Activity,
     Smile,
-    Trash2
+    Trash2,
+    Crown,
+    Ticket,
+    Percent,
+    PieChart,
+    BarChart3
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -64,8 +69,9 @@ export default function UnifiedUsersPage() {
     }, [activeTab]);
     const [searchQuery, setSearchQuery] = useState("");
     const [sortBy, setSortBy] = useState('newest');
-    const [userFilter, setUserFilter] = useState('all'); // 'intern', 'admin', 'all'
+    const [userFilter, setUserFilter] = useState('all'); // 'intern', 'admin', 'ambassador', 'all'
     const [tracks, setTracks] = useState([]);
+    const [ambassadors, setAmbassadors] = useState([]);
 
     // Detail View State
     const [viewingUserId, setViewingUserId] = useState(null);
@@ -74,6 +80,19 @@ export default function UnifiedUsersPage() {
 
     // Aadhaar View State
     const [viewingAadhaarUser, setViewingAadhaarUser] = useState(null);
+    const [userToDelete, setUserToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
+
+    // --- Global Blur Effect ---
+    useEffect(() => {
+        const isAnyModalOpen = viewingAadhaarUser || userToDelete;
+        if (isAnyModalOpen) {
+            document.body.classList.add('modal-open');
+        } else {
+            document.body.classList.remove('modal-open');
+        }
+        return () => document.body.classList.remove('modal-open');
+    }, [viewingAadhaarUser, userToDelete]);
 
     // Password Generation Utility
     const generateRandomPassword = () => {
@@ -92,13 +111,28 @@ export default function UnifiedUsersPage() {
         phone: "",
         password: generateRandomPassword(),
         role: "intern",
-        track: ""
+        track: "",
+        aadhaarNumber: "",
+        discountPercentage: 10,
+        commissionPercentage: 10,
+        collegeName: ""
     });
 
     useEffect(() => {
         fetchUsers();
         fetchTracks();
+        fetchAmbassadors();
     }, []);
+
+    const fetchAmbassadors = async () => {
+        try {
+            const res = await fetch('/api/admin/ambassador');
+            if (res.ok) {
+                const data = await res.json();
+                setAmbassadors(data);
+            }
+        } catch (error) { console.error("Error fetching ambassadors", error); }
+    };
 
     const fetchTracks = async () => {
         try {
@@ -167,17 +201,19 @@ export default function UnifiedUsersPage() {
 
     const handleCreateAdmin = async (e) => {
         e.preventDefault();
-        const tid = toast.loading("Executing User Creation Protocol...");
+        const tid = toast.loading("Executing Creation Protocol...");
         try {
             const requestedBy = typeof window !== 'undefined' ? localStorage.getItem('userEmail') : null;
-            const res = await fetch("/api/admin/create", {
+            const endpoint = adminForm.role === 'ambassador' ? "/api/admin/ambassador" : "/api/admin/create";
+            
+            const res = await fetch(endpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ ...adminForm, requestedBy }),
             });
 
             if (res.ok) {
-                toast.success(`Access Protocol ACTIVE. Password: ${adminForm.password}`, { 
+                toast.success(`Protocol ACTIVE. Password: ${adminForm.password}`, { 
                     id: tid,
                     duration: 10000 
                 });
@@ -187,33 +223,46 @@ export default function UnifiedUsersPage() {
                     phone: "", 
                     password: generateRandomPassword(),
                     role: "intern",
-                    track: tracks.length > 0 ? tracks[0].name : ""
+                    track: tracks.length > 0 ? tracks[0].name : "",
+                    discountPercentage: 10,
+                    commissionPercentage: 10,
+                    aadhaarNumber: "",
+                    collegeName: ""
                 });
                 fetchUsers();
+                fetchAmbassadors();
                 setActiveTab('database');
             } else {
                 const data = await res.json();
                 toast.error(data.message || "Protocol Failure", { id: tid });
             }
         } catch (error) {
-            toast.error("Security Error during creation", { id: tid });
+            toast.error("Security Error during execution", { id: tid });
         }
     };
 
-    const handleDeleteUser = async (userId) => {
-        if (!confirm("CRITICAL WARNING: Are you ready to PERMANENTLY revoke access and DELETE this administrative record? This action cannot be reversed.")) return;
-        
+    const handleDeleteUser = (user) => {
+        setUserToDelete(user);
+    };
+
+    const confirmDelete = async () => {
+        if (!userToDelete) return;
+        setIsDeleting(true);
         const tid = toast.loading("Executing Access Revocation...");
         try {
-            const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+            const res = await fetch(`/api/admin/users/${userToDelete._id}`, { method: 'DELETE' });
             if (res.ok) {
                 toast.success("Security Node PURGED Successfully", { id: tid });
                 fetchUsers();
+                fetchAmbassadors();
+                setUserToDelete(null);
             } else {
                 toast.error("Deletion Sequence Failed", { id: tid });
             }
         } catch {
             toast.error("Network Link Unstable during deletion", { id: tid });
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -227,7 +276,7 @@ export default function UnifiedUsersPage() {
         );
     }
 
-    const allUsers = [...interns, ...admins];
+    const allUsers = [...interns, ...admins, ...ambassadors.map(a => ({ ...a, role: 'ambassador' }))];
 
     const filteredUsers = allUsers
         .filter(u => userFilter === 'all' || u.role === userFilter)
@@ -258,8 +307,8 @@ export default function UnifiedUsersPage() {
                     <div className="flex items-center gap-3">
                         <div className="flex bg-gray-50/50 p-1 rounded-xl border border-gray-100 shadow-sm">
                             {[
-                                { id: 'database', label: 'Database Access' },
-                                { id: 'add', label: 'Provision Entry' }
+                                { id: 'database', label: 'Users' },
+                                { id: 'add', label: 'Add User' }
                             ].map(item => (
                                 <button
                                     key={item.id}
@@ -306,6 +355,7 @@ export default function UnifiedUsersPage() {
                                         <option value="all">All Users</option>
                                         <option value="intern">Interns Only</option>
                                         <option value="admin">Admins Only</option>
+                                        <option value="ambassador">Ambassadors Only</option>
                                     </select>
                                     <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" />
                                 </div>
@@ -369,7 +419,8 @@ export default function UnifiedUsersPage() {
                                             <tr key={user._id} className="group hover:bg-gray-50/50 transition-all cursor-pointer" onClick={() => router.push(`/admin/users/${user._id}`)}>
                                                 <td className="p-6">
                                                     <div className="flex items-center gap-4">
-                                                        <div className={`w-12 h-12 rounded-2xl overflow-hidden border-2 shadow-sm transition-transform group-hover:scale-105 flex items-center justify-center bg-gray-50 ${user.role === 'admin' ? 'border-purple-100' : 'border-gray-100'}`}>
+                                                        <div className={`w-12 h-12 rounded-2xl overflow-hidden border-2 shadow-sm transition-transform group-hover:scale-105 flex items-center justify-center bg-gray-50 
+                                                            ${user.role === 'admin' ? 'border-purple-100' : user.role === 'ambassador' ? 'border-amber-100' : 'border-gray-100'}`}>
                                                             <img 
                                                                 src={user.profilePicture || dicebear(user.avatarSeed || user.fullName?.split(' ')[0] || "User")} 
                                                                 alt="U" 
@@ -381,21 +432,32 @@ export default function UnifiedUsersPage() {
                                                             <p className="text-xs font-black text-black uppercase tracking-tight flex items-center gap-2">
                                                                 {user.fullName}
                                                                 {user.role === 'admin' && <span className="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[7px] font-black tracking-widest uppercase">Admin</span>}
+                                                                {user.role === 'ambassador' && <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded text-[7px] font-black tracking-widest uppercase">Ambassador</span>}
                                                             </p>
                                                             <p className="text-[9px] font-bold text-gray-400 tracking-tight flex items-center gap-1.5"><Mail className="w-3 h-3 text-gray-200" /> {user.email}</p>
+                                                            {user.role === 'ambassador' && <p className="text-[8px] font-black text-amber-500 tracking-widest uppercase">Code: {user.referralCode}</p>}
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="p-6 text-center">
                                                     <span className="text-[9px] font-black uppercase bg-gray-50 px-3 py-1.5 rounded-lg text-black border border-gray-100 tracking-widest">
-                                                        {user.role === 'admin' ? 'Admin / Overseer' : (user.track || '--')}
+                                                        {user.role === 'admin' ? 'Overseer' : user.role === 'ambassador' ? 'Recruitment Hub' : (user.track || '--')}
                                                     </span>
                                                 </td>
                                                 <td className="p-6 text-center flex flex-col items-center justify-center space-y-1">
-                                                    <SelectionBadge status={user.status} />
-                                                    {user.selectionStatus === 'Access given by admin' && (
-                                                        <span className="text-[8px] font-black uppercase text-blue-500 tracking-widest">Admin Granted</span>
-                                                        )}
+                                                    {user.role === 'ambassador' ? (
+                                                        <div className="flex flex-col items-center gap-0.5">
+                                                            <span className="text-[10px] font-black text-black">{user.userCount || 0} Users</span>
+                                                            <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">₹{user.earnings || 0} Earned</span>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <SelectionBadge status={user.status} />
+                                                            {user.selectionStatus === 'Access given by admin' && (
+                                                                <span className="text-[8px] font-black uppercase text-blue-500 tracking-widest">Admin Granted</span>
+                                                            )}
+                                                        </>
+                                                    )}
                                                 </td>
                                                 <td className="p-6 text-right" onClick={(e) => e.stopPropagation()}>
                                                     <div className="flex items-center justify-end gap-2 transition-all">
@@ -406,7 +468,7 @@ export default function UnifiedUsersPage() {
                                                             </>
                                                         )}
                                                         <button 
-                                                            onClick={(e) => { e.stopPropagation(); handleDeleteUser(user._id); }}
+                                                            onClick={(e) => { e.stopPropagation(); handleDeleteUser(user); }}
                                                             className="p-2 bg-white border border-gray-100 text-gray-300 hover:text-red-500 hover:border-red-500 rounded-lg transition-all shadow-sm group"
                                                             title="Purge Identity Access"
                                                         >
@@ -432,13 +494,6 @@ export default function UnifiedUsersPage() {
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-in slide-in-from-bottom-2 duration-300 pt-6">
                     <div className="bg-white p-10 rounded-3xl border border-gray-100 shadow-sm h-fit">
-                        <div className="flex items-center gap-4 mb-10">
-                            <div className="p-3.5 bg-black text-white rounded-xl shadow-lg">
-                                <UserPlus className="w-6 h-6" />
-                            </div>
-                            <h2 className="text-sm font-black text-black uppercase tracking-[0.2em]">Add User</h2>
-                        </div>
-
                         <form onSubmit={handleCreateAdmin} className="space-y-7">
                             <div className="grid grid-cols-1 gap-6">
                                 <div className="space-y-2">
@@ -447,116 +502,183 @@ export default function UnifiedUsersPage() {
                                         <select
                                             className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] uppercase tracking-widest shadow-inner appearance-none cursor-pointer"
                                             value={adminForm.role}
-                                            onChange={e => setAdminForm({ ...adminForm, role: e.target.value })}
+                                            onChange={e => {
+                                                const newRole = e.target.value;
+                                                setAdminForm({ 
+                                                    ...adminForm, 
+                                                    role: newRole,
+                                                    track: newRole === 'intern' ? (tracks[0]?.name || "") : (newRole === 'admin' ? "Administration" : "")
+                                                });
+                                            }}
                                             required
                                         >
                                             <option value="intern">Intern Candidate</option>
                                             <option value="admin">Administrator</option>
+                                            <option value="ambassador">Ambassador</option>
                                         </select>
                                         <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
                                     </div>
                                 </div>
                                 
-                                {adminForm.role === 'intern' && (
-                                    <div className="space-y-2 animate-in slide-in-from-top-2">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Assigned Pathway</label>
-                                        <div className="relative">
-                                            <select
-                                                className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] uppercase tracking-widest shadow-inner appearance-none cursor-pointer"
-                                                value={adminForm.track}
-                                                onChange={e => setAdminForm({ ...adminForm, track: e.target.value })}
-                                                required
-                                            >
-                                                {tracks.map(t => <option key={t._id} value={t.name}>{t.name}</option>)}
-                                            </select>
-                                            <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
-                                        </div>
+                                <div className="space-y-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Name</label>
+                                        <input
+                                            className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] shadow-inner"
+                                            placeholder="Full Name"
+                                            value={adminForm.fullName}
+                                            onChange={e => setAdminForm({ ...adminForm, fullName: e.target.value })}
+                                            required
+                                        />
                                     </div>
-                                )}
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Email</label>
+                                        <input
+                                            className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] shadow-inner"
+                                            placeholder="Email Address"
+                                            type="email"
+                                            value={adminForm.email}
+                                            onChange={e => setAdminForm({ ...adminForm, email: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Phone Number</label>
+                                        <input
+                                            className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] shadow-inner"
+                                            placeholder="Phone Number"
+                                            value={adminForm.phone}
+                                            onChange={e => setAdminForm({ ...adminForm, phone: e.target.value })}
+                                            required
+                                        />
+                                    </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Permanent Identity</label>
-                                    <input
-                                        className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] shadow-inner"
-                                        placeholder="Full Name"
-                                        value={adminForm.fullName}
-                                        onChange={e => setAdminForm({ ...adminForm, fullName: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Secure Mail</label>
-                                    <input
-                                        className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] shadow-inner"
-                                        placeholder="Email Address"
-                                        type="email"
-                                        value={adminForm.email}
-                                        onChange={e => setAdminForm({ ...adminForm, email: e.target.value })}
-                                        required
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Mobile Reference</label>
-                                    <input
-                                        className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] shadow-inner"
-                                        placeholder="Phone Number"
-                                        value={adminForm.phone}
-                                        onChange={e => setAdminForm({ ...adminForm, phone: e.target.value })}
-                                        required
-                                    />
+                                    {adminForm.role === 'ambassador' && (
+                                        <div className="space-y-6 animate-in slide-in-from-top-2">
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Aadhaar Number</label>
+                                                <input 
+                                                    type="text" 
+                                                    className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] shadow-inner" 
+                                                    placeholder="XXXX XXXX XXXX" 
+                                                    value={adminForm.aadhaarNumber || ''} 
+                                                    onChange={e => setAdminForm({...adminForm, aadhaarNumber: e.target.value})} 
+                                                />
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Intern Discount %</label>
+                                                    <div className="relative">
+                                                        <Percent className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                                        <input 
+                                                            type="number" 
+                                                            className="w-full pl-11 pr-4 py-3 bg-gray-50/50 border border-gray-100 rounded-xl font-bold text-xs" 
+                                                            value={adminForm.discountPercentage} 
+                                                            onChange={e => setAdminForm({...adminForm, discountPercentage: e.target.value})} 
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Ambassador Commission %</label>
+                                                    <div className="relative">
+                                                        <Crown className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-500" />
+                                                        <input 
+                                                            type="number" 
+                                                            className="w-full pl-11 pr-4 py-3 bg-gray-50/50 border border-gray-100 rounded-xl font-bold text-xs" 
+                                                            value={adminForm.commissionPercentage} 
+                                                            onChange={e => setAdminForm({...adminForm, commissionPercentage: e.target.value})} 
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Institution Name</label>
+                                                <input 
+                                                    type="text" 
+                                                    className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] shadow-inner" 
+                                                    placeholder="University Name" 
+                                                    value={adminForm.collegeName || ''} 
+                                                    onChange={e => setAdminForm({...adminForm, collegeName: e.target.value})} 
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {adminForm.role === 'intern' && (
+                                        <div className="space-y-2 animate-in slide-in-from-top-2">
+                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Track</label>
+                                            <div className="relative">
+                                                <select
+                                                    className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] uppercase appearance-none cursor-pointer"
+                                                    value={adminForm.track}
+                                                    onChange={e => setAdminForm({ ...adminForm, track: e.target.value })}
+                                                    required
+                                                >
+                                                    {tracks.map(t => <option key={t._id} value={t.name}>{t.name}</option>)}
+                                                </select>
+                                                <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
                             <button type="submit" className="w-full bg-black text-white py-5 rounded-xl font-black uppercase tracking-[0.4em] shadow-2xl hover:bg-neutral-800 transition-all text-[11px] mt-2 flex items-center justify-center gap-3">
-                                COMMIT {adminForm.role === 'admin' ? 'ADMIN' : 'INTERN'} ACCESS <ArrowRight className="w-4 h-4" />
+                                COMMIT {adminForm.role.toUpperCase()} ACCESS <ArrowRight className="w-4 h-4" />
                             </button>
                         </form>
-                    </div>
+                        </div>
 
-                    <div className="bg-white p-10 rounded-3xl border border-gray-100 shadow-sm h-fit">
-                        <div className="flex items-center justify-between mb-10">
-                            <div className="flex items-center gap-4">
-                                <div className="p-3 bg-gray-50 text-black border border-gray-100 rounded-xl shadow-sm">
-                                    <ShieldCheck className="w-5 h-5" />
+                        <div className="bg-white p-10 rounded-3xl border border-gray-100 shadow-sm h-fit">
+                            <div className="flex items-center justify-between mb-8 pb-4 border-b border-gray-50">
+                                <div className="space-y-0.5">
+                                    <h3 className="text-[10px] font-black text-black uppercase tracking-widest leading-none">
+                                        Identified {adminForm.role === 'admin' ? 'Admins' : adminForm.role === 'ambassador' ? 'Ambassadors' : 'Interns'}
+                                    </h3>
+                                    <p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">Total: {adminForm.role === 'admin' ? admins.length : adminForm.role === 'ambassador' ? ambassadors.length : interns.length}</p>
                                 </div>
-                                <h2 className="text-sm font-black text-black uppercase tracking-[0.2em]">Active Admin</h2>
+                                <button 
+                                    onClick={() => { setUserFilter(adminForm.role); setActiveTab('database'); }}
+                                    className="flex items-center gap-2 group px-3 py-1.5 bg-gray-50 hover:bg-black rounded-lg transition-all"
+                                >
+                                    <Filter size={10} className="group-hover:text-white" />
+                                    <span className="text-[8px] font-black uppercase tracking-widest group-hover:text-white">Filter Full List</span>
+                                </button>
                             </div>
-                            <button
-                                onClick={fetchUsers}
-                                className="p-3 bg-gray-50 rounded-xl hover:bg-black hover:text-white text-gray-400 transition-all border border-gray-100 shadow-sm"
-                            >
-                                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                            </button>
-                        </div>
 
-                        <div className="space-y-3">
-                            {admins.map((admin) => (
-                                <div key={admin._id} className="flex items-center justify-between p-5 bg-gray-50/50 rounded-2xl border border-transparent hover:border-gray-100 hover:bg-white transition-all group">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-xl bg-black text-white flex items-center justify-center text-xs font-black shadow-lg">
-                                            {admin.fullName?.charAt(0)}
+                            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                {(adminForm.role === 'admin' ? admins : adminForm.role === 'ambassador' ? ambassadors : interns.slice(0, 50)).map((user) => (
+                                    <div key={user._id} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-transparent hover:border-gray-100 hover:bg-white transition-all group">
+                                        <div className="flex items-center gap-3 truncate">
+                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black shadow-lg shrink-0 
+                                                ${adminForm.role === 'admin' ? 'bg-purple-100 text-purple-600' : adminForm.role === 'ambassador' ? 'bg-amber-100 text-amber-600' : 'bg-blue-100 text-blue-600'}`}>
+                                                {user.fullName?.charAt(0)}
+                                            </div>
+                                            <div className="truncate">
+                                                <p className="text-[10px] font-black text-black uppercase tracking-tight truncate">{user.fullName}</p>
+                                                <p className="text-[8px] text-gray-400 font-bold tracking-tight truncate">{user.email}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="text-xs font-black text-black uppercase tracking-tight mb-0.5">{admin.fullName}</p>
-                                            <p className="text-[9px] text-gray-400 font-bold tracking-tight">{admin.email}</p>
+                                        <div className="flex items-center gap-2">
+                                            <button 
+                                                onClick={() => handleDeleteUser(user)}
+                                                className="p-1.5 text-gray-300 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
+                                            <span className={`text-[7px] font-black uppercase tracking-widest px-2 py-1 rounded-md 
+                                                ${adminForm.role === 'admin' ? 'bg-purple-50 text-purple-600' : 
+                                                  adminForm.role === 'ambassador' ? 'bg-amber-50 text-amber-600' : 
+                                                  'bg-blue-50 text-blue-600'}`}>
+                                                {adminForm.role}
+                                            </span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                        <button 
-                                            onClick={() => handleDeleteUser(admin._id)}
-                                            className="p-2 text-gray-300 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
-                                            title="Revoke Admin Access"
-                                        >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                        </button>
-                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] px-3 py-1 bg-black text-white rounded-lg">Admin</span>
-                                    </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
 
             {/* Aadhaar Modal */}
             {viewingAadhaarUser && (
@@ -621,6 +743,60 @@ export default function UnifiedUsersPage() {
                                     </p>
                                 </div>
                                 <ShieldCheck className="w-10 h-10 text-emerald-400 opacity-80" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Confirmation Modal */}
+            {userToDelete && (
+                <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setUserToDelete(null)}></div>
+                    <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-200 border border-red-50">
+                        <div className="p-10 text-center space-y-6">
+               
+                            
+                            <div className="space-y-2">
+                                <h3 className="text-2xl font-black text-black uppercase tracking-tight leading-none">Final Verification</h3>
+                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest px-8">
+                                    You are about to <span className="text-red-500">PERMANENTLY PURGE</span> the administrative record for <span className="text-black">{userToDelete.fullName}</span>.
+                                </p>
+                            </div>
+
+                            <div className="bg-gray-50/50 p-6 rounded-[2rem] border border-gray-100/50 space-y-4">
+                                <p className="text-[9px] font-black text-red-500 uppercase tracking-[0.2em]">Security Warning:</p>
+                                <ul className="text-left space-y-2">
+                                    <li className="flex items-center gap-3 text-[10px] font-bold text-gray-500">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-red-500" /> All access keys will be revoked
+                                    </li>
+                                    <li className="flex items-center gap-3 text-[10px] font-bold text-gray-500">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-red-500" /> Database records will be erased
+                                    </li>
+                                    <li className="flex items-center gap-3 text-[10px] font-bold text-gray-500">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-red-500" /> This process is IRREVERSIBLE
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div className="flex flex-col gap-3 pt-4">
+                                <button 
+                                    onClick={confirmDelete}
+                                    disabled={isDeleting}
+                                    className="w-full bg-black text-white py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-2xl hover:bg-neutral-800 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                                >
+                                    {isDeleting ? (
+                                        <RefreshCw className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <>Delete User <ArrowRight className="w-4 h-4" /></>
+                                    )}
+                                </button>
+                                <button 
+                                    onClick={() => setUserToDelete(null)}
+                                    className="w-full bg-white text-gray-400 py-4 rounded-2xl font-black uppercase tracking-widest text-[9px] hover:text-black transition-all"
+                                >
+                                    Cancel
+                                </button>
                             </div>
                         </div>
                     </div>

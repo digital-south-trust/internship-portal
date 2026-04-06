@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
+import Ambassador from "@/models/Ambassador";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 
@@ -8,12 +9,30 @@ export async function POST(req) {
         await dbConnect();
         const { email, password } = await req.json();
 
-        if (!email || !password) {
-            return NextResponse.json({ message: "Email and password are required" }, { status: 400 });
+        // 1. Identify Identity - Priority: Ambassador > Admin/User (Foolproof Search)
+        const searchEmail = email.trim().toLowerCase();
+        
+        // Fetch all possible matches to perform a manual normalized comparison
+        const ambassadors = await Ambassador.find({ 
+            email: new RegExp(searchEmail, "i") 
+        }).select('+password');
+        
+        let ambassadorRecord = ambassadors.find(a => 
+            a.email.trim().toLowerCase() === searchEmail
+        );
+
+        let userRecord = null;
+        if (!ambassadorRecord) {
+            const users = await User.find({ 
+                email: new RegExp(searchEmail, "i") 
+            }).select('+password');
+            userRecord = users.find(u => 
+                u.email.trim().toLowerCase() === searchEmail
+            );
         }
 
-        // Find user by email and include password field
-        const user = await User.findOne({ email }).select('+password');
+        let user = ambassadorRecord || userRecord;
+        let isAmbassador = !!ambassadorRecord;
 
         if (!user) {
             return NextResponse.json({ message: "Invalid credentials" }, { status: 401 });
@@ -41,6 +60,7 @@ export async function POST(req) {
         // Return user info (without password)
         const userObj = user.toObject();
         delete userObj.password;
+        if (isAmbassador) userObj.role = 'ambassador';
 
         // Determine redirection based on status
         const roadmap = {
@@ -49,10 +69,18 @@ export async function POST(req) {
             'SELECTED': '/dashboard/complete-profile',
             'PROFILE_PENDING': '/dashboard/complete-profile',
             'REJECTED': '/internship/rejected',
+            'Active': '/dashboard',
             'ACTIVE': '/dashboard'
         };
 
-        const redirectTo = user.role === 'admin' ? '/admin' : (roadmap[user.status] || '/dashboard');
+        let redirectTo = '/dashboard';
+        if (isAmbassador) {
+            redirectTo = '/ambassador/dashboard';
+        } else if (user.role === 'admin') {
+            redirectTo = '/admin';
+        } else {
+            redirectTo = roadmap[user.status] || '/dashboard';
+        }
 
         const response = NextResponse.json({
             message: "Login successful",
@@ -61,7 +89,7 @@ export async function POST(req) {
         }, { status: 200 });
 
         // Set cookies locally for the middleware to use
-        response.cookies.set('userRole', user.role, { path: '/', maxAge: 10800 });
+        response.cookies.set('userRole', isAmbassador ? 'ambassador' : user.role, { path: '/', maxAge: 10800 });
         response.cookies.set('userEmail', user.email, { path: '/', maxAge: 10800 });
 
         return response;
