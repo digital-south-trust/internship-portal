@@ -8,7 +8,10 @@ import {
     ChevronRight,
     Play,
     LogOut,
-    CheckCircle2
+    CheckCircle2,
+    Layers,
+    Bookmark,
+    Trophy
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -25,6 +28,7 @@ function AssessmentContent() {
     const [timeLeft, setTimeLeft] = useState(0);
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [assessmentResult, setAssessmentResult] = useState(null);
     const [showConfirmSubmit, setShowConfirmSubmit] = useState(false);
     const [isPaused, setIsPaused] = useState(false);
     const [pauseTimeLeft, setPauseTimeLeft] = useState(30);
@@ -34,6 +38,8 @@ function AssessmentContent() {
     const answersRef = useRef({});
     const timeLeftRef = useRef(0);
     const isSubmittingRef = useRef(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+    const [reviewQuestions, setReviewQuestions] = useState(new Set());
 
     useEffect(() => {
         const fetchUserData = async () => {
@@ -56,12 +62,18 @@ function AssessmentContent() {
                          setLoading(false);
                          return;
                      }
-                    const examRes = await fetch(`/api/assessment/get-by-track?track=${encodeURIComponent(data.track)}&email=${encodeURIComponent(email)}`);
+                    const examUrl = `/api/assessment/get-by-track?track=${encodeURIComponent(data.track)}&email=${encodeURIComponent(email)}${urlExamId ? `&examId=${urlExamId}` : ''}`;
+                    const examRes = await fetch(examUrl);
                      if (examRes.ok) {
                          const examData = await examRes.json();
-                         setExam({ ...examData.exam, questions: examData.questions });
-                         setTimeLeft(examData.exam.durationMinutes * 60);
-                     }
+                          setExam({ ...examData.exam, questions: examData.questions });
+                          const duration = examData.exam.durationMinutes || 60;
+                          setTimeLeft(duration * 60);
+                      } else {
+                          // If specific examId failed (maybe track mismatch), go back to default
+                          if (urlExamId) router.push('/assessment');
+                          setExam(null);
+                      }
                  } else {
                      router.push('/login');
                  }
@@ -72,11 +84,14 @@ function AssessmentContent() {
              }
         };
         fetchUserData();
-    }, [router]);
+    }, [router, urlExamId]);
 
     useEffect(() => {
+        // Sync lobby/details based on URL presence
         if (urlExamId && exam && view === 'lobby') {
             setView('details');
+        } else if (!urlExamId && view === 'details') {
+            setView('lobby');
         }
     }, [urlExamId, exam, view]);
 
@@ -167,14 +182,25 @@ function AssessmentContent() {
     };
 
     const handleAnswer = (optionIndex) => {
-        const qId = exam.questions[currentQuestionIndex]._id;
-        setAnswers(prev => ({ ...prev, [qId]: optionIndex }));
+        const q = exam.questions[currentQuestionIndex];
+        const selectedText = q.options[optionIndex].text;
+        setAnswers(prev => ({ ...prev, [q._id]: selectedText }));
+    };
+
+    const toggleMarkForReview = (idx) => {
+        setReviewQuestions(prev => {
+            const next = new Set(prev);
+            if (next.has(idx)) next.delete(idx);
+            else next.add(idx);
+            return next;
+        });
     };
 
     const submitExam = async (forced = false) => {
         if (isSubmitting || !exam) return;
         setIsSubmitting(true);
-        const timeTaken = (exam.durationMinutes * 60) - timeLeftRef.current;
+        const duration = exam?.durationMinutes || 60;
+        const timeTaken = (duration * 60) - timeLeftRef.current;
         try {
             const res = await fetch('/api/assessment/submit', {
                 method: 'POST',
@@ -189,6 +215,8 @@ function AssessmentContent() {
                 })
             });
             if (res.ok) {
+                const data = await res.json();
+                setAssessmentResult(data);
                 setIsSubmitted(true);
                 setIsPaused(false);
             }
@@ -202,8 +230,22 @@ function AssessmentContent() {
     const formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
 
     if (loading) return (
-        <div className="min-h-screen bg-white flex items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black" />
+        <div className="min-h-screen bg-white animate-pulse p-10 md:p-24">
+            <div className="max-w-5xl mx-auto space-y-12">
+                <div className="flex items-center justify-between">
+                    <div className="h-4 bg-gray-100 rounded w-24" />
+                    <div className="h-8 bg-gray-200 rounded-xl w-32" />
+                </div>
+                <div className="space-y-6">
+                    <div className="h-12 bg-gray-200 rounded-2xl w-3/4" />
+                    <div className="h-6 bg-gray-100 rounded-xl w-1/2" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-12">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="h-32 bg-gray-50 rounded-3xl border border-gray-100" />
+                    ))}
+                </div>
+            </div>
         </div>
     );
 
@@ -231,53 +273,140 @@ function AssessmentContent() {
     );
 
     if (isSubmitted) {
-        const isRejected = user?.selectionStatus === 'Rejected';
+        // If status is REJECTED, show the "Hard Luck" screen
+        // If status is ASSESSMENT_COMPLETED, show the "Under Review" screen
+        const isRejected = user?.status === 'REJECTED' || user?.selectionStatus === 'Rejected';
+        const isPending = user?.status === 'ASSESSMENT_COMPLETED';
         
         return (
             <div 
-                className="min-h-screen font-sans flex items-center justify-center p-6 text-center relative overflow-hidden bg-center"
+                className="min-h-screen font-sans flex flex-col items-center bg-gray-50/50 relative overflow-hidden bg-center"
                 style={{ 
                     backgroundImage: 'url(/background4.svg)',
                     backgroundSize: '200px',
                     backgroundRepeat: 'repeat'
                 }}
             >
-                <div className="absolute inset-0 z-0 pointer-events-none bg-white/40"></div>
-                <div className="max-w-md w-full relative z-10 bg-white/60 backdrop-blur-3xl p-12 rounded-[3.5rem] border border-white/60 shadow-2xl shadow-black/5">
-                    {isRejected ? (
-                        <>
-                            <div className="w-32 h-32 mx-auto mb-8 relative">
-                                <img 
-                                    src="/sad_intern_avatar.png" 
-                                    alt="Hard Luck" 
-                                    className="w-full h-full object-cover rounded-3xl shadow-xl border-4 border-white/80"
-                                />
-                                <div className="absolute -bottom-2 -right-2 bg-red-500 text-white p-2 rounded-xl shadow-lg">
-                                    <CheckCircle2 className="w-4 h-4 rotate-180" />
-                                </div>
-                            </div>
-                            <h1 className="text-3xl font-black mb-4 uppercase tracking-tighter leading-tight">Hard Luck!<br/>Assessment Not Cleared</h1>
-                            <p className="text-gray-500 mb-10 px-4 font-medium leading-relaxed uppercase text-[10px] tracking-widest">We appreciate your time, but unfortunately, we won't be moving forward with your application for the {user?.track} track.</p>
-                        </>
-                    ) : (
-                        <>
-                            <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center mx-auto mb-8 shadow-xl">
-                                <CheckCircle2 className="w-10 h-10 text-white" />
-                            </div>
-                            <h1 className="text-3xl font-black mb-4 uppercase tracking-tighter leading-tight">Your exam paper<br/>is reviewing</h1>
-                            <p className="text-gray-500 mb-10 px-4 font-medium leading-relaxed uppercase text-[10px] tracking-widest">Your results will be released soon or within a day.</p>
-                        </>
-                    )}
-                    
+                <div className="absolute inset-0 z-0 pointer-events-none bg-white/60 backdrop-blur-[2px]"></div>
+                
+                {/* Fixed Header with Logout */}
+                <header className="fixed top-0 left-0 right-0 h-24 flex items-center justify-between px-12 z-50 bg-white/40 backdrop-blur-md border-b border-white/60">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-black rounded-xl flex items-center justify-center">
+                            <Trophy className="w-5 h-5 text-white" />
+                        </div>
+                        <span className="font-black text-lg tracking-tight">DIGITAL SOUTH</span>
+                    </div>
                     <button 
                         onClick={() => {
                             localStorage.clear();
                             router.push('/login');
                         }} 
-                        className="bg-black text-white px-12 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest active:scale-95 transition-all shadow-xl shadow-black/20 w-full"
+                        className="flex items-center gap-2 bg-black text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-black/10 hover:bg-neutral-800 transition-all active:scale-95"
                     >
+                        <LogOut className="w-4 h-4" />
                         Log Out
                     </button>
+                </header>
+
+                <div className="max-w-5xl w-full mx-auto px-6 pt-36 pb-24 relative z-10 flex flex-col items-center">
+                    {isRejected ? (
+                        <div className="max-w-md w-full bg-white p-12 rounded-[3.5rem] border border-gray-100 shadow-2xl text-center space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            <div className="w-32 h-32 mx-auto relative group">
+                                <img 
+                                    src="/sad_intern_avatar.png" 
+                                    alt="Hard Luck" 
+                                    className="w-full h-full object-cover rounded-[2.5rem] shadow-xl border-4 border-white transition-transform group-hover:scale-105"
+                                />
+                                <div className="absolute -bottom-2 -right-2 bg-red-500 text-white p-2.5 rounded-2xl shadow-lg">
+                                    <CheckCircle2 className="w-5 h-5 rotate-180" />
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                <h1 className="text-4xl font-black text-black uppercase tracking-tighter leading-none">Hard Luck!<br/>Not Selected</h1>
+                                <div className="inline-flex flex-col items-center">
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Final Score</span>
+                                    <div className="bg-red-50 text-red-600 px-8 py-3 rounded-2xl font-black text-2xl border border-red-100 italic">
+                                        {assessmentResult?.scorePercentage || user?.assessmentScore || 0}%
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="text-gray-500 font-medium leading-relaxed uppercase text-[10px] tracking-[0.15em]">
+                                We appreciate your time, but unfortunately, we won't be moving forward with your application for the {user?.track} track at this time.
+                            </p>
+                            <button 
+                                onClick={() => router.push('/dashboard')}
+                                className="w-full bg-black text-white py-5 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl shadow-black/20 hover:bg-neutral-800 transition-all active:scale-95"
+                            >
+                                Back to Dashboard
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="w-full space-y-12 animate-in fade-in duration-1000">
+                            <div className="text-center space-y-6">
+                                <div className="w-20 h-20 bg-emerald-500 rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-emerald-500/20 rotate-3 transition-transform hover:rotate-0">
+                                    <CheckCircle2 className="w-10 h-10 text-white" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h2 className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.4em]">ASSESSMENT SUBMITTED</h2>
+                                    <h1 className="text-5xl font-black text-black uppercase tracking-tighter">Under Review</h1>
+                                </div>
+                                <p className="text-gray-400 max-w-lg mx-auto font-medium uppercase text-[10px] tracking-widest leading-loose">
+                                    Our evaluation team is carefully reviewing your submission transcript. 
+                                    Verified results and selection status will be released within 24 hours.
+                                </p>
+                            </div>
+
+                            {/* Transcript Preview for Candidate */}
+                            <div className="bg-white/80 backdrop-blur-xl border border-white p-10 md:p-16 rounded-[4rem] shadow-2xl shadow-black/5 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-gray-50/50 rounded-full blur-3xl -mr-32 -mt-32"></div>
+                                
+                                <div className="relative z-10 space-y-12">
+                                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 pb-10 border-b border-gray-50">
+                                        <div className="space-y-1">
+                                            <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest">Assessment Module</p>
+                                            <h3 className="text-2xl font-black uppercase">{exam?.title}</h3>
+                                        </div>
+                                        <div className="flex gap-4">
+                                            <div className="bg-gray-50 px-6 py-3 rounded-2xl border border-gray-100">
+                                                <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-1">Status</p>
+                                                <p className="text-xs font-black uppercase text-amber-600 italic">PENDING VERIFICATION</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-8">
+                                        <p className="text-[10px] font-black text-black uppercase tracking-[0.3em] flex items-center gap-3">
+                                            <Layers className="w-3 h-3" /> Submission Transcript
+                                        </p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                            {exam.questions.map((q, i) => (
+                                                <div key={i} className="bg-gray-50/50 p-6 rounded-3xl border border-gray-50 flex items-start gap-4">
+                                                    <div className="w-8 h-8 rounded-xl bg-white border border-gray-100 flex items-center justify-center shrink-0 text-xs font-black">{i+1}</div>
+                                                    <div className="space-y-2">
+                                                        <p className="text-sm font-bold text-gray-800 line-clamp-2">{q.text}</p>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[9px] font-black text-gray-400">YOUR RESPONSE:</span>
+                                                            <span className="text-[10px] font-black uppercase text-blue-600">{answers[q._id] || 'N/A'}</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-center pt-8">
+                                <button 
+                                    onClick={() => router.push('/dashboard')}
+                                    className="bg-black text-white px-14 py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-2xl shadow-black/20 hover:scale-105 transition-all"
+                                >
+                                    Go to Dashboard
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         );
@@ -318,7 +447,7 @@ function AssessmentContent() {
                             <h2 className="text-2xl font-black uppercase leading-tight mb-4">{exam?.title || `${user?.track} Eligibility Assessment`}</h2>
                             <p className="text-gray-400 text-sm font-medium line-clamp-2 mb-10">The official entrance assessment for our {user?.track} internship program.</p>
                             <div className="flex justify-between items-center pt-6 border-t border-gray-50">
-                                <span className="text-[10px] font-black uppercase text-gray-400">{exam.durationMinutes} MINS</span>
+                                <span className="text-[10px] font-black uppercase text-gray-400">{exam.durationMinutes || 60} MINS</span>
                                 <span className="text-[10px] font-black uppercase group-hover:underline">Start Now &gt;</span>
                             </div>
                         </div>
@@ -344,12 +473,9 @@ function AssessmentContent() {
              <nav className="h-20 flex bg-white items-center px-12 justify-between relative z-10">
                 <span className="font-black text-xl tracking-tighter">DIGITAL SOUTH</span>
                 {!isPaused && (
-                    <button 
-                        onClick={() => {
-                            setView('lobby');
-                            router.push('/assessment');
-                        }} 
-                        className="text-xs font-black uppercase tracking-widest"
+                     <button 
+                        onClick={() => router.replace('/assessment', { scroll: false })} 
+                        className="text-xs font-black uppercase tracking-widest hover:text-red-500 transition-all"
                     >
                         Back
                     </button>
@@ -396,7 +522,11 @@ function AssessmentContent() {
                         <div className="grid grid-cols-2 lg:grid-cols-3 gap-12">
                             <div className="space-y-1">
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Question Format</p>
-                                <p className="font-black text-xl">Multiple Choice</p>
+                                 <p className="font-black text-xl">Multiple Choice</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total Modules</p>
+                                <p className="font-black text-xl">{exam.questions?.length || 0} Questions</p>
                             </div>
                             <div className="space-y-1">
                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Violation Limit</p>
@@ -423,24 +553,26 @@ function AssessmentContent() {
     );
 
     // 3. EXAM VIEW
+    if (!exam?.questions || exam.questions.length === 0) {
+        return (
+            <div className="min-h-screen font-sans flex flex-col items-center justify-center p-6 text-center space-y-6 bg-white">
+                <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center border border-gray-100 mb-4">
+                    <Layers className="w-10 h-10 text-gray-200" />
+                </div>
+                <h1 className="text-2xl font-black uppercase tracking-tight">No Questions Detected</h1>
+                <p className="text-gray-400 max-w-sm font-medium">This paper exists but contains no logic modules. Please contact your supervisor to populate the blueprint.</p>
+                <button onClick={() => setView('lobby')} className="bg-black text-white px-10 py-3.5 rounded-xl font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all">Go Back</button>
+            </div>
+        );
+    }
+
     const currentQuestion = exam.questions[currentQuestionIndex];
     const attemptedCount = Object.keys(answers).length;
-    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-    const [reviewQuestions, setReviewQuestions] = useState(new Set());
-
-    const toggleMarkForReview = (idx) => {
-        setReviewQuestions(prev => {
-            const next = new Set(prev);
-            if (next.has(idx)) next.delete(idx);
-            else next.add(idx);
-            return next;
-        });
-    };
 
     return (
         <div className="min-h-screen bg-white text-black flex flex-col md:flex-row overflow-hidden font-sans">
             {/* Left Sidebar: Collapsible */}
-            <aside className={`transition-all duration-300 relative bg-slate-50 border-r border-gray-100 flex flex-col h-screen shrink-0 ${isSidebarCollapsed ? 'w-24' : 'w-full md:w-80'}`}>
+            <aside className={`transition-all duration-300 relative bg-slate-50 border-r border-gray-100 flex flex-col h-screen shrink-0 overflow-y-auto ${isSidebarCollapsed ? 'w-24' : 'w-full md:w-80'}`}>
                 {/* Collapse Toggle */}
                 <button 
                     onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
@@ -476,8 +608,8 @@ function AssessmentContent() {
                                         onClick={() => setCurrentQuestionIndex(idx)} 
                                         className={`w-full aspect-square md:h-12 md:w-12 rounded-xl font-bold text-xs transition-all border-2 flex items-center justify-center
                                         ${isCurrent ? 'border-black bg-black text-white shadow-md' : 
-                                          isReview ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
-                                          isAttempted ? 'bg-blue-50 border-blue-100 text-blue-600' : 
+                                          isReview ? 'bg-amber-100 border-amber-300 text-amber-800' :
+                                          isAttempted ? 'bg-blue-600 border-blue-700 text-white font-black shadow-lg shadow-blue-200/50' : 
                                           'bg-white border-gray-100 text-gray-400 hover:border-black'}
                                         `}>
                                         {idx + 1}
@@ -511,10 +643,10 @@ function AssessmentContent() {
                             <button 
                                 onClick={() => toggleMarkForReview(currentQuestionIndex)}
                                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all
-                                ${reviewQuestions.has(currentQuestionIndex) ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
+                                ${reviewQuestions.has(currentQuestionIndex) ? 'bg-amber-100 text-amber-700 border border-amber-200 shadow-sm' : 'bg-gray-50 text-gray-400 hover:bg-gray-100'}`}
                             >
-                                <Play className={`w-3 h-3 ${reviewQuestions.has(currentQuestionIndex) ? 'fill-current' : ''}`} />
-                                {reviewQuestions.has(currentQuestionIndex) ? 'Under Review' : 'Mark for Review'}
+                                <Bookmark className={`w-3 h-3 ${reviewQuestions.has(currentQuestionIndex) ? 'fill-current' : ''}`} />
+                                {reviewQuestions.has(currentQuestionIndex) ? 'Marked' : 'Mark for Review'}
                             </button>
                         </div>
                         <h1 className="text-2xl md:text-3xl font-bold leading-snug">{currentQuestion.text}</h1>
@@ -577,7 +709,18 @@ function AssessmentContent() {
 
 export default function AssessmentPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-white"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-black"></div></div>}>
+        <Suspense fallback={
+            <div className="min-h-screen bg-white animate-pulse p-10 md:p-24">
+                <div className="max-w-5xl mx-auto space-y-10">
+                    <div className="h-12 bg-gray-100 rounded-2xl w-1/2" />
+                    <div className="h-64 bg-gray-50 rounded-[3rem]" />
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="h-20 bg-gray-50 rounded-2xl" />
+                        <div className="h-20 bg-gray-50 rounded-2xl" />
+                    </div>
+                </div>
+            </div>
+        }>
             <AssessmentContent />
         </Suspense>
     );

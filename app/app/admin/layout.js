@@ -74,8 +74,26 @@ export default function AdminLayout({ children }) {
 
     if (!authorized) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-black"></div>
+            <div className="min-h-screen flex bg-gray-50/50 animate-pulse">
+                {/* Sidebar skeleton */}
+                <div className={`transition-all duration-300 ${isCollapsed ? 'w-20' : 'w-64'} bg-white border-r border-gray-100 flex flex-col p-6 space-y-8`}>
+                    <div className="h-10 bg-gray-100 rounded-xl w-full" />
+                    <div className="space-y-4 pt-8">
+                        {[...Array(6)].map((_, i) => (
+                            <div key={i} className="h-10 bg-gray-50 rounded-xl w-full" />
+                        ))}
+                    </div>
+                </div>
+                {/* Main content skeleton */}
+                <div className="flex-1 p-12 space-y-12">
+                    <div className="h-16 bg-white rounded-[2rem] border border-gray-100 w-full" />
+                    <div className="grid grid-cols-4 gap-8">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="h-32 bg-white rounded-[2.5rem] border border-gray-100" />
+                        ))}
+                    </div>
+                    <div className="h-96 bg-white rounded-[3.5rem] border border-gray-100 w-full" />
+                </div>
             </div>
         );
     }

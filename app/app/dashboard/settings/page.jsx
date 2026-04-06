@@ -81,7 +81,7 @@ export default function StudentSettingsPage() {
     };
 
     const processSnapshot = async (type, dataUrl) => {
-        const loadingToast = toast.loading('Processing Neural Capture...');
+        const loadingToast = toast.loading('Processing Camera Capture...');
         try {
             const formData = new FormData();
             formData.append('file', dataUrl);
@@ -100,7 +100,7 @@ export default function StudentSettingsPage() {
             });
             if (res.ok) {
                 setUser(prev => ({ ...prev, [type]: url }));
-                toast.success('Neural Capture saved!', { id: loadingToast });
+                toast.success('Camera capture saved!', { id: loadingToast });
                 closePickerClean();
             } else { toast.error('Failed to update profile.', { id: loadingToast }); }
         } catch (error) { toast.error('Processing error.', { id: loadingToast }); }
@@ -142,7 +142,32 @@ export default function StudentSettingsPage() {
         finally { setIsSubmittingPassword(false); }
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center"><RefreshCw className="w-8 h-8 animate-spin" /></div>;
+    if (loading) return (
+        <div className="animate-in fade-in duration-500">
+            <div className="px-8 pt-5 space-y-8 animate-pulse">
+                <div className="bg-white rounded-[3rem] p-12 border border-gray-100 shadow-sm">
+                    <div className="flex flex-col md:flex-row items-center gap-10">
+                        <div className="w-40 h-40 rounded-[2.5rem] bg-gray-100 shrink-0" />
+                        <div className="flex-1 space-y-4 w-full">
+                            <div className="h-10 bg-gray-200 rounded-2xl w-3/4" />
+                            <div className="flex gap-4">
+                                <div className="h-8 bg-gray-100 rounded-xl w-24" />
+                                <div className="h-8 bg-gray-100 rounded-xl w-40" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div className="bg-white p-12 rounded-[3.5rem] border border-gray-100 shadow-sm space-y-8">
+                    <div className="h-8 bg-gray-200 rounded-xl w-48" />
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        {[...Array(4)].map((_, i) => (
+                            <div key={i} className="h-32 bg-gray-50 rounded-[2.5rem] border border-gray-100" />
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
     if (!user) return null;
 
     const handleCancelInternship = async () => {
@@ -339,15 +364,15 @@ export default function StudentSettingsPage() {
                         className="relative w-full max-w-2xl bg-white rounded-[3rem] shadow-2xl overflow-hidden p-10"
                     >
                         <div className="flex justify-between items-center mb-10">
-                            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Identity Image Uplink</h3>
+                            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Profile Picker</h3>
                             <button onClick={closePickerClean} className="w-10 h-10 border rounded-xl flex items-center justify-center hover:text-red-500"><X className="w-5 h-5" /></button>
                         </div>
                         
                         <div className="flex bg-gray-50 p-1.5 rounded-2xl border border-gray-100 mb-10">
                             {[
-                                { id: 'upload', label: 'File Upload', icon: Upload },
-                                { id: 'camera', label: 'Neural Capture', icon: Camera },
-                                { id: 'avatar', label: 'Persona Matrix', icon: Smile }
+                                { id: 'upload', label: 'Upload', icon: Upload },
+                                { id: 'camera', label: 'Camera', icon: Camera },
+                                { id: 'avatar', label: 'Avatar Character', icon: Smile }
                             ].map(tab => (
                                 <button
                                     key={tab.id}
@@ -396,15 +421,24 @@ export default function StudentSettingsPage() {
 
                             {avatarTab === 'avatar' && (
                                 <div className="flex flex-col items-center gap-8 w-full">
-                                    <div className="w-40 h-40 rounded-full border-4 border-white shadow-2xl bg-gray-50 overflow-hidden">
+                                    <div className="w-32 h-32 rounded-[2rem] border-4 border-white shadow-2xl bg-gray-50 overflow-hidden">
                                         <img src={dicebear(chosenSeed || user.avatarSeed || "User")} className="w-full h-full scale-110" alt="Dicebear" />
                                     </div>
-                                    <div className="flex flex-wrap justify-center gap-2">
-                                        {['Felix', 'Casper', 'Sasha', 'Bear', 'Tigger', 'Oliver'].map(s => (
-                                            <button key={s} onClick={() => setChosenSeed(s)} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${chosenSeed === s ? 'bg-black text-white' : 'bg-gray-50'}`}>{s}</button>
-                                        ))}
+                                    <div className="max-h-[300px] overflow-y-auto pr-2 w-full">
+                                        <div className="grid grid-cols-4 gap-3">
+                                            {["Felix", "Casper", "Sasha", "Bear", "Tigger", "Oliver", "Zephyr", "Nova", "Cosmo", "Pixel", "Cipher", "Echo", "Vega", "Blaze", "Orion", "Lyra", "Atlas", "Iris", "Luna", "Kai", "Milo", "Jade", "Remy", "Scout"].map(s => (
+                                                <button 
+                                                    key={s} 
+                                                    onClick={() => setChosenSeed(s)} 
+                                                    className={`p-2 rounded-2xl border-2 transition-all flex flex-col items-center gap-1 ${chosenSeed === s ? 'border-black bg-gray-50' : 'border-transparent bg-gray-50/50'}`}
+                                                >
+                                                    <img src={dicebear(s)} alt={s} className="w-full aspect-square" />
+                                                    <span className="text-[8px] font-black uppercase text-gray-400">{s}</span>
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                    <button onClick={() => handleFileUpload('avatarSeed', chosenSeed)} className="px-12 py-5 bg-black text-white rounded-2xl font-black text-xs uppercase tracking-[0.3em]">Save Persona Matrix</button>
+                                    <button onClick={() => handleFileUpload('avatarSeed', chosenSeed)} className="w-full py-5 bg-black text-white rounded-2xl font-black text-xs uppercase tracking-[0.3em] shadow-xl">Save Avatar Character</button>
                                 </div>
                             )}
                         </div>
