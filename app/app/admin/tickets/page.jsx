@@ -186,9 +186,27 @@ export default function AdminTicketsPage() {
             <div className="px-8 pb-20 max-w-[1750px] mx-auto space-y-4">
 
             {/* ── Tickets Row Layout ── */}
-            {loading && tickets.length === 0 ? (
-                <div className="flex items-center justify-center py-24">
-                    <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-black" />
+            {loading ? (
+                <div className="space-y-4 animate-pulse">
+                    <div className="grid grid-cols-12 gap-4 px-8 py-3 bg-gray-50/50 rounded-2xl border border-gray-100 mb-2">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className={`h-2 bg-gray-200 rounded ${i === 1 ? 'col-span-4' : 'col-span-2'}`} />
+                        ))}
+                    </div>
+                    {[...Array(5)].map((_, i) => (
+                        <div key={i} className="grid grid-cols-12 gap-4 px-8 py-6 bg-white rounded-2xl border border-gray-100 shadow-sm items-center">
+                            <div className="col-span-2 space-y-2">
+                                <div className="h-4 bg-gray-100 rounded w-20" />
+                                <div className="h-2.5 bg-gray-50 rounded w-12" />
+                            </div>
+                            <div className="col-span-4 h-4 bg-gray-100 rounded w-3/4" />
+                            <div className="col-span-2 h-4 bg-gray-50 rounded w-16" />
+                            <div className="col-span-2 h-6 bg-gray-100 rounded-xl w-24" />
+                            <div className="col-span-2 text-right">
+                                <div className="h-3 bg-gray-50 rounded w-20 ml-auto" />
+                            </div>
+                        </div>
+                    ))}
                 </div>
             ) : filtered.length === 0 ? (
                 <div className="text-center py-24 bg-white rounded-3xl border border-gray-100">

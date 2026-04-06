@@ -346,7 +346,22 @@ export default function UnifiedUsersPage() {
                                 </thead>
                                 <tbody className="divide-y divide-gray-50">
                                     {loading ? (
-                                        Array(3).fill(0).map((_, i) => <tr key={i}><td colSpan="4" className="p-8 animate-pulse"><div className="h-2 bg-gray-50 rounded-lg w-full" /></td></tr>)
+                                        Array(5).fill(0).map((_, i) => (
+                                            <tr key={i} className="animate-pulse">
+                                                <td className="p-6">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 bg-gray-100 rounded-2xl" />
+                                                        <div className="space-y-2">
+                                                            <div className="h-3 bg-gray-100 rounded w-24" />
+                                                            <div className="h-2 bg-gray-50 rounded w-32" />
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="p-6 text-center"><div className="h-6 bg-gray-50 rounded-lg w-24 mx-auto" /></td>
+                                                <td className="p-6 text-center"><div className="h-6 bg-gray-50 rounded-full w-20 mx-auto" /></td>
+                                                <td className="p-6 text-right"><div className="h-8 bg-gray-50 rounded-xl w-8 ml-auto" /></td>
+                                            </tr>
+                                        ))
                                     ) : filteredUsers.length === 0 ? (
                                         <tr><td colSpan="4" className="p-32 text-center text-[10px] font-black text-gray-300 uppercase tracking-widest">No Candidate Intelligence FOUND</td></tr>
                                     ) : (
@@ -619,9 +634,31 @@ export default function UnifiedUsersPage() {
 function UserDetailView({ data, loading, onBack }) {
     if (loading) {
         return (
-            <div className="py-32 flex flex-col items-center justify-center gap-6 animate-in fade-in">
-                <RefreshCw className="w-12 h-12 animate-spin text-black" />
-                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-300">Retrieving Vault Data...</p>
+            <div className="space-y-12 animate-pulse">
+                <div className="h-6 bg-gray-100 rounded w-32" />
+                <div className="bg-white p-12 rounded-[3.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row items-center gap-12">
+                    <div className="w-32 h-32 rounded-3xl bg-gray-100 shrink-0" />
+                    <div className="flex-1 space-y-6 w-full">
+                        <div className="h-10 bg-gray-200 rounded-2xl w-2/3" />
+                        <div className="h-4 bg-gray-100 rounded w-48" />
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 pt-4">
+                            {[...Array(4)].map((_, i) => (
+                                <div key={i} className="space-y-2">
+                                    <div className="h-2 bg-gray-50 rounded w-12" />
+                                    <div className="h-3 bg-gray-100 rounded w-20" />
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                <div className="space-y-8">
+                    <div className="h-6 bg-gray-100 rounded w-48 ml-6" />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {[...Array(3)].map((_, i) => (
+                            <div key={i} className="bg-white p-10 h-48 rounded-[3rem] border border-gray-100" />
+                        ))}
+                    </div>
+                </div>
             </div>
         );
     }

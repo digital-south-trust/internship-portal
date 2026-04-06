@@ -5,7 +5,7 @@ import { Save, Lock, Fingerprint,Users ,Clock, Shield, RefreshCw, XCircle, Mail,
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 
-const AVATAR_SEEDS = ["Zephyr", "Nova", "Cosmo", "Pixel", "Cipher", "Echo", "Vega", "Blaze", "Orion", "Lyra", "Atlas", "Iris"];
+const AVATAR_SEEDS = ["Felix", "Casper", "Sasha", "Bear", "Tigger", "Oliver", "Zephyr", "Nova", "Cosmo", "Pixel", "Cipher", "Echo", "Vega", "Blaze", "Orion", "Lyra", "Atlas", "Iris", "Luna", "Kai", "Milo", "Jade", "Remy", "Scout"];
 const dicebear = (seed) => `https://api.dicebear.com/7.x/micah/svg?seed=${encodeURIComponent(seed)}&backgroundColor=transparent`;
 
 export default function AdminSettingsPage() {
@@ -106,6 +106,29 @@ export default function AdminSettingsPage() {
         };
         fetchUserProfile();
     }, []);
+
+    if (isLoadingProfile) return (
+        <div className="animate-in fade-in duration-500">
+            <div className="px-12 py-12 space-y-10 animate-pulse">
+                <div className="flex flex-col md:flex-row items-center gap-8">
+                    <div className="w-32 h-32 md:w-40 md:h-40 rounded-[2.5rem] bg-gray-100" />
+                    <div className="flex-1 space-y-4">
+                        <div className="h-10 bg-gray-200 rounded-xl w-64" />
+                        <div className="h-4 bg-gray-100 rounded w-48" />
+                        <div className="grid grid-cols-4 gap-4 pt-4">
+                            {[...Array(4)].map((_, i) => (
+                                <div key={i} className="h-6 bg-gray-50 rounded-lg w-20" />
+                            ))}
+                        </div>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="h-64 bg-white rounded-[2rem] border border-gray-100" />
+                    <div className="h-64 bg-black rounded-[2rem]" />
+                </div>
+            </div>
+        </div>
+    );
 
     const handleSavePassword = async () => {
         if (!oldPassword || !newPassword || !reenterPassword) {
@@ -497,7 +520,7 @@ export default function AdminSettingsPage() {
 
                             <div className="flex bg-gray-50 p-1.5 rounded-2xl border mb-8">
                                 {[
-                                    { id: 'avatar', label: 'Avatars', icon: Smile },
+                                    { id: 'avatar', label: 'Avatar Character', icon: Smile },
                                     { id: 'upload', label: 'Upload', icon: Upload },
                                     { id: 'camera', label: 'Camera', icon: Camera }
                                 ].map(tab => (
@@ -518,17 +541,20 @@ export default function AdminSettingsPage() {
 
                             <div className="min-h-[200px]">
                                 {pickerTab === 'avatar' && (
-                                    <div className="grid grid-cols-4 gap-4">
-                                        {AVATAR_SEEDS.map(seed => (
-                                            <button 
-                                                key={seed} 
-                                                onClick={() => handleSaveAvatar(seed)} 
-                                                disabled={savingAvatar} 
-                                                className={`aspect-square p-2 bg-gray-50 rounded-2xl border-2 transition-all hover:scale-105 active:scale-95 ${chosenSeed === seed ? 'border-black' : 'border-transparent'}`}
-                                            >
-                                                <img src={dicebear(seed)} alt={seed} className="w-full h-full" />
-                                            </button>
-                                        ))}
+                                    <div className="max-h-[300px] overflow-y-auto pr-2">
+                                        <div className="grid grid-cols-4 gap-4">
+                                            {AVATAR_SEEDS.map(seed => (
+                                                <button 
+                                                    key={seed} 
+                                                    onClick={() => handleSaveAvatar(seed)} 
+                                                    disabled={savingAvatar} 
+                                                    className={`aspect-square p-2 bg-gray-50 rounded-2xl border-2 transition-all hover:scale-105 active:scale-95 flex flex-col items-center gap-1 ${chosenSeed === seed ? 'border-black' : 'border-transparent'}`}
+                                                >
+                                                    <img src={dicebear(seed)} alt={seed} className="w-full h-full" />
+                                                    <span className="text-[8px] font-black uppercase text-gray-400">{seed}</span>
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
 

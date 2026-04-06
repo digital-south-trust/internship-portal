@@ -1,6 +1,13 @@
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import ProjectRequest from "@/models/ProjectRequest";
+import Schedule from "@/models/Schedule";
+import WeeklyReview from "@/models/WeeklyReview";
+import Result from "@/models/Result";
+import Ticket from "@/models/Ticket";
+import Certificate from "@/models/Certificate";
+import Meeting from "@/models/Meeting";
+import ChatConversation from "@/models/ChatConversation";
 import { NextResponse } from "next/server";
 
 export async function GET(req, { params }) {
@@ -61,14 +68,38 @@ export async function DELETE(req, { params }) {
         await dbConnect();
         const { id } = await params;
         
-        // Before deleting, check if this is the last admin (optional security)
-        // But for now, just delete as requested.
-        const deleted = await User.findByIdAndDelete(id);
-        if (!deleted) return NextResponse.json({ message: "User not found" }, { status: 404 });
+        // 1. Fetch user to get email for email-based cascades
+        const user = await User.findById(id);
+        if (!user) return NextResponse.json({ message: "User not found" }, { status: 404 });
 
-        return NextResponse.json({ message: "Administrative access REVOKED and user DELETED" }, { status: 200 });
+        const userEmail = user.email;
+
+        // 2. Cascading Delete - ID based
+        await Promise.all([
+            Schedule.deleteMany({ userId: id }),
+            WeeklyReview.deleteMany({ internId: id }),
+            Result.deleteMany({ user: id }),
+            ProjectRequest.deleteMany({ internId: id }),
+            ChatConversation.deleteMany({ userId: id })
+        ]);
+
+        // 3. Cascading Delete - Email based
+        if (userEmail) {
+            await Promise.all([
+                Ticket.deleteMany({ reportedBy: userEmail }),
+                Certificate.deleteMany({ internEmail: userEmail }),
+                Meeting.deleteMany({ intern: userEmail })
+            ]);
+        }
+        
+        // 4. Finally delete the User
+        await User.findByIdAndDelete(id);
+
+        return NextResponse.json({ 
+            message: "User and all related records (Schedules, Reviews, Results, Projects, Tickets) successfully purged." 
+        }, { status: 200 });
     } catch (error) {
-        console.error("Error deleting user:", error);
-        return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
+        console.error("Error performing cascading delete for user:", error);
+        return NextResponse.json({ message: "Internal Server Error", error: error.message }, { status: 500 });
     }
 }
