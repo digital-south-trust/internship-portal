@@ -6,11 +6,13 @@ import { sendOTPEmail } from "@/lib/mailer";
 export async function POST(req) {
     try {
         await dbConnect();
-        const { email } = await req.json();
+        let { email } = await req.json();
 
         if (!email) {
             return NextResponse.json({ message: "Email is required" }, { status: 400 });
         }
+        
+        email = email.toLowerCase().trim();
 
         const userData = await PendingUser.findOne({ email });
 
@@ -32,6 +34,7 @@ export async function POST(req) {
             await sendOTPEmail(email, otpCode);
         } catch (mailError) {
             console.error("Failed to resend OTP email:", mailError);
+            return NextResponse.json({ message: "Mail server failed to send OTP. Please check your address or try again later.", error: mailError.message }, { status: 500 });
         }
 
         return NextResponse.json({ 

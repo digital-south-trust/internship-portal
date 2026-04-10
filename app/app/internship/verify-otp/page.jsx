@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-hot-toast";
 import { ChevronRight, Mail } from "lucide-react";
 
+const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+
 function VerifyOTPContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -13,12 +15,43 @@ function VerifyOTPContent() {
     const [loading, setLoading] = useState(false);
     const [resendLoading, setResendLoading] = useState(false);
     const [timeLeft, setTimeLeft] = useState(120); // 2 minutes in seconds
+    const [sessionTimeLeft, setSessionTimeLeft] = useState(SESSION_TIMEOUT_MS / 1000);
     const inputRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
 
     useEffect(() => {
         if (!email) {
             router.push("/internship/register");
         }
+    }, [email, router]);
+
+    // 30-minute session expiry logic
+    useEffect(() => {
+        const storageKey = `otp_session_start_${email}`;
+        let startTime = sessionStorage.getItem(storageKey);
+
+        if (!startTime) {
+            startTime = Date.now().toString();
+            sessionStorage.setItem(storageKey, startTime);
+        }
+
+        const checkExpiry = () => {
+            const elapsed = Date.now() - parseInt(startTime);
+            const remaining = SESSION_TIMEOUT_MS - elapsed;
+
+            if (remaining <= 0) {
+                // Session expired — clean up and force restart
+                sessionStorage.removeItem(storageKey);
+                toast.error("Verification session expired. Please register again.");
+                router.push("/internship/register");
+                return;
+            }
+
+            setSessionTimeLeft(Math.ceil(remaining / 1000));
+        };
+
+        checkExpiry(); // Check immediately on mount
+        const interval = setInterval(checkExpiry, 10000); // Re-check every 10 seconds
+        return () => clearInterval(interval);
     }, [email, router]);
 
     // Countdown Timer logic
@@ -201,6 +234,9 @@ function VerifyOTPContent() {
                                     {resendLoading ? "Resending..." : "Resend Code"}
                                 </button>
                             )}
+                        </p>
+                        <p className={`text-[10px] font-bold uppercase tracking-widest mt-3 ${sessionTimeLeft < 300 ? 'text-red-500' : 'text-gray-300'}`}>
+                            Session expires in {Math.floor(sessionTimeLeft / 60)}:{(sessionTimeLeft % 60).toString().padStart(2, '0')}
                         </p>
                     </div>
                 </form>
