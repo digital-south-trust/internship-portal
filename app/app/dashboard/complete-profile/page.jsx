@@ -73,7 +73,9 @@ export default function CompleteProfilePage() {
         aadhaarNumber: "", passportPhoto: "", aadhaarCard: "",
         educationQualification: "", courseName: "", duration: "", collegeName: "", workingDetails: "", resumeDocument: "",
         isVerified: false, aadharVerificationTries: 0, 
-        isPaid: false
+        isPaid: false,
+        referralCode: "",
+        appliedReferral: null, // Stores ambassador data if valid
     });
     const [showSplash, setShowSplash] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState('idle'); // 'idle', 'success', 'failed'
@@ -108,6 +110,10 @@ export default function CompleteProfilePage() {
                     const data = await res.json();
                     console.log("Profile data received, status:", data.status);
                     setUserData(data);
+
+                    if (data.phone && !formData.phone) {
+                        setFormData(prev => ({ ...prev, phone: data.phone }));
+                    }
 
                     if (data.status === 'ACTIVE') {
                         router.push('/dashboard');
@@ -196,16 +202,48 @@ export default function CompleteProfilePage() {
         }
     };
 
+    const getAmount = () => {
+        const costs = {
+            '2 Months': 7200,
+            '4 Months': 12000,
+            '6 Months': 15000
+        };
+        const base = costs[formData.duration] || 7200;
+        if (formData.appliedReferral) {
+            const discount = (base * (formData.appliedReferral.discountPercentage || 10)) / 100;
+            return base - discount;
+        }
+        return base;
+    };
+
+    const handleApplyReferral = async () => {
+        if (!formData.referralCode.trim()) return toast.error("Enter a code first");
+        const tid = toast.loading("Validating referral...");
+        try {
+            const res = await fetch(`/api/ambassador/validate?code=${formData.referralCode}`);
+            if (res.ok) {
+                const ambassador = await res.json();
+                setFormData(prev => ({ ...prev, appliedReferral: ambassador }));
+                toast.success("Referral applied! Enjoy 10% off", { id: tid });
+            } else {
+                toast.error("Invalid referral code", { id: tid });
+            }
+        } catch (e) {
+            toast.error("Error validating referral", { id: tid });
+        }
+    };
+
     const handlePayment = async () => {
         setLoading(true);
-        const tid = toast.loading("Initiating secure payment...");
+        const amount = getAmount();
+        const tid = toast.loading(`Initiating payment for ₹${amount}...`);
         try {
             const res = await fetch("/api/razorpay/order", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
-                    amount: 500, // INR 500
-                    receipt: `rcpt_${userData.email.split('@')[0]}`
+                    amount: amount, 
+                    receipt: `rcpt_${userData.email.split('@')[0]}_${Date.now()}`
                 }),
             });
             const orderData = await res.json();
@@ -215,7 +253,7 @@ export default function CompleteProfilePage() {
                 amount: orderData.amount,
                 currency: orderData.currency,
                 name: "Digital South Internship",
-                description: "Onboarding & Verification Fee",
+                description: `${formData.duration} Program Enrollment`,
                 order_id: orderData.id,
                 handler: async function (response) {
                     const verifyRes = await fetch("/api/verify-payment", {
@@ -226,7 +264,8 @@ export default function CompleteProfilePage() {
                             razorpay_payment_id: response.razorpay_payment_id,
                             razorpay_signature: response.razorpay_signature,
                             email: userData.email,
-                            fullName: userData.fullName
+                            fullName: userData.fullName,
+                            referralCode: formData.appliedReferral?.referralCode
                         }),
                     });
 
@@ -237,12 +276,7 @@ export default function CompleteProfilePage() {
                         localStorage.removeItem(`profile_step_${userData.email}`);
                         setFormData(prev => ({ ...prev, isPaid: true }));
                         
-                        // Small delay to let them see "Start Your Journey" text if they want, 
-                        // then show splash
-                        setTimeout(() => {
-                            setShowSplash(true);
-                        }, 1000);
-                        
+                        setTimeout(() => { setShowSplash(true); }, 1000);
                         setTimeout(() => { router.push("/dashboard"); }, 5000);
                     } else {
                         setPaymentStatus('failed');
@@ -387,8 +421,9 @@ export default function CompleteProfilePage() {
                                             value={formData.phone}
                                             onChange={handleChange}
                                             required
+                                            readOnly={!!userData.phone}
                                             placeholder="+91 00000 00000"
-                                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all"
+                                            className={`w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all ${userData.phone ? 'bg-gray-50 text-gray-400 cursor-not-allowed' : ''}`}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -497,18 +532,28 @@ export default function CompleteProfilePage() {
                                     <label className="text-[10px] font-black text-black uppercase tracking-widest flex items-center gap-2">
                                         <Clock className="w-3 h-3" /> Internship Duration
                                     </label>
-                                    <select
-                                        name="duration"
-                                        value={formData.duration}
-                                        onChange={handleChange}
-                                        required
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all bg-white"
-                                    >
-                                        <option value="">Select Duration</option>
-                                        <option value="2 Months">2 Months</option>
-                                        <option value="3 Months">3 Months</option>
-                                        <option value="6 Months">6 Months</option>
-                                    </select>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        {[
+                                            { label: '2 Months', fee: '₹7,200', subtitle: '₹3,600/month' },
+                                            { label: '4 Months', fee: '₹12,000', subtitle: '₹3,000/month' },
+                                            { label: '6 Months', fee: '₹15,000', subtitle: '₹2,500/month' }
+                                        ].map(d => (
+                                            <button
+                                                key={d.label}
+                                                type="button"
+                                                onClick={() => setFormData(prev => ({ ...prev, duration: d.label }))}
+                                                className={`p-6 rounded-3xl border-2 transition-all flex flex-col items-center justify-center gap-2 group
+                                                ${formData.duration === d.label ? 'bg-black border-black text-white shadow-xl scale-105' : 'bg-white border-gray-100 text-gray-500 hover:border-gray-300'}`}
+                                            >
+                                                <Clock className={`w-6 h-6 ${formData.duration === d.label ? 'text-[#ccff00]' : 'text-gray-300 group-hover:text-black'}`} />
+                                                <div className="text-center">
+                                                    <p className="text-xs font-black uppercase tracking-widest">{d.label}</p>
+                                                    <p className={`text-[9px] font-bold ${formData.duration === d.label ? 'text-gray-400' : 'text-gray-300'}`}>{d.subtitle}</p>
+                                                    <p className={`text-[10px] font-black ${formData.duration === d.label ? 'text-[#ccff00]' : 'text-black'}`}>Total: {d.fee}</p>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                         )}
@@ -566,14 +611,52 @@ export default function CompleteProfilePage() {
                                     Finalize your enrollment by paying the verification fee.
                                 </p>
 
-                                <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 flex items-center justify-between mt-8">
-                                    <div className="text-left">
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Total Due</p>
-                                        <p className="text-2xl font-black text-gray-900">₹500.00</p>
+                                <div className="space-y-4">
+                                    <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 flex items-center justify-between">
+                                        <div className="text-left">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Total Enrollment Fee</p>
+                                            <p className={`text-2xl font-black ${formData.appliedReferral ? 'text-gray-300 line-through text-sm' : 'text-gray-900'}`}>
+                                                ₹{formData.duration === '2 Months' ? '7,200' : formData.duration === '4 Months' ? '12,000' : formData.duration === '6 Months' ? '15,000' : '7,200'}.00
+                                            </p>
+                                            {formData.appliedReferral && <p className="text-2xl font-black text-black">₹{getAmount().toLocaleString('en-IN')}.00</p>}
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Duration</p>
+                                            <p className="text-xs font-black uppercase text-black italic">{formData.duration}</p>
+                                        </div>
                                     </div>
-                                    <div className="text-right text-emerald-600 text-[10px] font-black uppercase tracking-widest">
-                                        One-Time Fee
-                                    </div>
+
+                                    {!formData.appliedReferral ? (
+                                        <div className="flex gap-2">
+                                            <input 
+                                                type="text" 
+                                                placeholder="Have a Referral Code?" 
+                                                value={formData.referralCode}
+                                                onChange={(e) => setFormData(prev => ({ ...prev, referralCode: e.target.value.toUpperCase() }))}
+                                                className="flex-1 px-4 py-3 bg-gray-50 border border-gray-100 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:border-blue-300 transition-all"
+                                            />
+                                            <button 
+                                                type="button" 
+                                                onClick={handleApplyReferral}
+                                                className="px-6 py-3 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all"
+                                            >
+                                                Apply
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-lime-50 border border-lime-100 p-4 rounded-xl flex items-center justify-between">
+                                            <div className="flex items-center gap-3">
+                                                <Check className="w-4 h-4 text-lime-600" />
+                                                <span className="text-[10px] font-black text-lime-700 uppercase tracking-widest">Code Applied: {formData.appliedReferral.referralCode}</span>
+                                            </div>
+                                            <button 
+                                                onClick={() => setFormData(prev => ({ ...prev, appliedReferral: null, referralCode: "" }))}
+                                                className="text-[9px] font-black text-lime-600 uppercase underline"
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <button

@@ -10,6 +10,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import CertificateIssuer from "@/components/CertificateIssuer";
+import { CartesianGrid, Line, LineChart, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 
 const dicebear = (seed) => `https://api.dicebear.com/7.x/micah/svg?seed=${encodeURIComponent(seed)}&backgroundColor=transparent`;
 
@@ -22,6 +23,7 @@ export default function InternDetailsPage() {
 
     const [user, setUser] = useState(null);
     const [projects, setProjects] = useState([]);
+    const [referredUsers, setReferredUsers] = useState([]);
     const [admins, setAdmins] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedProject, setSelectedProject] = useState(null);
@@ -69,6 +71,7 @@ export default function InternDetailsPage() {
                     const data = await userRes.json();
                     setUser(data.user);
                     setProjects(data.projects || []);
+                    setReferredUsers(data.referredUsers || []);
                     const saved = data.user?.assignedAdmin || 'gauthamram.um@gmail.com';
                     setAssignedAdmin(saved);
                     setPendingAdmin(saved);
@@ -219,6 +222,31 @@ export default function InternDetailsPage() {
         </div>
     );
 
+    // Process real analytics data for the chart (Last 6 Months)
+    const generateChartData = () => {
+        if (!referredUsers || referredUsers.length === 0) return [];
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const data = [];
+        const now = new Date();
+        for (let i = 5; i >= 0; i--) {
+            let d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            let monthLabel = months[d.getMonth()];
+            
+            let recruits = referredUsers.filter(u => {
+                let uDate = new Date(u.createdAt);
+                return uDate.getMonth() === d.getMonth() && uDate.getFullYear() === d.getFullYear();
+            });
+            data.push({
+                name: monthLabel,
+                uv: recruits.length, // Total recruits
+                pv: recruits.filter(u => u.status === 'Active' || u.status === 'SELECTED' || u.status === 'VERIFIED').length // Active recruits
+            });
+        }
+        return data;
+    };
+
+    const chartData = generateChartData();
+
     return (
         <div className="-mt-8 -mx-8">
 
@@ -252,7 +280,10 @@ export default function InternDetailsPage() {
                         <div>
                             <div className="flex items-center gap-3 mb-1 flex-wrap">
                                 <h1 className="text-3xl font-black text-gray-900 tracking-tight leading-none uppercase">{user.fullName}</h1>
-                                <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-bold border ${user.role?.toLowerCase() === 'admin' ? 'bg-purple-50 text-purple-700 border-purple-100' : 'bg-blue-50 text-blue-700 border-blue-100'}`}>
+                                <span className={`px-2.5 py-1 rounded-full text-[10px] uppercase font-bold border ${
+                                    user.role?.toLowerCase() === 'admin' ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                                    user.role?.toLowerCase() === 'ambassador' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                                    'bg-blue-50 text-blue-700 border-blue-100'}`}>
                                     {user.role}
                                 </span>
                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${isTerminated ? 'text-red-700 bg-red-50 border border-red-100' :
@@ -269,40 +300,83 @@ export default function InternDetailsPage() {
                         </div>
 
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-5 border-t border-gray-50">
-                            <div>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Track</p>
-                                <p className="text-xs font-bold text-gray-900 truncate">{user.track || 'Unassigned'}</p>
-                            </div>
-                            <div>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Duration</p>
-                                <p className="text-xs font-bold text-gray-900">{user.duration || 'N/A'}</p>
-                            </div>
-                            <div>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Assigned Admin</p>
-                                <button
-                                    onClick={() => { setPendingAdmin(assignedAdmin); setShowAdminModal(true); }}
-                                    className="text-xs font-bold text-black border-b border-black/20 hover:border-black transition-all flex items-center gap-1"
-                                >
-                                    {getAdminLabel()}
-                                </button>
-                            </div>
-                            <div>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Phone</p>
-                                <p className="text-xs font-bold text-gray-900">{user.phone || 'N/A'}</p>
-                            </div>
+                            {user.role?.toLowerCase() === 'ambassador' ? (
+                                <>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Referral Code</p>
+                                        <p className="text-xs font-black text-black select-all tracking-wider font-mono uppercase">{user.referralCode || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Institution</p>
+                                        <p className="text-xs font-bold text-gray-900 truncate">{user.collegeName || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Performance</p>
+                                        <p className="text-xs font-bold text-gray-900">{user.userCount || 0} Successful Recruits</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Total Earnings</p>
+                                        <p className="text-xs font-black text-emerald-600 flex items-center gap-1">
+                                            <span className="text-[10px]">₹</span> {user.earnings || 0}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Ambassador Commission</p>
+                                        <p className="text-xs font-bold text-gray-900">{user.commissionPercentage || 10}% Commission</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Intern Discount</p>
+                                        <p className="text-xs font-bold text-gray-900">{user.discountPercentage || 10}% OFF</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Aadhaar Number</p>
+                                        <p className="text-xs font-bold text-gray-900">{user.aadhaarNumber || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Phone</p>
+                                        <p className="text-xs font-bold text-gray-900">{user.phone || 'N/A'}</p>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Track</p>
+                                        <p className="text-xs font-bold text-gray-900 truncate">{user.track || 'Unassigned'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Duration</p>
+                                        <p className="text-xs font-bold text-gray-900">{user.duration || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Assigned Admin</p>
+                                        <button
+                                            onClick={() => { setPendingAdmin(assignedAdmin); setShowAdminModal(true); }}
+                                            className="text-xs font-bold text-black border-b border-black/20 hover:border-black transition-all flex items-center gap-1"
+                                        >
+                                            {getAdminLabel()}
+                                        </button>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Phone</p>
+                                        <p className="text-xs font-bold text-gray-900">{user.phone || 'N/A'}</p>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
 
                     {/* Right Vertical Action Stack */}
                     <div className="flex flex-col gap-2 w-full md:w-48 pt-2">
-                        {/* Unified Certificates Button */}
-                        <button onClick={() => setShowCertsListModal(true)}
-                            className="bg-gray-50 text-gray-600 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all flex items-center justify-between border border-gray-200">
-                            <div className="flex items-center gap-2">
-                                <Award className="w-4 h-4" /> Certificates
-                            </div>
-                            {certificates.length > 0 && <span className="bg-black/10 group-hover:bg-white/20 px-1.5 py-0.5 rounded text-[8px]">{certificates.length}</span>}
-                        </button>
+                        {/* Unified Certificates Button - Hidden for Ambassadors */}
+                        {user.role?.toLowerCase() !== 'ambassador' && (
+                            <button onClick={() => setShowCertsListModal(true)}
+                                className="bg-gray-50 text-gray-600 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all flex items-center justify-between border border-gray-200">
+                                <div className="flex items-center gap-2">
+                                    <Award className="w-4 h-4" /> Certificates
+                                </div>
+                                {certificates.length > 0 && <span className="bg-black/10 group-hover:bg-white/20 px-1.5 py-0.5 rounded text-[8px]">{certificates.length}</span>}
+                            </button>
+                        )}
 
                         {/* Change Password */}
                         <button onClick={() => { setShowPasswordModal(true); setNewPassword(null); setShowNewPassword(false); }}
@@ -326,40 +400,98 @@ export default function InternDetailsPage() {
                 </div>
             </div>
 
-            {/* ── Projects ── */}
-            <div className="p-8 space-y-6">
-                <h2 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-                    <Activity className="w-5 h-5" /> Submitted Projects
-                </h2>
-                {projects.length === 0 ? (
-                    <div className="bg-white border border-gray-100 p-8 rounded-3xl text-center text-gray-500 font-medium">
-                        This intern hasn't submitted any projects yet.
-                    </div>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {projects.map((project, idx) => (
-                            <div key={project._id || `project-${idx}`} onClick={() => openProject(project)}
-                                className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
-                                <div className="flex justify-between items-start mb-4">
-                                    <h3 className="font-black text-gray-900 group-hover:text-black">{project.projectName}</h3>
-                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${project.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : project.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
-                                        {project.status}
-                                    </span>
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between text-xs text-gray-500 font-medium">
-                                        <span>Progress</span>
-                                        <span className="font-black text-gray-900">{project.progress || 0}%</span>
+            {/* ── Performance & Recruitment (Ambassador Only) ── */}
+            {user.role?.toLowerCase() === 'ambassador' && (
+                <div className="p-8 space-y-10">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                        {/* Analytics Graph */}
+                        <div className="lg:col-span-2 bg-white rounded-[3rem] border border-gray-100 shadow-sm p-10 space-y-8 group">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-gray-50 rounded-xl group-hover:bg-black group-hover:text-white transition-colors border border-gray-100">
+                                        <Activity className="w-5 h-5" />
                                     </div>
-                                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                                        <div className="h-full bg-black rounded-full transition-all" style={{ width: `${project.progress || 0}%` }} />
-                                    </div>
+                                    <h3 className="text-lg font-black text-black uppercase tracking-tight">Growth Intelligence</h3>
                                 </div>
                             </div>
-                        ))}
+                            {/* Line Chart */}
+                            <div className="aspect-[2.5/1] bg-white rounded-3xl pt-6 group-hover:bg-gray-50/30 transition-colors w-full h-[250px]">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <LineChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid stroke="#f3f4f6" strokeDasharray="5 5" vertical={false} />
+                                    <XAxis dataKey="name" stroke="#9ca3af" fontSize={10} axisLine={false} tickLine={false} />
+                                    <YAxis stroke="#9ca3af" fontSize={10} axisLine={false} tickLine={false} />
+                                    <Line type="monotone" dataKey="uv" stroke="#000000" strokeWidth={3} dot={{ fill: '#ffffff', strokeWidth: 2, stroke: '#000000', r: 4 }} activeDot={{ r: 6 }} />
+                                    <Line type="monotone" dataKey="pv" stroke="#d1d5db" strokeWidth={3} dot={{ fill: '#ffffff', strokeWidth: 2, stroke: '#d1d5db', r: 4 }} activeDot={{ r: 6 }} />
+                                    </LineChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Recent Activity Log */}
+                        <div className="bg-white rounded-[3rem] border border-gray-100 shadow-sm p-10 space-y-8 h-full">
+                            <h3 className="text-lg font-black text-black uppercase tracking-tight flex items-center gap-3">
+                                <Calendar className="w-5 h-5" /> Joined History
+                            </h3>
+                            <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
+                                {referredUsers.length === 0 ? (
+                                    <p className="text-xs text-gray-400 font-bold text-center py-10 uppercase tracking-widest opacity-40">No entries yet</p>
+                                ) : (
+                                    referredUsers.map((u, i) => (
+                                        <div key={i} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-transparent hover:border-gray-100 hover:bg-white transition-all">
+                                            <div>
+                                                <p className="text-[10px] font-black text-black uppercase tracking-tight">{u.fullName}</p>
+                                                <p className="text-[8px] font-bold text-gray-400">{u.track || 'Gen Track'}</p>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[8px] font-black text-gray-400 uppercase">{new Date(u.createdAt).toLocaleDateString()}</p>
+                                                <span className={`text-[7px] font-black uppercase px-2 py-0.5 rounded border ${u.status === 'ACTIVE' ? 'bg-black text-white' : 'bg-white text-gray-400'}`}>{u.status}</span>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
+
+            {/* ── Projects - Hidden for Ambassadors ── */}
+            {user.role?.toLowerCase() !== 'ambassador' && (
+                <div className="p-8 space-y-6">
+                    <h2 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
+                        <Activity className="w-5 h-5" /> Submitted Projects
+                    </h2>
+                    {projects.length === 0 ? (
+                        <div className="bg-white border border-gray-100 p-8 rounded-3xl text-center text-gray-500 font-medium">
+                            This intern hasn't submitted any projects yet.
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {projects.map((project, idx) => (
+                                <div key={project._id || `project-${idx}`} onClick={() => openProject(project)}
+                                    className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <h3 className="font-black text-gray-900 group-hover:text-black">{project.projectName}</h3>
+                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${project.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : project.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                                            {project.status}
+                                        </span>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between text-xs text-gray-500 font-medium">
+                                            <span>Progress</span>
+                                            <span className="font-black text-gray-900">{project.progress || 0}%</span>
+                                        </div>
+                                        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                            <div className="h-full bg-black rounded-full transition-all" style={{ width: `${project.progress || 0}%` }} />
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
 
 
 

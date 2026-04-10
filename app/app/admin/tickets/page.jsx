@@ -16,6 +16,7 @@ const TYPE_CONFIG = {
     'Suggest a Feature (UI)':    { color: 'bg-violet-50 text-violet-700 border-violet-100', dot: 'bg-violet-500' },
     'Change Problem Statement':  { color: 'bg-blue-50 text-blue-700 border-blue-100',  dot: 'bg-blue-500' },
     'Intern Doubt':              { color: 'bg-orange-50 text-orange-700 border-orange-100', dot: 'bg-orange-500' },
+    'Assessment Query':          { color: 'bg-blue-50 text-blue-700 border-blue-100', dot: 'bg-blue-500' },
     'Others':                    { color: 'bg-gray-50 text-gray-700 border-gray-100',   dot: 'bg-gray-400' },
 };
 
@@ -361,6 +362,19 @@ export default function AdminTicketsPage() {
                                     <MessageSquare className="absolute top-4 right-4 w-6 h-6 text-gray-100" />
                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-3">Intern's Concern</p>
                                     <p className="text-sm font-medium text-gray-800 leading-relaxed">"{selectedTicket.description}"</p>
+                                    
+                                    {selectedTicket.type === 'Assessment Query' && (
+                                        <div className="mt-6 flex justify-end">
+                                            <a 
+                                                href={`/admin/assessments?search=${encodeURIComponent(selectedTicket.reportedBy)}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:scale-105 transition-all"
+                                            >
+                                                <Target className="w-3.5 h-3.5 text-[#ccff00]" /> View Exam Intelligence
+                                            </a>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Previous Replies */}

@@ -1,5 +1,6 @@
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
+import Ambassador from "@/models/Ambassador";
 import ProjectRequest from "@/models/ProjectRequest";
 import Schedule from "@/models/Schedule";
 import WeeklyReview from "@/models/WeeklyReview";
@@ -14,10 +15,33 @@ export async function GET(req, { params }) {
     try {
         await dbConnect();
         const { id } = await params;
-        const user = await User.findById(id).select('-password');
+        
+        let user = await User.findById(id).select('-password').lean();
+        let isAmbassador = false;
+
+        if (!user) {
+            user = await Ambassador.findById(id).select('-password').lean();
+            if (user) {
+                isAmbassador = true;
+                user.role = 'ambassador';
+            }
+        }
+
         if (!user) return NextResponse.json({ message: "User not found" }, { status: 404 });
-        const projects = await ProjectRequest.find({ internId: id }).sort({ createdAt: -1 });
-        return NextResponse.json({ user, projects }, { status: 200 });
+        
+        let projects = [];
+        let referredUsers = [];
+
+        if (isAmbassador) {
+            // Find users who joined with this ambassador's code
+            referredUsers = await User.find({ referralCodeUsed: user.referralCode })
+                .select('fullName email status createdAt track')
+                .sort({ createdAt: -1 });
+        } else {
+            projects = await ProjectRequest.find({ internId: id }).sort({ createdAt: -1 });
+        }
+        
+        return NextResponse.json({ user, projects, referredUsers }, { status: 200 });
     } catch (error) {
         console.error("Error fetching user details:", error);
         return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -35,11 +59,11 @@ export async function PATCH(req, { params }) {
         if (body.assignedAdmin !== undefined) allowedFields.assignedAdmin = body.assignedAdmin;
         if (body.status !== undefined) {
             allowedFields.status = body.status;
-            if (['SELECTED', 'PROFILE_PENDING', 'VERIFIED', 'ACTIVE'].includes(body.status)) {
+            if (['SELECTED', 'PROFILE_PENDING', 'VERIFIED', 'ACTIVE', 'Active'].includes(body.status)) {
                 allowedFields.selectionStatus = 'Selected';
                 allowedFields.isApproved = true;
-            } else if (body.status === 'REJECTED') {
-                allowedFields.selectionStatus = 'Rejected';
+            } else if (body.status === 'REJECTED' || body.status === 'Terminated') {
+                allowedFields.selectionStatus = body.status === 'REJECTED' ? 'Rejected' : 'Terminated';
                 allowedFields.isApproved = false;
             }
         }
@@ -48,11 +72,19 @@ export async function PATCH(req, { params }) {
             return NextResponse.json({ message: "No valid fields to update" }, { status: 400 });
         }
 
-        const updated = await User.findByIdAndUpdate(
+        let updated = await User.findByIdAndUpdate(
             id,
             { $set: allowedFields },
             { new: true }
         ).select('-password');
+
+        if (!updated) {
+            updated = await Ambassador.findByIdAndUpdate(
+                id,
+                { $set: allowedFields },
+                { new: true }
+            ).select('-password');
+        }
 
         if (!updated) return NextResponse.json({ message: "User not found" }, { status: 404 });
 
@@ -68,8 +100,15 @@ export async function DELETE(req, { params }) {
         await dbConnect();
         const { id } = await params;
         
-        // 1. Fetch user to get email for email-based cascades
-        const user = await User.findById(id);
+        // 1. Try finding in both collections
+        let user = await User.findById(id);
+        let isAmbassador = false;
+
+        if (!user) {
+            user = await Ambassador.findById(id);
+            if (user) isAmbassador = true;
+        }
+
         if (!user) return NextResponse.json({ message: "User not found" }, { status: 404 });
 
         const userEmail = user.email;
@@ -92,11 +131,15 @@ export async function DELETE(req, { params }) {
             ]);
         }
         
-        // 4. Finally delete the User
-        await User.findByIdAndDelete(id);
+        // 4. Finally delete the User or Ambassador
+        if (isAmbassador) {
+            await Ambassador.findByIdAndDelete(id);
+        } else {
+            await User.findByIdAndDelete(id);
+        }
 
         return NextResponse.json({ 
-            message: "User and all related records (Schedules, Reviews, Results, Projects, Tickets) successfully purged." 
+            message: `${isAmbassador ? 'Ambassador' : 'User'} and all related records successfully purged.` 
         }, { status: 200 });
     } catch (error) {
         console.error("Error performing cascading delete for user:", error);

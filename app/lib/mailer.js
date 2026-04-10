@@ -176,3 +176,47 @@ export async function sendOTPEmail(to, otp) {
 
   return sendEmail(to, subject, html);
 }
+
+export async function sendAmbassadorOfferLetter({ to, ambassadorName, referralCode, password }) {
+    const subject = '🎉 Welcome to the Ambassador Program: Your Official Offer Letter';
+    
+    const html = `
+      <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #fde68a; border-radius: 12px; padding: 24px; color: #1e293b;">
+        <div style="text-align: center; margin-bottom: 24px;">
+          <span style="background: #fffbeb; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; color: #b45309; border: 1px solid #fde68a;">OFFICIAL APPOINTMENT</span>
+        </div>
+        <h2 style="color: #000; margin-bottom: 16px; font-size: 28px; font-weight: 800; text-align: center;">Welcome, Ambassador! 👑</h2>
+        <p style="font-size: 16px; line-height: 1.6;">Hi <strong>${ambassadorName}</strong>,</p>
+        <p style="font-size: 16px; line-height: 1.6; margin: 20px 0;">We are excited to officially appoint you as a <strong>Growth Ambassador</strong> for our Digital South Internship Program!</p>
+        
+        <div style="background-color: #fffbeb; padding: 20px; border-radius: 12px; margin: 24px 0; border-left: 4px solid #f59e0b;">
+          <h3 style="color: #b45309; margin-top: 0;">Your Credentials:</h3>
+          <p style="margin: 8px 0; font-size: 14px;"><strong>📧 Login Email:</strong> ${to}</p>
+          <p style="margin: 8px 0; font-size: 14px;"><strong>🔑 Temporary Password:</strong> <code style="background: #fef3c7; padding: 2px 6px; border-radius: 4px;">${password}</code></p>
+          <p style="margin: 12px 0; font-size: 14px;"><strong>🎫 Unique Referral Code:</strong> <span style="font-size: 20px; font-weight: 900; color: #000; letter-spacing: 2px; text-transform: uppercase;">${referralCode}</span></p>
+        </div>
+  
+        <div style="background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 24px 0; border: 1px solid #e2e8f0;">
+          <h3 style="color: #0f172a; margin-top: 0; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em;">Program Highlights:</h3>
+          <ul style="margin: 0; padding-left: 20px; font-size: 14px; color: #475569;">
+            <li style="margin: 6px 0;">Earn commission for every successful intern you recruit.</li>
+            <li style="margin: 6px 0;">Provide exclusive discounts to candidates using your code.</li>
+            <li style="margin: 6px 0;">Access your dedicated performance dashboard to track joins and earnings.</li>
+          </ul>
+        </div>
+  
+        <p style="text-align: center; margin-top: 32px;">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login" style="display: inline-block; padding: 14px 32px; background-color: #000; color: #fff; text-decoration: none; font-weight: bold; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+            Access Ambassador Dashboard
+          </a>
+        </p>
+  
+        <p style="font-size: 14px; color: #64748b; margin-top: 32px; text-align: center;">We are thrilled to have you lead our expansion efforts!</p>
+        <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #e2e8f0; text-align: center;">
+          <p style="font-size: 12px; color: #64748b;">This is a formal appointment letter from the Digital South Recruitment Hub.</p>
+        </div>
+      </div>
+    `;
+  
+    return sendEmail(to, subject, html);
+  }

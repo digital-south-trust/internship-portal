@@ -25,7 +25,12 @@ import {
     Upload,
     FileText,
     FileDigit,
-    FileCheck
+    FileCheck,
+    Phone,
+    MapPin,
+    GraduationCap,
+    Calendar,
+    Briefcase
 } from "lucide-react";
 import MacOSFolder from "@/components/MacOSFolder";
 import { toast } from "react-hot-toast";
@@ -392,7 +397,7 @@ export default function UnifiedAssessmentsPage() {
     };
 
     if (viewingUserId) {
-        return <UserDetailView data={selectedUserData} loading={loadingDetail} onBack={() => setViewingUserId(null)} />;
+        return <UserDetailView data={selectedUserData} loading={loadingDetail} onBack={() => setViewingUserId(null)} onStatusUpdate={updateSubmissionStatus} />;
     }
 
     const filteredSubmissions = submissions.filter(s => {
@@ -575,9 +580,19 @@ export default function UnifiedAssessmentsPage() {
                                                 <td className="px-8 py-6 text-center"><SelectionBadge status={s.selectionStatus === 'Selected' ? 'SELECTED' : s.selectionStatus === 'Rejected' ? 'REJECTED' : 'NEW'} label={s.selectionStatus?.split(' ')[0]} /></td>
                                                 <td className="px-8 py-6 text-right">
                                                     <div className="flex gap-2 justify-end">
-                                                        {(s.selectionStatus !== 'Selected') && <button onClick={() => updateSubmissionStatus(s._id, 'Selected')} className="w-10 h-10 bg-black text-white rounded-xl flex items-center justify-center hover:bg-neutral-800 transition-all"><UserCheck className="w-4 h-4" /></button>}
-                                                        {(s.selectionStatus !== 'Rejected') && <button onClick={() => updateSubmissionStatus(s._id, 'Rejected')} className="w-10 h-10 bg-white border border-gray-100 text-black rounded-xl flex items-center justify-center hover:bg-gray-50 transition-all"><UserX className="w-4 h-4" /></button>}
-                                                        <button onClick={() => handleViewUserDetail(s)} className="w-10 h-10 bg-white border border-gray-100 text-gray-400 hover:text-black rounded-xl flex items-center justify-center transition-all"><Eye className="w-4 h-4" /></button>
+                                                        {(s.selectionStatus !== 'Selected') && (
+                                                            <button onClick={() => updateSubmissionStatus(s._id, 'Selected')} className="w-10 h-10 bg-black text-white rounded-xl flex items-center justify-center hover:bg-neutral-800 transition-all shadow-sm">
+                                                                <UserCheck className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        {(s.selectionStatus !== 'Rejected' && s.selectionStatus !== 'Selected') && (
+                                                            <button onClick={() => updateSubmissionStatus(s._id, 'Rejected')} className="w-10 h-10 bg-white border border-gray-100 text-black rounded-xl flex items-center justify-center hover:bg-gray-50 transition-all shadow-sm">
+                                                                <UserX className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                        <button onClick={() => handleViewUserDetail(s)} className="w-10 h-10 bg-white border border-gray-100 text-gray-400 hover:text-black rounded-xl flex items-center justify-center transition-all shadow-sm">
+                                                            <Eye className="w-4 h-4" />
+                                                        </button>
                                                     </div>
                                                 </td>
                                             </tr>
@@ -655,45 +670,110 @@ function CustomDropdown({ value, onChange, options }) {
     );
 }
 
-function UserDetailView({ data, loading, onBack }) {
+function UserDetailView({ data, loading, onBack, onStatusUpdate }) {
     if (loading) return <div className="py-32 flex flex-col items-center justify-center gap-6"><RefreshCw className="w-12 h-12 animate-spin text-black" /><p className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-300">Syncing Intelligence...</p></div>;
     if (!data) return null;
     const { user, assessment } = data;
+
     return (
         <div className="animate-in slide-in-from-right-4 duration-500 pb-32">
-            <div className="-mt-8 -mx-8 px-8 py-6 bg-white border-b border-gray-100 flex flex-col gap-4 shadow-sm mb-8">
-                <button onClick={onBack} className="flex items-center gap-3 text-gray-400 hover:text-black transition-all font-black text-[11px] uppercase tracking-widest"><ArrowLeft className="w-4 h-4" /> Back to Dashboard</button>
-                <div className="flex items-center gap-8">
-                    <div className="w-20 h-20 rounded-2xl bg-black text-white flex items-center justify-center text-3xl font-black">{user.fullName?.charAt(0)}</div>
-                    <div className="space-y-2">
-                        <h2 className="text-4xl font-black text-black tracking-tighter uppercase">{user.fullName}</h2>
-                        <div className="flex items-center gap-4 text-xs font-bold text-gray-400"><Mail className="w-4 h-4" /> {user.email} | <Activity className="w-4 h-4 ml-2" /> {user.track} Path</div>
+            {/* Attached Header & Score Section */}
+            <div className="-mt-8 -mx-8 bg-white border-b border-gray-100 shadow-sm overflow-hidden flex flex-col">
+                <div className="px-12 py-8 flex flex-col md:flex-row md:items-center justify-between gap-8">
+                    <div className="flex items-center gap-8">
+                        <div className="w-24 h-24 rounded-3xl bg-black text-white flex items-center justify-center text-4xl font-black shadow-xl shadow-black/10 transition-transform hover:scale-105">{user.fullName?.charAt(0)}</div>
+                        <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                                <button onClick={onBack} className="p-2 bg-gray-50 hover:bg-black hover:text-white rounded-lg transition-all"><ArrowLeft className="w-4 h-4" /></button>
+                                <h2 className="text-4xl font-black text-black tracking-tighter uppercase leading-none">{user.fullName}</h2>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
+                                <DetailItem icon={Mail} value={user.email} />
+                                <DetailItem icon={Phone} value={user.phone || 'Not Provided'} />
+                                <DetailItem icon={GraduationCap} value={`${user.educationQualification || ''} ${user.courseName ? `(${user.courseName})` : ''}`} />
+                                <DetailItem icon={Briefcase} value={`${user.collegeName || 'Self Taught'}`} />
+                                <DetailItem icon={Target} value={`${user.track} Path`} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-row md:flex-col gap-3">
+                        {user.selectionStatus !== 'Selected' && (
+                            <button 
+                                onClick={() => onStatusUpdate(user._id, 'Selected')}
+                                className="px-8 py-3 bg-[#ccff00] text-black rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-lime-500/10 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+                            >
+                                <UserCheck className="w-4 h-4" /> Select Intern
+                            </button>
+                        )}
+                        {user.selectionStatus !== 'Rejected' && user.selectionStatus !== 'Selected' && (
+                            <button 
+                                onClick={() => onStatusUpdate(user._id, 'Rejected')}
+                                className="px-8 py-3 bg-red-50 text-red-600 border border-red-100 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all flex items-center gap-2"
+                            >
+                                <UserX className="w-4 h-4" /> Reject User
+                            </button>
+                        )}
                     </div>
                 </div>
-            </div>
-            {assessment ? (
-                <div className="space-y-8">
-                    <div className="bg-black text-white grid grid-cols-2 md:grid-cols-5 gap-6 p-10 -mx-8">
-                        {[{l:'Score', v:`${assessment.scorePercentage}%`}, {l:'Questions', v:`${assessment.score}/${assessment.totalQuestions}`}, {l:'Time', v:`${Math.floor(assessment.timeTaken/60)}m ${assessment.timeTaken%60}s`}, {l:'Verdict', v:assessment.passed ? 'PASSED' : 'FAILED', c:assessment.passed ? 'text-emerald-400' : 'text-red-400'}].map((m, i) => (
-                            <div key={i} className="space-y-1"><p className="text-[9px] font-black uppercase text-gray-500 tracking-[0.2em]">{m.l}</p><p className={`text-2xl font-black ${m.c || ''}`}>{m.v}</p></div>
-                        ))}
+
+                {/* Compact Score Bar */}
+                {assessment ? (
+                    <div className="bg-black text-white grid grid-cols-2 md:grid-cols-5 gap-0 divide-x divide-white/5 py-4 border-t border-white/5">
+                        <ScoreMetric label="Final Score" value={`${assessment.scorePercentage}%`} />
+                        <ScoreMetric label="Accuracy" value={`${assessment.score}/${assessment.totalQuestions}`} />
+                        <ScoreMetric label="Time Invested" value={`${Math.floor(assessment.timeTaken/60)}m ${assessment.timeTaken%60}s`} />
+                        <ScoreMetric label="Verdict" value={assessment.passed ? 'PASSED' : 'FAILED'} color={assessment.passed ? 'text-emerald-400' : 'text-red-400'} />
+                        <ScoreMetric label="Status" value={user.selectionStatus?.split(' ')[0] || 'NEW'} />
                     </div>
-                    <div className="space-y-6">
-                        <h3 className="text-2xl font-black uppercase tracking-tighter">Transcript</h3>
+                ) : (
+                    <div className="bg-gray-50 py-3 text-center border-t border-gray-100">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Module Blueprint Not Attempted</p>
+                    </div>
+                )}
+            </div>
+
+            {assessment && (
+                <div className="mt-12 space-y-8 px-4">
+                    <div className="flex items-center gap-4">
+                        <div className="h-0.5 flex-1 bg-gray-100" />
+                        <h3 className="text-2xl font-black uppercase tracking-tighter text-gray-400">Question-Level Intelligence</h3>
+                        <div className="h-0.5 flex-1 bg-gray-100" />
+                    </div>
+                    <div className="space-y-4 max-w-5xl mx-auto">
                         {assessment.answers?.map((ans, idx) => (
-                            <div key={idx} className={`p-8 rounded-[2rem] border ${!ans.selectedOption ? 'bg-gray-50' : ans.isCorrect ? 'bg-emerald-50/30 border-emerald-100' : 'bg-red-50/30 border-red-100'}`}>
-                                <div className="flex gap-4 mb-6"><div className={`w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black ${!ans.selectedOption ? 'bg-gray-200' : ans.isCorrect ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>{idx+1}</div><p className="text-sm font-black leading-relaxed">{ans.questionId?.text}</p></div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="p-4 bg-white rounded-xl border border-gray-100"><p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Candidate</p><p className={`text-xs font-bold uppercase ${ans.isCorrect ? 'text-emerald-600' : 'text-red-500'}`}>{ans.selectedOption || 'No response'}</p></div>
-                                    <div className="p-4 bg-white rounded-xl border border-gray-100"><p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-1">Correct</p><p className="text-xs font-bold uppercase text-black">{ans.questionId?.options?.find(o => o.isCorrect)?.text}</p></div>
+                            <div key={idx} className={`p-8 rounded-[2.5rem] border transition-all hover:shadow-lg ${!ans.selectedOption ? 'bg-gray-50 border-gray-100' : ans.isCorrect ? 'bg-emerald-50/20 border-emerald-100/50' : 'bg-red-50/20 border-red-100/50'}`}>
+                                <div className="flex gap-6 mb-6">
+                                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-xs font-black shrink-0 ${!ans.selectedOption ? 'bg-gray-200 text-gray-500' : ans.isCorrect ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'}`}>{idx+1}</div>
+                                    <p className="text-base font-black leading-tight text-gray-900">{ans.questionId?.text}</p>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="p-4 bg-white/60 backdrop-blur-sm rounded-2xl border border-gray-100"><p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1 italic">Candidate Selected</p><p className={`text-xs font-black uppercase ${ans.isCorrect ? 'text-emerald-600' : 'text-red-600'}`}>{ans.selectedOption || 'BLANK SUBMISSION'}</p></div>
+                                    <div className="p-4 bg-white rounded-2xl border border-gray-100"><p className="text-[8px] font-bold text-gray-400 uppercase tracking-widest mb-1 italic">Correct Solution</p><p className="text-xs font-black uppercase text-black">{ans.questionId?.options?.find(o => o.isCorrect)?.text}</p></div>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </div>
-            ) : (
-                <div className="py-20 text-center text-[10px] font-black text-gray-300 uppercase tracking-widest">No Telemetry Discovered</div>
             )}
+        </div>
+    );
+}
+
+function DetailItem({ icon: Icon, value }) {
+    return (
+        <div className="flex items-center gap-2 text-[11px] font-bold text-gray-500 truncate">
+            <Icon className="w-3.5 h-3.5 text-gray-300 shrink-0" />
+            <span className="truncate">{value}</span>
+        </div>
+    );
+}
+
+function ScoreMetric({ label, value, color = "text-white" }) {
+    return (
+        <div className="flex flex-col items-center justify-center py-2 px-4 text-center">
+            <p className="text-[8px] font-black uppercase text-gray-500 tracking-widest mb-0.5">{label}</p>
+            <p className={`text-lg font-black uppercase tracking-tighter ${color}`}>{value}</p>
         </div>
     );
 }

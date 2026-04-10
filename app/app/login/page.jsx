@@ -21,7 +21,9 @@ export default function LoginPage() {
         const userEmail = typeof window !== 'undefined' ? localStorage.getItem("userEmail") : null;
         const userRole = typeof window !== 'undefined' ? localStorage.getItem("userRole") : null;
         if (userEmail && userRole) {
-            router.push(userRole === 'admin' ? '/admin' : '/dashboard');
+            if (userRole === 'admin') router.push('/admin');
+            else if (userRole === 'ambassador') router.push('/ambassador/dashboard');
+            else router.push('/dashboard');
         }
     }, [router]);
 
@@ -48,13 +50,18 @@ export default function LoginPage() {
                 localStorage.setItem("userRole", data.user.role || 'intern');
                 localStorage.setItem("loginTimestamp", Date.now().toString());
 
+                // For Ambassadors, set the specific key used by their dashboard
+                if (data.user.role === 'ambassador') {
+                    localStorage.setItem("ambassadorEmail", data.user.email);
+                }
+
                 document.cookie = `userRole=${data.user.role || 'intern'}; path=/; max-age=10800`;
                 document.cookie = `userEmail=${data.user.email}; path=/; max-age=10800`;
 
                 if (data.redirectTo) {
-                    router.push(data.redirectTo);
+                    window.location.href = data.redirectTo;
                 } else {
-                    router.push(data.user.role === 'admin' ? "/admin" : "/dashboard");
+                    window.location.href = data.user.role === 'admin' ? "/admin" : "/dashboard";
                 }
             } else if (res.status === 403) {
                 const errorData = data;
