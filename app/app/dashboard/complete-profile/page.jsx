@@ -204,12 +204,11 @@ export default function CompleteProfilePage() {
 
     const getAmount = () => {
         const costs = {
-            '2 Months': 4700,
-            '3 Months': 7050, // Pro-rated or default for 3? User said 4m-9400. 
-            '4 Months': 9400,
-            '6 Months': 14000
+            '2 Months': 7200,
+            '4 Months': 12000,
+            '6 Months': 15000
         };
-        const base = costs[formData.duration] || 4700;
+        const base = costs[formData.duration] || 7200;
         if (formData.appliedReferral) {
             const discount = (base * (formData.appliedReferral.discountPercentage || 10)) / 100;
             return base - discount;
@@ -535,9 +534,9 @@ export default function CompleteProfilePage() {
                                     </label>
                                     <div className="grid grid-cols-2 gap-4">
                                         {[
-                                            { label: '2 Months', fee: '₹4,700' },
-                                            { label: '4 Months', fee: '₹9,400' },
-                                            { label: '6 Months', fee: '₹14,000' }
+                                            { label: '2 Months', fee: '₹7,200', subtitle: '₹3,600/month' },
+                                            { label: '4 Months', fee: '₹12,000', subtitle: '₹3,000/month' },
+                                            { label: '6 Months', fee: '₹15,000', subtitle: '₹2,500/month' }
                                         ].map(d => (
                                             <button
                                                 key={d.label}
@@ -549,7 +548,8 @@ export default function CompleteProfilePage() {
                                                 <Clock className={`w-6 h-6 ${formData.duration === d.label ? 'text-[#ccff00]' : 'text-gray-300 group-hover:text-black'}`} />
                                                 <div className="text-center">
                                                     <p className="text-xs font-black uppercase tracking-widest">{d.label}</p>
-                                                    <p className={`text-[9px] font-bold ${formData.duration === d.label ? 'text-gray-400' : 'text-gray-300'}`}>Total Program Fee: {d.fee}</p>
+                                                    <p className={`text-[9px] font-bold ${formData.duration === d.label ? 'text-gray-400' : 'text-gray-300'}`}>{d.subtitle}</p>
+                                                    <p className={`text-[10px] font-black ${formData.duration === d.label ? 'text-[#ccff00]' : 'text-black'}`}>Total: {d.fee}</p>
                                                 </div>
                                             </button>
                                         ))}
@@ -616,9 +616,9 @@ export default function CompleteProfilePage() {
                                         <div className="text-left">
                                             <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Total Enrollment Fee</p>
                                             <p className={`text-2xl font-black ${formData.appliedReferral ? 'text-gray-300 line-through text-sm' : 'text-gray-900'}`}>
-                                                ₹{formData.duration === '2 Months' ? '4,700' : formData.duration === '4 Months' ? '9,400' : formData.duration === '6 Months' ? '14,000' : '4,700'}.00
+                                                ₹{formData.duration === '2 Months' ? '7,200' : formData.duration === '4 Months' ? '12,000' : formData.duration === '6 Months' ? '15,000' : '7,200'}.00
                                             </p>
-                                            {formData.appliedReferral && <p className="text-2xl font-black text-black">₹{getAmount()}.00</p>}
+                                            {formData.appliedReferral && <p className="text-2xl font-black text-black">₹{getAmount().toLocaleString('en-IN')}.00</p>}
                                         </div>
                                         <div className="text-right">
                                             <p className="text-[9px] font-black uppercase tracking-widest text-gray-400">Duration</p>

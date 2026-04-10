@@ -104,7 +104,6 @@ export default function AmbassadorDashboard() {
 
     const chartData = generateChartData();
 
-    // Calculate real Growth Rate comparing this month to last month
     const calculateGrowth = () => {
         if (chartData.length < 2) return "+0.0%";
         const currentMonth = chartData[5].uv;
