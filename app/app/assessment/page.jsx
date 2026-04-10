@@ -40,6 +40,7 @@ function AssessmentContent() {
     const answersRef = useRef({});
     const timeLeftRef = useRef(0);
     const isSubmittingRef = useRef(false);
+    const isSubmittedRef = useRef(false);
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [reviewQuestions, setReviewQuestions] = useState(new Set());
     const [showHelpModal, setShowHelpModal] = useState(false);
@@ -116,14 +117,14 @@ function AssessmentContent() {
         if (view !== 'exam' || isSubmitted) return;
         
         const handleVisibilityChange = () => { 
-            if (document.hidden && !isSubmitted) {
+            if (document.hidden && !isSubmittedRef.current) {
                 recordViolation('Warning: Please stay on this page.');
                 setIsPaused(true);
             }
         };
         
         const handleFullScreenChange = () => {
-            if (!document.fullscreenElement && !isSubmitted) {
+            if (!document.fullscreenElement && !isSubmittedRef.current) {
                 recordViolation('Warning: Please stay in full screen.');
                 setIsPaused(true);
             }
@@ -223,6 +224,7 @@ function AssessmentContent() {
                 const data = await res.json();
                 setAssessmentResult(data);
                 setIsSubmitted(true);
+                isSubmittedRef.current = true;
                 setIsPaused(false);
                 if (document.fullscreenElement) {
                     document.exitFullscreen().catch(err => console.error("Failed to exit full screen:", err));
@@ -299,7 +301,7 @@ function AssessmentContent() {
                 </div>
                 <h1 className="text-2xl font-black uppercase tracking-tight">No Assessment Found</h1>
                 <p className="text-gray-500 max-w-sm font-medium">No assessment is currently active for the {user.track || 'assigned'} track. Please contact your administrator.</p>
-                <button onClick={() => router.push('/dashboard')} className="bg-black text-white px-10 py-3.5 rounded-xl font-bold uppercase text-[10px] tracking-widest active:scale-95 transition-all shadow-xl shadow-black/10">Back to Dashboard</button>
+                <button onClick={() => window.location.href = '/dashboard'} className="bg-black text-white px-10 py-3.5 rounded-xl font-bold uppercase text-[10px] tracking-widest active:scale-95 transition-all shadow-xl shadow-black/10">Back to Dashboard</button>
             </div>
         </div>
     );
@@ -358,7 +360,7 @@ function AssessmentContent() {
                             <p className="text-gray-500 font-medium leading-relaxed uppercase text-[10px] tracking-widest">
                                 We appreciate your time, but unfortunately, we won't be moving forward with your application for the {user?.track} track at this time.
                             </p>
-                            <button onClick={() => router.push('/dashboard')} className="w-full bg-black text-white py-5 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl">Back to Dashboard</button>
+                            <button onClick={() => window.location.href = '/dashboard'} className="w-full bg-black text-white py-5 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl">Back to Dashboard</button>
                         </div>
                     ) : isSelected ? (
                         <div className="w-full space-y-12 animate-in fade-in duration-1000">
@@ -412,7 +414,7 @@ function AssessmentContent() {
                             </div>
 
                             <div className="flex justify-center">
-                                <button onClick={() => router.push('/dashboard')} className="bg-black text-white px-14 py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-2xl hover:scale-105 transition-all">Proceed to Intern Portal</button>
+                                <button onClick={() => window.location.href = '/dashboard'} className="bg-black text-white px-14 py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-2xl hover:scale-105 transition-all">Proceed to Intern Portal</button>
                             </div>
                         </div>
                     ) : (
@@ -431,7 +433,7 @@ function AssessmentContent() {
                                 </p>
                             </div>
 
-                            <button onClick={() => router.push('/dashboard')} className="mx-auto block bg-black text-white px-14 py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-2xl hover:scale-105 transition-all">Go to Dashboard</button>
+                            <button onClick={() => window.location.href = '/dashboard'} className="mx-auto block bg-black text-white px-14 py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-2xl hover:scale-105 transition-all">Go to Dashboard</button>
                         </div>
                     ) }
 
