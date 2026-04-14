@@ -78,16 +78,17 @@
 }
 
 @layer utilities {
-  .modal-open aside {
-    filter: blur(8px) grayscale(0.5);
-    opacity: 0.7;
+  .modal-active aside {
+    filter: blur(8px) grayscale(0.2);
+    opacity: 0.4;
     pointer-events: none;
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  .modal-open .fixed.inset-0.z-0 {
+  .modal-active main > div:first-child {
     filter: blur(4px);
-    opacity: 0.05;
+    opacity: 0.5;
+    pointer-events: none;
     transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }

@@ -55,6 +55,7 @@ export default function UnifiedAssessmentsPage() {
     const [expandedQuestion, setExpandedQuestion] = useState(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("ALL");
+    const [deleteQuestionTarget, setDeleteQuestionTarget] = useState(null);
     const [newQuestion, setNewQuestion] = useState({
         text: "",
         options: [
@@ -84,6 +85,18 @@ export default function UnifiedAssessmentsPage() {
     const [bulkImportText, setBulkImportText] = useState("");
     const [isParsing, setIsParsing] = useState(false);
     const [showSaveModal, setShowSaveModal] = useState(false);
+
+    // --- Global Modal State ---
+    const isAnyModalOpen = !!(isBulkMode || showSaveModal || viewingAadhaarUser || deleteQuestionTarget);
+
+    useEffect(() => {
+        if (isAnyModalOpen) {
+            document.body.classList.add('modal-active');
+        } else {
+            document.body.classList.remove('modal-active');
+        }
+        return () => document.body.classList.remove('modal-active');
+    }, [isAnyModalOpen]);
 
     // --- Initialization ---
     useEffect(() => {
@@ -260,12 +273,12 @@ export default function UnifiedAssessmentsPage() {
                         while (currentQuestion.options.length < 4) currentQuestion.options.push({ text: `Option ${currentQuestion.options.length + 1}`, isCorrect: false });
                         importedQuestions.push(currentQuestion);
                     }
-                    let qText = line.replace(/^(?:Q\d*|\d+|Q)[.)\]:\s]*/i, '').trim();
+                    let qText = line.replace(/^(?:Q\d*|\d+|Q)[.)\]:\s]{0,}/i, '').trim();
                     currentQuestion = { text: qText, options: [] };
                 } else if (isOptionLine) {
                     if (!currentQuestion) currentQuestion = { text: "Untitled Question", options: [] };
                     if (currentQuestion.options.length < 4) {
-                        const optText = line.replace(/^[a-e1-5][.)\]]\s*/i, '');
+                        const optText = line.replace(/^[a-e1-5][.)\]]\s{0,}/i, '');
                         currentQuestion.options.push({ text: optText, isCorrect: false });
                     }
                 } else {
@@ -293,7 +306,7 @@ export default function UnifiedAssessmentsPage() {
                 });
                 if (res.ok) successCount++;
             }
-            toast.success(`Imported ${successCount} modules`, { id: tid });
+            toast.success(`Imported ${successCount} questions`, { id: tid });
             setBulkImportText("");
             setIsBulkMode(false);
             fetchData();
@@ -339,17 +352,48 @@ export default function UnifiedAssessmentsPage() {
         } catch { toast.error("Error", { id: tid }); }
     };
 
-    const handleDeleteQuestion = async (id, e) => {
-        e.stopPropagation();
-        if (!confirm("Delete?")) return;
+    const handleUpdateAnswer = async (question, correctIdx) => {
+        const tid = toast.loading("Updating answer...");
+        try {
+            const updatedOptions = question.options.map((opt, i) => ({
+                ...opt,
+                isCorrect: i === correctIdx
+            }));
+
+            const res = await fetch("/api/admin/assessment/questions", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: question._id,
+                    text: question.text,
+                    options: updatedOptions
+                })
+            });
+
+            if (res.ok) {
+                toast.success("Answer Updated", { id: tid });
+                fetchData();
+            } else {
+                toast.error("Update Failed", { id: tid });
+            }
+        } catch (err) {
+            toast.error("Network Error", { id: tid });
+        }
+    };
+
+    const handleDeleteQuestion = async (id) => {
         const tid = toast.loading("Removing...");
         try {
             const res = await fetch(`/api/admin/assessment/questions?id=${id}`, { method: "DELETE" });
             if (res.ok) {
                 toast.success("Cleared", { id: tid });
                 fetchData();
+            } else {
+                toast.error("Deletion Failed", { id: tid });
             }
-        } catch { toast.error("Error", { id: tid }); }
+        } catch { 
+            toast.error("Error", { id: tid }); 
+        }
     };
 
     const handleBulkDeleteQuestions = async () => {
@@ -535,7 +579,7 @@ export default function UnifiedAssessmentsPage() {
                                         {isBulkMode && (
                                             <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm animate-in zoom-in-95">
                                                 <textarea className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-6 text-[10px] font-mono h-64 outline-none" placeholder="Paste questions..." value={bulkImportText} onChange={e => setBulkImportText(e.target.value)} />
-                                                <button onClick={handleBulkImport} className="w-full py-5 bg-black text-white rounded-2xl font-black uppercase tracking-widest mt-6">Execute Injection</button>
+                                                <button onClick={handleBulkImport} className="w-full py-5 bg-black text-white rounded-2xl font-black uppercase tracking-widest mt-6">Upload</button>
                                             </div>
                                         )}
 
@@ -588,7 +632,7 @@ export default function UnifiedAssessmentsPage() {
                                             <div className="divide-y divide-gray-50">
                                                 {questions.map((q, idx) => (
                                                     <div key={q._id} className={`p-6 hover:bg-gray-50/50 transition-all ${selectedQuestionIds.includes(q._id) ? 'bg-red-50/50' : ''}`}>
-                                                        <div className="flex items-center justify-between">
+                                                        <div className="flex items-start justify-between">
                                                             <div className="flex items-center gap-6">
                                                                 <input 
                                                                     type="checkbox" 
@@ -597,9 +641,28 @@ export default function UnifiedAssessmentsPage() {
                                                                     className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
                                                                 />
                                                                 <span className="text-[10px] font-black text-gray-200">{String(idx+1).padStart(2,'0')}</span>
-                                                                <p className="text-[11px] font-black uppercase tracking-tight">{q.text}</p>
+                                                                <div className="space-y-4">
+                                                                    <p className="text-[11px] font-black tracking-tight">{q.text}</p>
+                                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pb-2">
+                                                                        {q.options?.map((opt, i) => (
+                                                                            <button 
+                                                                                key={i} 
+                                                                                onClick={() => handleUpdateAnswer(q, i)}
+                                                                                className={`px-4 py-2.5 rounded-xl border text-[10px] font-black tracking-widest flex items-center justify-between transition-all group/opt ${opt.isCorrect ? 'bg-emerald-50 border-emerald-100 text-emerald-600 shadow-sm' : 'bg-gray-50/50 border-gray-100 text-gray-400 hover:border-black hover:text-black'}`}
+                                                                            >
+                                                                                <span className="flex items-center gap-2">
+                                                                                    <span className={`w-5 h-5 rounded flex items-center justify-center text-[9px] transition-colors ${opt.isCorrect ? 'bg-emerald-500 text-white' : 'bg-gray-100 text-gray-400 group-hover/opt:bg-black group-hover/opt:text-white'}`}>
+                                                                                        {String.fromCharCode(65 + i)}
+                                                                                    </span>
+                                                                                    {opt.text}
+                                                                                </span>
+                                                                                {opt.isCorrect && <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />}
+                                                                            </button>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
                                                             </div>
-                                                            <button onClick={(e) => handleDeleteQuestion(q._id, e)} className="p-2 text-gray-200 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                                            <button onClick={() => setDeleteQuestionTarget(q)} className="p-2 text-gray-200 hover:text-red-500 transition-colors"><Trash2 className="w-4 h-4" /></button>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -685,10 +748,10 @@ export default function UnifiedAssessmentsPage() {
 
             {/* Modals & Sub-components */}
             {showSaveModal && selectedExam && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowSaveModal(false)} />
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowSaveModal(false)} />
                     <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95">
-                        <div className="p-8 border-b border-gray-50 text-center bg-gray-50/30">
+                        <div className="p-8 border-b border-gray-100 text-center bg-gray-50/30">
                             <h3 className="text-xl font-black uppercase tracking-tighter">Paper Protocol</h3>
                             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2">Update release status for {selectedExam.title}</p>
                         </div>
@@ -701,10 +764,10 @@ export default function UnifiedAssessmentsPage() {
             )}
 
             {viewingAadhaarUser && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setViewingAadhaarUser(null)} />
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setViewingAadhaarUser(null)} />
                     <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95">
-                        <div className="p-8 border-b border-gray-50 flex items-center justify-between">
+                        <div className="p-8 border-b border-gray-100 flex items-center justify-between">
                             <h3 className="text-xl font-black uppercase tracking-tighter">Identity Proof</h3>
                             <button onClick={() => setViewingAadhaarUser(null)} className="p-2 text-gray-400 hover:text-black"><X className="w-5 h-5" /></button>
                         </div>
@@ -715,6 +778,29 @@ export default function UnifiedAssessmentsPage() {
                                 <img src={viewingAadhaarUser.aadhaarCard || 'https://placehold.co/800x500'} className="w-full h-32 object-contain rounded-xl" />
                                 <p className="mt-6 text-2xl font-black font-mono tracking-widest">{viewingAadhaarUser.aadhaarNumber?.replace(/(.{4})/g, '$1 ') || 'XXXX XXXX XXXX'}</p>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {deleteQuestionTarget && (
+                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setDeleteQuestionTarget(null)} />
+                    <div className="bg-white w-full max-w-md rounded-[2.5rem] p-10 text-center relative z-10 animate-in zoom-in-95">
+                        <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <Trash2 className="w-10 h-10" />
+                        </div>
+                        <h3 className="text-xl font-black uppercase tracking-tighter">Remove Module</h3>
+                        <p className="text-[10px] font-bold text-gray-400 mt-2 mb-8 leading-relaxed uppercase tracking-widest">
+                            Are you sure you want to delete this question? This action is irreversible.
+                        </p>
+                        <div className="flex gap-4">
+                            <button onClick={() => setDeleteQuestionTarget(null)} className="flex-1 py-4 bg-gray-50 text-black rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all">Cancel</button>
+                            <button onClick={async () => {
+                                const qid = deleteQuestionTarget._id;
+                                setDeleteQuestionTarget(null);
+                                handleDeleteQuestion(qid);
+                            }} className="flex-1 py-4 bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg shadow-red-500/20">Purge</button>
                         </div>
                     </div>
                 </div>
