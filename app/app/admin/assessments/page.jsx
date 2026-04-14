@@ -36,7 +36,7 @@ import MacOSFolder from "@/components/MacOSFolder";
 import { toast } from "react-hot-toast";
 
 export default function UnifiedAssessmentsPage() {
-    const [activeTab, setActiveTab] = useState('submissions'); // 'build', 'submissions', 'rejected'
+    const [activeTab, setActiveTab] = useState('submissions'); // 'build', 'submissions'
 
     // --- Dynamic Tracks State ---
     const [tracks, setTracks] = useState([]);
@@ -49,6 +49,7 @@ export default function UnifiedAssessmentsPage() {
     const [exams, setExams] = useState([]);
     const [loadingExams, setLoadingExams] = useState(false);
     const [questions, setQuestions] = useState([]);
+    const [selectedQuestionIds, setSelectedQuestionIds] = useState([]);
     const [loadingExam, setLoadingExam] = useState(false);
     const [isAddingMode, setIsAddingMode] = useState(false);
     const [expandedQuestion, setExpandedQuestion] = useState(null);
@@ -252,7 +253,7 @@ export default function UnifiedAssessmentsPage() {
                 }
 
                 let isQuestionLine = /^(?:Q\d*|\d+)[.)\]]?\s+/i.test(line) || line.toLowerCase().startsWith('q:');
-                let isOptionLine = /^[a-e][.)\]]\s+/i.test(line);
+                let isOptionLine = /^[a-z][.)\]]\s+/i.test(line);
 
                 if (isQuestionLine) {
                     if (currentQuestion && currentQuestion.options.length > 0) {
@@ -267,9 +268,14 @@ export default function UnifiedAssessmentsPage() {
                         const optText = line.replace(/^[a-e1-5][.)\]]\s*/i, '');
                         currentQuestion.options.push({ text: optText, isCorrect: false });
                     }
-                } else if (currentQuestion) {
-                    if (currentQuestion.options.length === 0) currentQuestion.text += " " + line;
-                    else currentQuestion.options[currentQuestion.options.length - 1].text += " " + line;
+                } else {
+                    if (!currentQuestion) {
+                        currentQuestion = { text: line, options: [] };
+                    } else if (currentQuestion.options.length === 0) {
+                        currentQuestion.text += " " + line;
+                    } else {
+                        currentQuestion.options[currentQuestion.options.length - 1].text += " " + line;
+                    }
                 }
             }
             if (currentQuestion && currentQuestion.options.length > 0) {
@@ -346,8 +352,23 @@ export default function UnifiedAssessmentsPage() {
         } catch { toast.error("Error", { id: tid }); }
     };
 
+    const handleBulkDeleteQuestions = async () => {
+        if (!confirm(`Delete ${selectedQuestionIds.length} questions?`)) return;
+        const tid = toast.loading(`Purging ${selectedQuestionIds.length} modules...`);
+        try {
+            for (const id of selectedQuestionIds) {
+                await fetch(`/api/admin/assessment/questions?id=${id}`, { method: "DELETE" });
+            }
+            toast.success("Cleanup Complete", { id: tid });
+            setSelectedQuestionIds([]);
+            fetchData();
+        } catch {
+            toast.error("Cleanup Interrupted", { id: tid });
+        }
+    };
+
     useEffect(() => {
-        if (activeTab === 'submissions' || activeTab === 'rejected') fetchSubmissions();
+        if (activeTab === 'submissions') fetchSubmissions();
     }, [activeTab]);
 
     const fetchSubmissions = async () => {
@@ -403,7 +424,12 @@ export default function UnifiedAssessmentsPage() {
     const filteredSubmissions = submissions.filter(s => {
         const matchesTrack = filterTrack ? s.track === filterTrack : true;
         const matchesStatus = filterStatus ? s.selectionStatus === filterStatus : true;
-        return matchesTrack && matchesStatus;
+        
+        // Find the track object to check its category
+        const trackObj = tracks.find(t => t.name === s.track);
+        const matchesCategory = selectedCategoryFilter === 'ALL' || (trackObj && trackObj.category === selectedCategoryFilter);
+        
+        return matchesTrack && matchesStatus && matchesCategory;
     });
 
     return (
@@ -416,13 +442,13 @@ export default function UnifiedAssessmentsPage() {
                     </div>
                     <div className="flex items-center gap-3">
                         <nav className="flex bg-gray-50/50 p-1 rounded-xl border border-gray-100">
-                            {['submissions', 'build', 'rejected'].map(t => (
+                            {['submissions', 'build'].map(t => (
                                 <button
                                     key={t}
                                     onClick={() => setActiveTab(t)}
                                     className={`px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === t ? 'bg-black text-white shadow-xl' : 'text-gray-400 hover:text-black'}`}
                                 >
-                                    {t === 'submissions' ? 'Intelligence' : t === 'build' ? 'Repository' : 'Rejected'}
+                                    {t === 'submissions' ? 'Intelligence' : 'Repository'}
                                 </button>
                             ))}
                         </nav>
@@ -437,14 +463,28 @@ export default function UnifiedAssessmentsPage() {
                 {activeTab === 'build' ? (
                     <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
                         {!selectedTrack ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {tracks.filter(t => selectedCategoryFilter === 'ALL' || t.category === selectedCategoryFilter).map(track => (
-                                    <div key={track._id} onClick={() => setSelectedTrack(track.name)} className="group bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all cursor-pointer flex flex-col items-center gap-4">
-                                        <MacOSFolder size={48} />
-                                        <h3 className="text-sm font-black text-black uppercase tracking-widest leading-tight">{track.name}</h3>
-                                        <div className="px-4 py-2 bg-gray-100 group-hover:bg-black group-hover:text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">Enter Repository</div>
-                                    </div>
-                                ))}
+                            <div className="space-y-6">
+                                <div className="flex items-center gap-4">
+                                    <CustomDropdown 
+                                        value={selectedCategoryFilter} 
+                                        onChange={setSelectedCategoryFilter} 
+                                        options={[
+                                            { value: "ALL", label: "ALL CATEGORIES" },
+                                            ...Array.from(new Set(tracks.map(t => t.category).filter(Boolean))).map(c => ({ value: c, label: c.toUpperCase() }))
+                                        ]} 
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {tracks.filter(t => selectedCategoryFilter === 'ALL' || t.category === selectedCategoryFilter).map(track => (
+                                        <div key={track._id} onClick={() => setSelectedTrack(track.name)} className="group bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all cursor-pointer flex flex-col items-center gap-4">
+                                            <MacOSFolder size={48} />
+                                            <h3 className="text-sm font-black text-black uppercase tracking-widest text-center leading-tight">{track.name}</h3>
+                                            <div className="px-4 py-2 bg-gray-100 group-hover:bg-black group-hover:text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">
+                                                {track.category || "Category"}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         ) : (
                             <div className="space-y-6">
@@ -518,14 +558,44 @@ export default function UnifiedAssessmentsPage() {
 
                                         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden min-h-[500px]">
                                             <div className="p-8 border-b border-gray-100 bg-gray-50/10 flex items-center justify-between gap-6">
-                                                <input className="text-2xl font-black uppercase tracking-tighter bg-transparent w-full outline-none" defaultValue={selectedExam.title} onBlur={async (e) => { if(e.target.value !== selectedExam.title) { fetch("/api/admin/assessment/exams/update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: selectedExam._id, title: e.target.value }) }); } }} />
+                                                <div className="flex items-center gap-4 flex-1">
+                                                     {selectedQuestionIds.length > 0 ? (
+                                                         <div className="flex items-center gap-4 animate-in fade-in slide-in-from-left-2">
+                                                             <input 
+                                                                type="checkbox" 
+                                                                checked={selectedQuestionIds.length === questions.length}
+                                                                onChange={() => setSelectedQuestionIds(selectedQuestionIds.length === questions.length ? [] : questions.map(q => q._id))}
+                                                                className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+                                                             />
+                                                             <span className="text-xs font-black uppercase tracking-widest text-red-600">{selectedQuestionIds.length} Selected</span>
+                                                             <button onClick={handleBulkDeleteQuestions} className="px-4 py-2 bg-red-600 text-white rounded-lg text-[9px] font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-red-200"><Trash2 className="w-3.5 h-3.5" /> Delete Selected</button>
+                                                             <button onClick={() => setSelectedQuestionIds([])} className="text-[9px] font-black uppercase tracking-widest text-gray-400 hover:text-black">Cancel</button>
+                                                         </div>
+                                                     ) : (
+                                                        <>
+                                                            <input 
+                                                                type="checkbox" 
+                                                                checked={selectedQuestionIds.length === questions.length && questions.length > 0}
+                                                                onChange={() => setSelectedQuestionIds(selectedQuestionIds.length === questions.length ? [] : questions.map(q => q._id))}
+                                                                className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+                                                            />
+                                                            <input className="text-2xl font-black uppercase tracking-tighter bg-transparent w-full outline-none" defaultValue={selectedExam.title} onBlur={async (e) => { if(e.target.value !== selectedExam.title) { fetch("/api/admin/assessment/exams/update", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: selectedExam._id, title: e.target.value }) }); } }} />
+                                                        </>
+                                                     )}
+                                                </div>
                                                 <button onClick={() => setShowSaveModal(true)} className="px-6 py-2 bg-black text-white rounded-lg text-[9px] font-black uppercase tracking-widest">Save Settings</button>
                                             </div>
                                             <div className="divide-y divide-gray-50">
                                                 {questions.map((q, idx) => (
-                                                    <div key={q._id} className="p-6">
+                                                    <div key={q._id} className={`p-6 hover:bg-gray-50/50 transition-all ${selectedQuestionIds.includes(q._id) ? 'bg-red-50/50' : ''}`}>
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center gap-6">
+                                                                <input 
+                                                                    type="checkbox" 
+                                                                    checked={selectedQuestionIds.includes(q._id)}
+                                                                    onChange={() => setSelectedQuestionIds(prev => prev.includes(q._id) ? prev.filter(id => id !== q._id) : [...prev, q._id])}
+                                                                    className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black cursor-pointer"
+                                                                />
                                                                 <span className="text-[10px] font-black text-gray-200">{String(idx+1).padStart(2,'0')}</span>
                                                                 <p className="text-[11px] font-black uppercase tracking-tight">{q.text}</p>
                                                             </div>
@@ -545,8 +615,16 @@ export default function UnifiedAssessmentsPage() {
                         <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden min-h-[600px]">
                             <div className="p-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/10">
                                 <div className="flex items-center gap-4">
-                                    <CustomDropdown value={filterTrack} onChange={setFilterTrack} options={[{ value: "", label: "ALL TRACKS" }, ...tracks.map(t => ({ value: t.name, label: t.name }))]} />
-                                    {activeTab === 'submissions' && <CustomDropdown value={filterStatus} onChange={setFilterStatus} options={[{ value: "", label: "ALL STATUS" }, { value: "Pending Selection (24h Buffer)", label: "PENDING" }, { value: "Selected", label: "SELECTED" }, { value: "Rejected", label: "REJECTED" }]} />}
+                                    <CustomDropdown 
+                                        value={selectedCategoryFilter} 
+                                        onChange={setSelectedCategoryFilter} 
+                                        options={[
+                                            { value: "ALL", label: "ALL CATEGORIES" },
+                                            ...Array.from(new Set(tracks.map(t => t.category).filter(Boolean))).map(c => ({ value: c, label: c.toUpperCase() }))
+                                        ]} 
+                                    />
+                                    <CustomDropdown value={filterTrack} onChange={setFilterTrack} options={[{ value: "", label: "ALL TRACKS" }, ...tracks.filter(t => selectedCategoryFilter === 'ALL' || t.category === selectedCategoryFilter).map(t => ({ value: t.name, label: t.name }))]} />
+                                    {activeTab === 'submissions' && <CustomDropdown value={filterStatus} onChange={setFilterStatus} options={[{ value: "", label: "ALL STATUS" }, { value: "Pending Selection (24h Buffer)", label: "PENDING" }, { value: "Selected", label: "SELECTED" }]} />}
                                 </div>
                                 <button onClick={fetchSubmissions} className="p-3 bg-white border border-gray-100 rounded-xl hover:bg-black hover:text-white transition-all"><RefreshCw className={`w-4 h-4 ${loadingSubmissions ? 'animate-spin' : ''}`} /></button>
                             </div>
@@ -563,7 +641,7 @@ export default function UnifiedAssessmentsPage() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-50">
-                                        {(activeTab === 'rejected' ? filteredSubmissions.filter(s => s.selectionStatus === 'Rejected') : filteredSubmissions).map(s => (
+                                        {filteredSubmissions.map(s => (
                                             <tr key={s._id} className="hover:bg-gray-50/50 transition-all">
                                                 <td className="px-8 py-6">
                                                     <div className="flex items-center gap-4">
