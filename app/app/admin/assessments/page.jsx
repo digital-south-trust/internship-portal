@@ -87,7 +87,7 @@ export default function UnifiedAssessmentsPage() {
     const [showSaveModal, setShowSaveModal] = useState(false);
 
     // --- Global Modal State ---
-    const isAnyModalOpen = !!(isBulkMode || showSaveModal || viewingAadhaarUser || deleteQuestionTarget);
+    const isAnyModalOpen = !!(showSaveModal || viewingAadhaarUser || deleteQuestionTarget);
 
     useEffect(() => {
         if (isAnyModalOpen) {
