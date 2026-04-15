@@ -100,7 +100,7 @@ export default function AdminLayout({ children }) {
 
 
     return (
-        <div className="flex min-h-screen relative overflow-hidden bg-gray-50/20">
+        <div className="flex min-h-screen relative bg-gray-50/20">
             {/* Global Background Pattern */}
             <div 
                 className="fixed inset-0 z-0 pointer-events-none opacity-20" 

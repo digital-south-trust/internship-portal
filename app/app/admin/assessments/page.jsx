@@ -477,7 +477,8 @@ export default function UnifiedAssessmentsPage() {
     });
 
     return (
-        <div className="animate-in fade-in duration-500">
+        <div className="relative min-h-screen">
+            <div className={`animate-in fade-in duration-500 flex flex-col min-h-screen ${isAnyModalOpen ? 'blur-md grayscale opacity-40 pointer-events-none' : ''} transition-all duration-700`}>
             <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-5 border-b border-gray-100 shadow-sm mb-8">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
@@ -503,7 +504,8 @@ export default function UnifiedAssessmentsPage() {
                 </div>
             </header>
 
-            <div className="px-8 pb-20 max-w-[1750px] mx-auto">
+
+            <div className="px-10 pb-20 w-full relative">
                 {activeTab === 'build' ? (
                     <div className="space-y-6 animate-in slide-in-from-bottom-2 duration-300">
                         {!selectedTrack ? (
@@ -518,7 +520,7 @@ export default function UnifiedAssessmentsPage() {
                                         ]} 
                                     />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 w-full">
                                     {tracks.filter(t => selectedCategoryFilter === 'ALL' || t.category === selectedCategoryFilter).map(track => (
                                         <div key={track._id} onClick={() => setSelectedTrack(track.name)} className="group bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all cursor-pointer flex flex-col items-center gap-4">
                                             <MacOSFolder size={48} />
@@ -541,26 +543,28 @@ export default function UnifiedAssessmentsPage() {
                                                 if (res.ok) fetchExams();
                                             }} className="px-5 py-2.5 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><Plus className="w-4 h-4" /> Create Unique Paper</button>
                                         </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 w-full">
                                             {exams.map(ex => (
-                                                <div key={ex._id} className="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all flex flex-col gap-6">
+                                                <div key={ex._id} className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm hover:shadow-2xl hover:shadow-black/5 transition-all flex flex-col gap-8 min-h-[350px]">
                                                     <div className="flex items-start justify-between">
-                                                        <FileText className="w-6 h-6 text-blue-500" />
-                                                        <button onClick={(e) => { e.stopPropagation(); if(confirm("Purge?")) fetch(`/api/admin/assessment/exams?id=${ex._id}`, { method: "DELETE" }).then(() => fetchExams()); }} className="p-2 text-gray-200 hover:text-rose-500"><Trash2 className="w-4 h-4" /></button>
+                                                        <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
+                                                            <FileText className="w-6 h-6 text-blue-500" />
+                                                        </div>
+                                                        <button onClick={(e) => { e.stopPropagation(); if(confirm("Purge?")) fetch(`/api/admin/assessment/exams?id=${ex._id}`, { method: "DELETE" }).then(() => fetchExams()); }} className="p-2.5 text-gray-200 hover:text-rose-500 transition-colors"><Trash2 className="w-5 h-5" /></button>
                                                     </div>
-                                                    <div onClick={() => setSelectedExam(ex)} className="cursor-pointer space-y-4">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded">ID-{ex._id.slice(-6).toUpperCase()}</span>
-                                                            <h3 className="text-xs font-black text-black uppercase tracking-widest truncate">{ex.title}</h3>
+                                                    <div onClick={() => setSelectedExam(ex)} className="cursor-pointer space-y-4 flex-1">
+                                                        <div className="space-y-2">
+                                                            <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">ID-{ex._id.slice(-6).toUpperCase()}</span>
+                                                            <h3 className="text-lg font-black text-black uppercase tracking-tight">{ex.title}</h3>
                                                         </div>
                                                         <div className="flex items-center gap-4">
-                                                            <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1"><Activity className="w-3 h-3" /> {ex.questions?.length || 0} Modules</span>
-                                                            <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded ${ex.status === 'active' ? 'text-emerald-500 bg-emerald-50' : 'text-amber-500 bg-amber-50'}`}>{ex.status === 'active' ? 'Active' : 'Inactive'}</span>
+                                                            <span className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5"><Activity className="w-4 h-4" /> {ex.questions?.length || 0} Modules</span>
+                                                            <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg ${ex.status === 'active' ? 'text-emerald-600 bg-emerald-50' : 'text-amber-600 bg-amber-50'}`}>{ex.status === 'active' ? 'Active' : 'Inactive'}</span>
                                                         </div>
                                                     </div>
-                                                    <div className="flex gap-2">
-                                                        <button onClick={() => setSelectedExam(ex)} className="flex-1 py-3 bg-gray-50 hover:bg-black hover:text-white rounded-xl text-[9px] font-black uppercase">Modify</button>
-                                                        <button onClick={() => handleToggleStatus(ex._id, ex.status)} className={`flex-1 py-3 border rounded-xl text-[9px] font-black uppercase ${ex.status === 'active' ? 'border-amber-100 text-amber-600' : 'border-emerald-100 text-emerald-600'}`}>{ex.status === 'active' ? 'Freeze' : 'Release'}</button>
+                                                    <div className="flex gap-3 pt-2 border-t border-gray-50">
+                                                        <button onClick={() => setSelectedExam(ex)} className="flex-1 py-3.5 bg-gray-50 hover:bg-black hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Modify</button>
+                                                        <button onClick={() => handleToggleStatus(ex._id, ex.status)} className={`flex-1 py-3.5 border rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${ex.status === 'active' ? 'border-amber-200 text-amber-600 hover:bg-amber-50' : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'}`}>{ex.status === 'active' ? 'Freeze' : 'Release'}</button>
                                                     </div>
                                                 </div>
                                             ))}
@@ -746,7 +750,9 @@ export default function UnifiedAssessmentsPage() {
                 )}
             </div>
 
-            {/* Modals & Sub-components */}
+
+
+
             {showSaveModal && selectedExam && (
                 <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowSaveModal(false)} />
@@ -805,6 +811,7 @@ export default function UnifiedAssessmentsPage() {
                     </div>
                 </div>
             )}
+        </div>
         </div>
     );
 }

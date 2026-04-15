@@ -39,7 +39,7 @@ export async function POST(req) {
             description: `Assessment for ${track}`,
             supervisorEmail: 'admin@digitalsouth.co.in',
             scheduledAt: new Date(),
-            status: 'active'
+            status: 'scheduled'
         });
 
         return NextResponse.json(newExam, { status: 201 });

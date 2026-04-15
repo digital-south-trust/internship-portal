@@ -27,6 +27,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 
 import { Skeleton } from '@/components/ui/skeleton';
 import { ParticleTextEffect } from '@/components/ui/particle-text-effect';
+import { AuroraBackground } from '@/components/ui/aurora-background';
+import { motion } from 'framer-motion';
 
 function ProfileSkeleton() {
     return (
@@ -256,31 +258,45 @@ export default function CompleteProfilePage() {
                 description: `${formData.duration} Program Enrollment`,
                 order_id: orderData.id,
                 handler: async function (response) {
-                    const verifyRes = await fetch("/api/verify-payment", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            razorpay_order_id: response.razorpay_order_id,
-                            razorpay_payment_id: response.razorpay_payment_id,
-                            razorpay_signature: response.razorpay_signature,
-                            email: userData.email,
-                            fullName: userData.fullName,
-                            referralCode: formData.appliedReferral?.referralCode
-                        }),
-                    });
+                    toast.dismiss(tid); // Clear the "Initiating payment" toast
+                    const verifyTid = toast.loading("Verifying payment...");
+                    try {
+                        const verifyRes = await fetch("/api/verify-payment", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                email: userData.email,
+                                fullName: userData.fullName,
+                                referralCode: formData.appliedReferral?.referralCode
+                            }),
+                        });
 
-                    if (verifyRes.ok) {
-                        toast.success("Payment Successful!");
-                        setPaymentStatus('success');
-                        localStorage.removeItem(`profile_form_${userData.email}`);
-                        localStorage.removeItem(`profile_step_${userData.email}`);
-                        setFormData(prev => ({ ...prev, isPaid: true }));
-                        
-                        setTimeout(() => { setShowSplash(true); }, 1000);
-                        setTimeout(() => { router.push("/dashboard"); }, 5000);
-                    } else {
-                        setPaymentStatus('failed');
-                        toast.error("Payment verification failed.");
+                        if (verifyRes.ok) {
+                            toast.success("Payment Successful!", { id: verifyTid });
+                            setPaymentStatus('success');
+                            localStorage.removeItem(`profile_form_${userData.email}`);
+                            localStorage.removeItem(`profile_step_${userData.email}`);
+                            setFormData(prev => ({ ...prev, isPaid: true }));
+                            
+                            setTimeout(() => { setShowSplash(true); }, 1000);
+                            setTimeout(() => { window.location.href = "/dashboard"; }, 5000);
+                        } else {
+                            setPaymentStatus('failed');
+                            toast.error("Payment verification failed.", { id: verifyTid });
+                        }
+                    } catch (verifyError) {
+                        console.error("Verification error:", verifyError);
+                        toast.error("Payment verification error. Please contact support.", { id: verifyTid });
+                    }
+                },
+                modal: {
+                    ondismiss: function() {
+                        // User closed the Razorpay modal without paying
+                        toast.dismiss(tid);
+                        setLoading(false);
                     }
                 },
                 prefill: {
@@ -293,6 +309,7 @@ export default function CompleteProfilePage() {
 
             const rzp = new window.Razorpay(options);
             rzp.open();
+            toast.dismiss(tid); // Clear "Initiating" once the Razorpay modal opens
         } catch (error) {
             console.error("Payment failed:", error);
             toast.error("Failed to initiate payment.", { id: tid });
@@ -341,44 +358,36 @@ export default function CompleteProfilePage() {
 
     if (showSplash) {
         return (
-            <div className="fixed inset-0 z-[1000] bg-black flex flex-col items-center justify-center p-6 text-center overflow-hidden font-sans">
-                {/* Modern Minimal Background Detail */}
-                <div className="absolute inset-0 z-0 opacity-20" style={{ backgroundImage: "radial-gradient(circle at 2px 2px, rgba(255,255,255,0.05) 1px, transparent 0)", backgroundSize: '40px 40px' }}></div>
-                
-                <div className="relative z-10 w-full max-w-4xl space-y-4 animate-in fade-in duration-1000">
-                    <div className="h-64 flex items-center justify-center">
-                        <ParticleTextEffect words={["DIGITAL SOUTH", "INTERNSHIP", "WELCOME"]} />
+            <AuroraBackground>
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{
+                        duration: 1.2,
+                        ease: [0.4, 0, 0.2, 1],
+                    }}
+                    className="relative flex flex-col gap-6 items-center justify-center px-6"
+                >
+                    <div className="text-4xl md:text-8xl font-black text-black dark:text-white text-center tracking-tighter uppercase drop-shadow-2xl">
+                        Digital South Internship
+                    </div>
+                    <div className="font-medium text-base md:text-2xl text-gray-600 dark:text-neutral-400 py-2 text-center tracking-[0.3em] uppercase opacity-80">
+                        Welcome aboard! Have a great journey with us.
                     </div>
                     
-                    <div className="space-y-6">
-                        <div className="inline-flex items-center gap-3 bg-white/5 px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.5em] text-gray-400 border border-white/10 mb-4 backdrop-blur-md">
-                            Protocol Activated
-                        </div>
-                        <p className="text-gray-500 text-sm font-medium tracking-widest uppercase opacity-70 max-w-md mx-auto">
-                            Secure Onboarding Complete. <br />Initializing Developer Environment...
-                        </p>
+                    <div className="pt-8">
+                        <button 
+                            onClick={() => window.location.href = "/dashboard"} 
+                            className="bg-black text-white px-12 py-5 rounded-2xl font-black uppercase text-xs tracking-[0.2em] hover:scale-110 active:scale-95 transition-all shadow-2xl hover:shadow-black/20"
+                        >
+                            Enter Workspace
+                        </button>
                     </div>
-
-                    <div className="pt-12 flex flex-col items-center gap-6">
-                        <div className="w-32 h-1 bg-white/5 rounded-full overflow-hidden border border-white/5">
-                            <div className="h-full bg-white shadow-[0_0_15px_rgba(255,255,255,0.8)] animate-[loading_4s_ease-in-out_forwards]" />
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                            <p className="text-[10px] font-black text-white uppercase tracking-[0.3em]">Directing to Workspace</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <style jsx>{`
-                    @keyframes loading {
-                        0% { width: 0% }
-                        100% { width: 100% }
-                    }
-                `}</style>
-            </div>
+                </motion.div>
+            </AuroraBackground>
         );
     }
+
 
     return (
         <div className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden font-sans">
