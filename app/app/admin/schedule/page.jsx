@@ -27,6 +27,7 @@ export default function AdminSchedulePage() {
     const [scheduling, setScheduling] = useState(false);
     const [wrInternId, setWrInternId] = useState('');
     const [wrSearch, setWrSearch] = useState('');
+    const [wrTime, setWrTime] = useState('10:00');
     const [wrMeetLink, setWrMeetLink] = useState('https://meet.google.com/vcd-gfct-jqa');
     const [filterInternId, setFilterInternId] = useState(''); // '' = all
 
@@ -92,7 +93,7 @@ export default function AdminSchedulePage() {
             const res = await fetch('/api/admin/weekly-review', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ internId: wrInternId, meetLink: wrMeetLink }),
+                body: JSON.stringify({ internId: wrInternId, meetLink: wrMeetLink, startTime: wrTime }),
             });
             const data = await res.json();
             if (res.ok || res.status === 201) {
@@ -160,6 +161,30 @@ export default function AdminSchedulePage() {
             setPostponeDate(eventData.datetime.split('T')[0]);
             setPostponeTime(eventData.time);
             setPostponeLink(eventData.meetingLink || "");
+            return;
+        }
+        if (action === 'cancel') {
+            if (!confirm('Are you sure you want to cancel this meeting? The intern will be notified via email.')) return;
+            try {
+                const isReview = eventData.tag === 'review';
+                const endpoint = isReview ? '/api/admin/weekly-review' : '/api/schedule';
+                const res = await fetch(endpoint, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: eventData.id, status: 'Cancelled' })
+                });
+                if (res.ok) {
+                    toast.success('Meeting Cancelled and User Notified.');
+                    fetchReviews();
+                    const adminEmail = localStorage.getItem("userEmail") || "admin@example.com";
+                    const sRes = await fetch(`/api/schedule?role=admin&email=${adminEmail}`);
+                    if (sRes.ok) setSchedules(await sRes.json());
+                } else {
+                    toast.error('Failed to cancel meeting.');
+                }
+            } catch (err) {
+                toast.error('Server error during cancellation.');
+            }
             return;
         }
         if (action === 'attended' || action === 'missed') {
@@ -522,6 +547,16 @@ export default function AdminSchedulePage() {
                                                             </a>
                                                         )}
                                                         <button
+                                                            onClick={() => handleEventAction('cancel', {
+                                                                id: r._id,
+                                                                tag: r.tag
+                                                            })}
+                                                            className="p-2 bg-red-50 border border-red-100 rounded-lg text-red-400 hover:bg-red-500 hover:text-white transition-all"
+                                                            title="Cancel Meeting"
+                                                        >
+                                                            <X className="w-3.5 h-3.5" />
+                                                        </button>
+                                                        <button
                                                             onClick={() => handleEventAction('postpone_request', {
                                                                 id: r._id,
                                                                 name: selectedReviewIntern.fullName,
@@ -690,12 +725,22 @@ export default function AdminSchedulePage() {
                                 </div>
 
                                 {/* Meet link */}
-                                <div className="space-y-1.5">
-                                    <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Meeting Link</label>
-                                    <div className="relative">
-                                        <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
-                                        <input type="url" value={wrMeetLink} onChange={e => setWrMeetLink(e.target.value)}
-                                            className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-11 pr-4 py-3 text-[11px] font-bold focus:ring-4 focus:ring-black/5 outline-none" />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Start Time</label>
+                                        <div className="relative">
+                                            <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                                            <input type="time" value={wrTime} onChange={e => setWrTime(e.target.value)}
+                                                className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-11 pr-4 py-3 text-[11px] font-bold focus:ring-4 focus:ring-black/5 outline-none" />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Meeting Link</label>
+                                        <div className="relative">
+                                            <LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                                            <input type="url" value={wrMeetLink} onChange={e => setWrMeetLink(e.target.value)}
+                                                className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-11 pr-4 py-3 text-[11px] font-bold focus:ring-4 focus:ring-black/5 outline-none" />
+                                        </div>
                                     </div>
                                 </div>
 
@@ -705,7 +750,7 @@ export default function AdminSchedulePage() {
                                     <ul className="space-y-1.5">
                                         {[
                                             '4 weekly meetings created from today',
-                                            'Time slots auto-spaced 20 min apart per intern',
+                                            `Slots start at ${wrTime} (spaced 20m per intern)`,
                                             'Confirmation emails sent to intern + admin',
                                             '24h + 1h before reminders sent automatically',
                                         ].map((item, i) => (
@@ -760,20 +805,18 @@ export default function AdminSchedulePage() {
                                     <input type="url" value={postponeLink} onChange={e => setPostponeLink(e.target.value)}
                                         className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-[11px] font-bold outline-none" />
                                 </div>
-                                {postponeEvent.tag === 'review' && (
-                                    <div className="space-y-1.5">
-                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Status</label>
-                                        <select
-                                            value={postponeEvent.status || "Scheduled"}
-                                            onChange={e => setPostponeEvent({ ...postponeEvent, status: e.target.value })}
-                                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-[11px] font-bold outline-none appearance-none"
-                                        >
-                                            <option value="Scheduled">Scheduled</option>
-                                            <option value="Completed">Completed</option>
-                                            <option value="Cancelled">Cancelled</option>
-                                        </select>
-                                    </div>
-                                )}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Status</label>
+                                    <select
+                                        value={postponeEvent.status || "Scheduled"}
+                                        onChange={e => setPostponeEvent({ ...postponeEvent, status: e.target.value })}
+                                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-[11px] font-bold outline-none appearance-none"
+                                    >
+                                        <option value="Scheduled">Scheduled</option>
+                                        <option value="Completed">Completed</option>
+                                        <option value="Cancelled">Cancelled</option>
+                                    </select>
+                                </div>
                                 <button onClick={handlePostponeSubmit} disabled={postponing}
                                     className="w-full py-4 mt-2 bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.01] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                                     {postponing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Calendar className="w-4 h-4" />}

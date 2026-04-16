@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
     ArrowLeft, Mail, Calendar, Phone, Award, Activity, User,
     CheckCircle, RefreshCw, UserCog, ChevronDown, ShieldOff, ShieldCheck, X, AlertTriangle,
-    Github, ExternalLink, KeyRound, Copy, Eye, EyeOff
+    Github, ExternalLink, KeyRound, Copy, Eye, EyeOff, Edit, CreditCard
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
@@ -52,6 +52,11 @@ export default function InternDetailsPage() {
     const [resettingPassword, setResettingPassword] = useState(false);
     const [newPassword, setNewPassword] = useState(null);
     const [showNewPassword, setShowNewPassword] = useState(false);
+    
+    // Edit Modal State
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [editData, setEditData] = useState({});
+    const [savingEdit, setSavingEdit] = useState(false);
 
     const openProject = (project) => {
         setSelectedProject(project);
@@ -224,7 +229,6 @@ export default function InternDetailsPage() {
 
     // Process real analytics data for the chart (Last 6 Months)
     const generateChartData = () => {
-        if (!referredUsers || referredUsers.length === 0) return [];
         const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         const data = [];
         const now = new Date();
@@ -232,7 +236,7 @@ export default function InternDetailsPage() {
             let d = new Date(now.getFullYear(), now.getMonth() - i, 1);
             let monthLabel = months[d.getMonth()];
             
-            let recruits = referredUsers.filter(u => {
+            let recruits = (referredUsers || []).filter(u => {
                 let uDate = new Date(u.createdAt);
                 return uDate.getMonth() === d.getMonth() && uDate.getFullYear() === d.getFullYear();
             });
@@ -268,7 +272,13 @@ export default function InternDetailsPage() {
                     {/* Avatar */}
                     <div className="w-32 h-32 md:w-36 md:h-36 bg-gray-50 rounded-[2.5rem] border-2 border-white shadow-xl flex items-center justify-center shrink-0 z-20 overflow-hidden">
                         <img 
-                            src={user.profilePicture || dicebear(user.avatarSeed || user.fullName?.split(' ')[0] || "User")} 
+                            src={
+                                (user.profilePicture && user.profilePicture !== "null") 
+                                ? user.profilePicture 
+                                : (user.passportPhoto && user.passportPhoto !== "null")
+                                ? user.passportPhoto
+                                : dicebear(user.avatarSeed || user.fullName?.split(' ')[0] || "User")
+                            } 
                             alt="Profile" 
                             className="w-full h-full object-cover" 
                             onError={(e) => { e.target.src = dicebear("User"); }}
@@ -348,6 +358,22 @@ export default function InternDetailsPage() {
                                         <p className="text-xs font-bold text-gray-900">{user.duration || 'N/A'}</p>
                                     </div>
                                     <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Professional Status</p>
+                                        <p className="text-xs font-bold text-gray-900 truncate">{user.workingDetails || user.collegeName || 'Not Provided'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Aadhaar</p>
+                                        <p className="text-xs font-bold text-gray-900 select-all">{user.aadhaarNumber || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Date of Birth</p>
+                                        <p className="text-xs font-bold text-gray-900">{user.dob || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Course & Degree</p>
+                                        <p className="text-xs font-bold text-gray-900 truncate">{user.courseName ? `${user.courseName} (${user.educationQualification || 'Degree'})` : 'N/A'}</p>
+                                    </div>
+                                    <div>
                                         <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Assigned Admin</p>
                                         <button
                                             onClick={() => { setPendingAdmin(assignedAdmin); setShowAdminModal(true); }}
@@ -357,8 +383,8 @@ export default function InternDetailsPage() {
                                         </button>
                                     </div>
                                     <div>
-                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Phone</p>
-                                        <p className="text-xs font-bold text-gray-900">{user.phone || 'N/A'}</p>
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Location / Address</p>
+                                        <p className="text-xs font-bold text-gray-900 truncate max-w-[150px]" title={user.address}>{user.address || 'N/A'}</p>
                                     </div>
                                 </>
                             )}
@@ -396,6 +422,12 @@ export default function InternDetailsPage() {
                                 <ShieldOff className="w-4 h-4" /> Terminate
                             </button>
                         )}
+
+                        {/* Update Data Button (New) */}
+                        <button onClick={() => { setEditData(user); setShowEditModal(true); }}
+                            className="bg-black text-white px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-neutral-800 transition-all flex items-center gap-2 shadow-lg shadow-black/10">
+                            <Edit className="w-4 h-4 text-[#ccff00]" /> Update Information
+                        </button>
                     </div>
                 </div>
             </div>
@@ -790,69 +822,191 @@ export default function InternDetailsPage() {
                             <div className="p-6 space-y-5">
                                 {!newPassword ? (
                                     <>
-                                        <p className="text-sm text-gray-700 font-medium leading-relaxed">
-                                            This will generate a <strong>new random password</strong> for <strong>{user.fullName}</strong> and email it to:
-                                        </p>
-                                        <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 flex items-center gap-3">
-                                            <Mail className="w-5 h-5 text-gray-400 shrink-0" />
-                                            <span className="text-sm font-bold text-gray-800 truncate">{user.email}</span>
+                                        <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                                            <p className="text-xs font-bold text-amber-700 leading-relaxed">
+                                                This will generate a new random password and send it to {user.fullName}'s email address.
+                                            </p>
                                         </div>
-                                        <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 space-y-1">
-                                            <p className="text-xs font-black text-amber-700">⚠️ Important:</p>
-                                            <ul className="text-xs text-amber-600 font-medium space-y-0.5 list-disc list-inside">
-                                                <li>The old password will stop working immediately</li>
-                                                <li>New password will be emailed to the intern</li>
-                                                <li>You will also see it on-screen after reset</li>
-                                            </ul>
-                                        </div>
-                                        <div className="flex gap-3 pt-2">
-                                            <button onClick={() => setShowPasswordModal(false)}
-                                                className="flex-1 py-3 bg-gray-50 text-gray-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-all">
-                                                Cancel
-                                            </button>
-                                            <button onClick={handleResetPassword} disabled={resettingPassword}
-                                                className="flex-1 py-3 bg-amber-500 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-amber-600 transition-all disabled:opacity-50 shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
-                                                {resettingPassword ? (
-                                                    <><RefreshCw className="w-3.5 h-3.5 animate-spin" /> Resetting...</>
-                                                ) : (
-                                                    <><KeyRound className="w-3.5 h-3.5" /> Reset Now</>
-                                                )}
-                                            </button>
-                                        </div>
-                                    </>
-                                ) : (
-                                    <>
-                                        <div className="text-center space-y-2">
-                                            <div className="w-14 h-14 bg-emerald-50 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
-                                                <CheckCircle className="w-7 h-7 text-emerald-600" />
-                                            </div>
-                                            <p className="text-sm font-black text-emerald-700 uppercase tracking-widest">Password Reset Successful</p>
-                                            <p className="text-xs text-gray-500 font-medium">Email sent to {user.email}</p>
-                                        </div>
-                                        <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 space-y-3">
-                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">New Password</p>
-                                            <div className="flex items-center gap-2">
-                                                <div className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-3 font-mono text-lg font-black tracking-widest text-gray-900 overflow-hidden">
-                                                    {showNewPassword ? newPassword : '••••••••••••'}
-                                                </div>
-                                                <button onClick={() => setShowNewPassword(!showNewPassword)}
-                                                    className="w-10 h-10 bg-white border border-gray-200 rounded-xl flex items-center justify-center text-gray-400 hover:text-black transition-all shrink-0"
-                                                    title={showNewPassword ? "Hide" : "Show"}>
-                                                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                                </button>
-                                                <button onClick={() => copyToClipboard(newPassword)}
-                                                    className="w-10 h-10 bg-black text-white rounded-xl flex items-center justify-center hover:scale-105 transition-all shrink-0 shadow-lg"
-                                                    title="Copy to clipboard">
-                                                    <Copy className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-                                        <button onClick={() => setShowPasswordModal(false)}
-                                            className="w-full py-3 bg-black text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg">
-                                            Done
+                                        <button onClick={handleResetPassword} disabled={resettingPassword}
+                                            className="w-full py-4 bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-103 active:scale-95 transition-all shadow-xl shadow-black/10">
+                                            {resettingPassword ? "Generating..." : "Confirm & Send Email"}
                                         </button>
                                     </>
+                                ) : (
+                                    <div className="space-y-4">
+                                        <div className="p-4 bg-green-50 rounded-2xl border border-green-100 text-center">
+                                            <p className="text-[10px] font-black text-green-700 uppercase tracking-widest mb-1">New Password Generated</p>
+                                            <div className="flex items-center justify-center gap-2">
+                                                <code className="text-lg font-black text-black tracking-widest">{showNewPassword ? newPassword : '••••••••'}</code>
+                                                <button onClick={() => setShowNewPassword(!showNewPassword)} className="p-2 hover:bg-black/5 rounded-lg transition-all">
+                                                    {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <button onClick={() => copyToClipboard(newPassword)}
+                                            className="w-full py-3 bg-gray-50 text-gray-700 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all flex items-center justify-center gap-2">
+                                            <Copy className="w-4 h-4" /> Copy Password
+                                        </button>
+                                    </div>
                                 )}
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+
+                {/* ── Update Data Modal ── */}
+                {showEditModal && (
+                    <motion.div key="edit-modal" className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setShowEditModal(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+                            className="relative w-full max-w-xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                            {/* Header */}
+                            <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center shadow-xl shadow-black/10">
+                                        <Edit className="w-5 h-5 text-[#ccff00]" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-black uppercase tracking-tight">Update Information</h3>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Administrative Override</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowEditModal(false)} className="p-3 hover:bg-black/5 rounded-2xl transition-all">
+                                    <X className="w-6 h-6 text-gray-400" />
+                                </button>
+                            </div>
+
+                            {/* Scrollable Form */}
+                            <div className="flex-1 overflow-y-auto p-8 space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5 col-span-2">
+                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Full Name</label>
+                                        <input type="text" value={editData.fullName || ""} 
+                                            onChange={e => setEditData({...editData, fullName: e.target.value})}
+                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Phone Number</label>
+                                        <input type="text" value={editData.phone || ""} 
+                                            onChange={e => setEditData({...editData, phone: e.target.value})}
+                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Aadhaar Number</label>
+                                        <input type="text" value={editData.aadhaarNumber || ""} 
+                                            onChange={e => setEditData({...editData, aadhaarNumber: e.target.value})}
+                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
+                                    </div>
+                                    
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Date of Birth</label>
+                                        <input type="text" value={editData.dob || ""} 
+                                            onChange={e => setEditData({...editData, dob: e.target.value})}
+                                            placeholder="DD/MM/YYYY"
+                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
+                                    </div>
+                                    <div className="space-y-1.5 col-span-2">
+                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Physical Address</label>
+                                        <textarea value={editData.address || ""} 
+                                            onChange={e => setEditData({...editData, address: e.target.value})}
+                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none resize-none" rows={2} />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Qualification</label>
+                                        <input type="text" value={editData.educationQualification || ""} 
+                                            onChange={e => setEditData({...editData, educationQualification: e.target.value})}
+                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Course Name</label>
+                                        <input type="text" value={editData.courseName || ""} 
+                                            onChange={e => setEditData({...editData, courseName: e.target.value})}
+                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
+                                    </div>
+                                    <div className="space-y-1.5 col-span-2">
+                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Working Status / Company Name</label>
+                                        <input type="text" value={editData.workingDetails || ""} 
+                                            onChange={e => setEditData({...editData, workingDetails: e.target.value})}
+                                            placeholder="Company Name if working, else leave blank"
+                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
+                                    </div>
+                                    
+                                    {editData.role?.toLowerCase() !== 'ambassador' && (
+                                        <div className="space-y-1.5 col-span-2">
+                                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Institution / College</label>
+                                            <input type="text" value={editData.collegeName || ""} 
+                                                onChange={e => setEditData({...editData, collegeName: e.target.value})}
+                                                className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
+                                        </div>
+                                    )}
+
+                                    {editData.role?.toLowerCase() === 'ambassador' && (
+                                        <>
+                                            <div className="space-y-1.5 col-span-2">
+                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Institution / College</label>
+                                                <input type="text" value={editData.collegeName || ""} 
+                                                    onChange={e => setEditData({...editData, collegeName: e.target.value})}
+                                                    className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Referral Code</label>
+                                                <input type="text" value={editData.referralCode || ""} 
+                                                    onChange={e => setEditData({...editData, referralCode: e.target.value.toUpperCase()})}
+                                                    className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-black tracking-widest transition-all outline-none" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Current Earnings (₹)</label>
+                                                <input type="number" value={editData.earnings || 0} 
+                                                    onChange={e => setEditData({...editData, earnings: Number(e.target.value)})}
+                                                    className="w-full bg-emerald-50/50 border border-transparent focus:border-emerald-200 focus:bg-white rounded-2xl px-5 py-4 text-sm font-black text-emerald-600 transition-all outline-none" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Commission %</label>
+                                                <input type="number" value={editData.commissionPercentage || 0} 
+                                                    onChange={e => setEditData({...editData, commissionPercentage: Number(e.target.value)})}
+                                                    className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
+                                            </div>
+                                            <div className="space-y-1.5">
+                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Intern Discount %</label>
+                                                <input type="number" value={editData.discountPercentage || 0} 
+                                                    onChange={e => setEditData({...editData, discountPercentage: Number(e.target.value)})}
+                                                    className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="p-8 border-t border-gray-50 flex gap-4 bg-gray-50/50">
+                                <button onClick={() => setShowEditModal(false)}
+                                    className="flex-1 py-4 bg-white border border-gray-200 text-gray-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all">
+                                    Cancel
+                                </button>
+                                <button onClick={async () => {
+                                    setSavingEdit(true);
+                                    try {
+                                        const res = await fetch(`/api/admin/users/${id}`, {
+                                            method: 'PATCH',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify(editData)
+                                        });
+                                        if (res.ok) {
+                                            toast.success('Information updated successfully');
+                                            setUser(editData);
+                                            setShowEditModal(false);
+                                        } else {
+                                            const err = await res.json();
+                                            toast.error(err.message || 'Update failed');
+                                        }
+                                    } catch { toast.error('Error saving changes'); }
+                                    finally { setSavingEdit(false); }
+                                }} disabled={savingEdit}
+                                    className="flex-1 py-4 bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10 disabled:opacity-50">
+                                    {savingEdit ? 'Updating...' : 'Save Changes'}
+                                </button>
                             </div>
                         </motion.div>
                     </motion.div>

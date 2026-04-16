@@ -1,54 +1,66 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { StreamletClient } from "@streamlet/sdk";
 
-const s3Client = new S3Client({
-    region: "auto",
-    endpoint: `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
-    credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID,
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-    },
+const client = new StreamletClient({
+    baseUrl: "https://api.streamlet.in",
+    apiKey: process.env.streamlet_api || process.env.STREAMLET_API_KEY,
+    accountNumber: process.env.streamlet_accountid || process.env.STREAMLET_ACCOUNT_NUMBER
 });
 
+
 export async function uploadFile(file, fileName, contentType) {
-    const bucketName = process.env.R2_BUCKET_NAME;
-
-    const command = new PutObjectCommand({
-        Bucket: bucketName,
-        Key: fileName,
-        Body: file,
-        ContentType: contentType,
-    });
-
     try {
-        await s3Client.send(command);
-        // If public URL is configured, return it
-        if (process.env.R2_PUBLIC_URL) {
-            return `${process.env.R2_PUBLIC_URL}/${fileName}`;
+        // Convert Buffer to Blob if necessary (Streamlet SDK expects File/Blob)
+        let fileToUpload = file;
+        if (Buffer.isBuffer(file)) {
+            fileToUpload = new Blob([file], { type: contentType });
         }
-        return `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${bucketName}/${fileName}`;
+
+        // Streamlet handles images and videos differently
+        if (contentType.startsWith('image/')) {
+            const result = await client.uploadImage({
+                file: fileToUpload
+            });
+            return result.cdnUrl;
+        } else if (contentType.startsWith('video/')) {
+            const result = await client.uploadVideo({
+                file: fileToUpload,
+                videoTitle: fileName || "Internship_Video",
+                keepOriginal: true
+            });
+            return result.videoId;
+        } else {
+            // Document Handler (PDF, Docs, etc.)
+            try {
+                const formData = new FormData();
+                formData.append('document', fileToUpload);
+                formData.append('documentTitle', fileName || "Internship_Doc");
+
+                const res = await fetch(`https://api.streamlet.in/${process.env.streamlet_api || process.env.STREAMLET_API_KEY}/upload-document`, {
+                    method: 'POST',
+                    headers: {
+                        'x-account-number': process.env.streamlet_accountid || process.env.STREAMLET_ACCOUNT_NUMBER
+                    },
+                    body: formData
+                });
+                
+                if (!res.ok) throw new Error("Document upload failed");
+                const result = await res.json();
+                return result.cdnUrl || result.documentUrl;
+            } catch (err) {
+                // Fallback to uploadImage if API is unified but SDK is old
+                const result = await client.uploadImage({ file: fileToUpload });
+                return result.cdnUrl;
+            }
+        }
     } catch (error) {
-        console.error("Error uploading file to R2:", error);
+        console.error("Streamlet upload error:", error);
         throw error;
     }
 }
 
 /**
- * Generate a signed URL for a file in R2
- * @param {string} fileName - The key/name of the file
- * @param {number} expiresIn - Expiration time in seconds (default 1 hour)
- * @returns {Promise<string>}
+ * Placeholder for presigned URLs (Streamlet uses public CDN URLs)
  */
-export async function getPresignedUrl(fileName, expiresIn = 3600) {
-    const command = new GetObjectCommand({
-        Bucket: process.env.R2_BUCKET_NAME,
-        Key: fileName,
-    });
-
-    try {
-        return await getSignedUrl(s3Client, command, { expiresIn });
-    } catch (error) {
-        console.error("Error generating presigned URL:", error);
-        throw error;
-    }
+export async function getPresignedUrl(fileName) {
+    return fileName;
 }

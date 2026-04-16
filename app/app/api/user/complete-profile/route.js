@@ -19,6 +19,17 @@ export async function POST(req) {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
+        // Check for duplicate phone
+        if (profileData.phone) {
+            const phoneOwner = await User.findOne({ 
+                phone: profileData.phone,
+                email: { $ne: email } 
+            });
+            if (phoneOwner) {
+                return NextResponse.json({ error: 'This mobile number is registered already' }, { status: 400 });
+            }
+        }
+
         // Update user fields
         Object.assign(user, profileData);
         user.isProfileComplete = true;

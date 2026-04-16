@@ -220,3 +220,33 @@ export async function sendAmbassadorOfferLetter({ to, ambassadorName, referralCo
   
     return sendEmail(to, subject, html);
   }
+
+export async function sendMeetingCancellation({ to, internName, date, time, description }) {
+  const subject = `❌ CANCELLED: ${description} — Internship Meeting`;
+  const dateStr = new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+
+  const html = `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #fee2e2; border-radius: 12px; padding: 24px; color: #1e293b;">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <span style="background: #fef2f2; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; color: #ef4444; text-transform: uppercase;">Meeting Cancelled</span>
+            </div>
+            <h2 style="color: #000; margin-bottom: 16px; font-size: 24px; font-weight: 800; text-align: center;">Update: Session Cancelled</h2>
+            <p>Hi <strong>${internName}</strong>,</p>
+            <p>Please note that your scheduled internship meeting has been <strong>cancelled</strong> by the administrator.</p>
+            <div style="background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 24px 0; border: 1px solid #f1f5f9; text-decoration: line-through; opacity: 0.6;">
+                <p style="margin: 8px 0;"><strong>🏢 Session:</strong> &nbsp; ${description}</p>
+                <p style="margin: 8px 0;"><strong>📅 Date:</strong> &nbsp; ${dateStr}</p>
+                <p style="margin: 8px 0;"><strong>⏰ Time:</strong> &nbsp; ${time}</p>
+            </div>
+            <p style="line-height: 1.6;">If this was a required weekly review, a new slot will be scheduled for you shortly. Please check your dashboard for updates.</p>
+            <div style="text-align: center; margin-top: 32px;">
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/schedule" style="display: inline-block; padding: 12px 24px; background-color: #f1f5f9; color: #000; text-decoration: none; font-weight: bold; border-radius: 8px;">View Updated Schedule</a>
+            </div>
+            <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #f1f5f9; text-align: center;">
+                <p style="font-size: 12px; color: #64748b;">This is an automated system notification from the Internship Portal.</p>
+            </div>
+        </div>
+    `;
+
+  return sendEmail(to, subject, html);
+}

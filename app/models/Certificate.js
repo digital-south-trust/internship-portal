@@ -9,6 +9,8 @@ const CertificateSchema = new mongoose.Schema({
     issuer: { type: String, default: 'Digital South' },
     track: String,
     type: { type: String, default: 'Completion' }, // Completion, Excellence, etc.
+    themeId: { type: Number, default: 1 }, // Map to templates 1-5
+    customUrl: String, // If user uploads a custom image
     pdfUrl: String, // Future use
 }, { timestamps: true });
 

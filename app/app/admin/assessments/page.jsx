@@ -6,7 +6,6 @@ import {
     Trash2,
     ChevronRight,
     ChevronDown,
-    Search,
     RefreshCw,
     BookOpen,
     Layers,
@@ -36,7 +35,12 @@ import MacOSFolder from "@/components/MacOSFolder";
 import { toast } from "react-hot-toast";
 
 export default function UnifiedAssessmentsPage() {
-    const [activeTab, setActiveTab] = useState('submissions'); // 'build', 'submissions'
+    const [activeTab, setActiveTab] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return sessionStorage.getItem('as_activeTab') || 'submissions';
+        }
+        return 'submissions';
+    }); // 'build', 'submissions'
 
     // --- Dynamic Tracks State ---
     const [tracks, setTracks] = useState([]);
@@ -520,14 +524,14 @@ export default function UnifiedAssessmentsPage() {
                                         ]} 
                                     />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-6 w-full">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8 w-full">
                                     {tracks.filter(t => selectedCategoryFilter === 'ALL' || t.category === selectedCategoryFilter).map(track => (
-                                        <div key={track._id} onClick={() => setSelectedTrack(track.name)} className="group bg-white p-6 rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl transition-all cursor-pointer flex flex-col items-center gap-4">
-                                            <MacOSFolder size={48} />
-                                            <h3 className="text-sm font-black text-black uppercase tracking-widest text-center leading-tight">{track.name}</h3>
-                                            <div className="px-4 py-2 bg-gray-100 group-hover:bg-black group-hover:text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all">
-                                                {track.category || "Category"}
+                                        <div key={track._id} onClick={() => setSelectedTrack(track.name)} className="group bg-white p-12 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-2xl transition-all cursor-pointer flex flex-col items-start justify-start gap-6 text-left">
+                                            <div className="space-y-1">
+                                                <h3 className="text-base font-black text-black uppercase tracking-tighter leading-tight">{track.name}</h3>
+                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{track.category || "General Category"}</p>
                                             </div>
+                                            <MacOSFolder size={64} className="transition-transform group-hover:scale-110 origin-left" />
                                         </div>
                                     ))}
                                 </div>
@@ -545,17 +549,13 @@ export default function UnifiedAssessmentsPage() {
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 w-full">
                                             {exams.map(ex => (
-                                                <div key={ex._id} className="bg-white p-10 rounded-[3rem] border border-gray-100 shadow-sm hover:shadow-2xl hover:shadow-black/5 transition-all flex flex-col gap-8 min-h-[350px]">
-                                                    <div className="flex items-start justify-between">
-                                                        <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center">
-                                                            <FileText className="w-6 h-6 text-blue-500" />
-                                                        </div>
-                                                        <button onClick={(e) => { e.stopPropagation(); if(confirm("Purge?")) fetch(`/api/admin/assessment/exams?id=${ex._id}`, { method: "DELETE" }).then(() => fetchExams()); }} className="p-2.5 text-gray-200 hover:text-rose-500 transition-colors"><Trash2 className="w-5 h-5" /></button>
-                                                    </div>
-                                                    <div onClick={() => setSelectedExam(ex)} className="cursor-pointer space-y-4 flex-1">
+                                                <div key={ex._id} className="relative bg-white p-12 rounded-[3rem] border border-gray-100 shadow-sm hover:shadow-2xl hover:shadow-black/5 transition-all flex flex-col gap-8 min-h-[350px]">
+                                                    <button onClick={(e) => { e.stopPropagation(); if(confirm("Purge?")) fetch(`/api/admin/assessment/exams?id=${ex._id}`, { method: "DELETE" }).then(() => fetchExams()); }} className="absolute top-10 right-10 p-2.5 text-gray-200 hover:text-rose-500 transition-colors z-20"><Trash2 className="w-5 h-5" /></button>
+                                                    
+                                                    <div onClick={() => setSelectedExam(ex)} className="cursor-pointer space-y-4 flex-1 relative z-10">
                                                         <div className="space-y-2">
-                                                            <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">ID-{ex._id.slice(-6).toUpperCase()}</span>
-                                                            <h3 className="text-lg font-black text-black uppercase tracking-tight">{ex.title}</h3>
+                                                            <h3 className="text-xl font-black text-black uppercase tracking-tight leading-none">{ex.title}</h3>
+                                                            <span className="inline-block text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">ID-{ex._id.slice(-6).toUpperCase()}</span>
                                                         </div>
                                                         <div className="flex items-center gap-4">
                                                             <span className="text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-1.5"><Activity className="w-4 h-4" /> {ex.questions?.length || 0} Modules</span>
@@ -858,12 +858,18 @@ function UserDetailView({ data, loading, onBack, onStatusUpdate }) {
                                 <button onClick={onBack} className="p-2 bg-gray-50 hover:bg-black hover:text-white rounded-lg transition-all"><ArrowLeft className="w-4 h-4" /></button>
                                 <h2 className="text-4xl font-black text-black tracking-tighter uppercase leading-none">{user.fullName}</h2>
                             </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2">
-                                <DetailItem icon={Mail} value={user.email} />
-                                <DetailItem icon={Phone} value={user.phone || 'Not Provided'} />
-                                <DetailItem icon={GraduationCap} value={`${user.educationQualification || ''} ${user.courseName ? `(${user.courseName})` : ''}`} />
-                                <DetailItem icon={Briefcase} value={`${user.collegeName || 'Self Taught'}`} />
-                                <DetailItem icon={Target} value={`${user.track} Path`} />
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
+                                <DetailItem icon={Mail} label="Email" value={user.email} />
+                                <DetailItem icon={Phone} label="Contact" value={user.phone || 'Not Provided'} />
+                                <DetailItem icon={MapPin} label="Location" value={user.address || 'Not Provided'} />
+                                <DetailItem icon={Calendar} label="DOB" value={user.dob || 'Not Provided'} />
+                                <DetailItem icon={UserCircle} label="Gender" value={user.gender || 'Not Provided'} />
+                                <DetailItem icon={GraduationCap} label="Qualification" value={`${user.educationQualification || ''} ${user.courseName ? `(${user.courseName})` : ''}`} />
+                                <DetailItem icon={Briefcase} label="Institution" value={`${user.collegeName || 'Self Taught'}`} />
+                                <DetailItem icon={Target} label="Core Path" value={`${user.track} Path`} />
+                                <DetailItem icon={Activity} label="Mode" value={user.mode || 'Remote'} />
+                                <DetailItem icon={RefreshCw} label="Duration" value={user.duration ? `${user.duration} Months` : 'Not Set'} />
+                                <DetailItem icon={Calendar} label="Registered" value={new Date(user.createdAt).toLocaleDateString()} />
                             </div>
                         </div>
                     </div>
@@ -931,11 +937,14 @@ function UserDetailView({ data, loading, onBack, onStatusUpdate }) {
     );
 }
 
-function DetailItem({ icon: Icon, value }) {
+function DetailItem({ icon: Icon, label, value }) {
     return (
-        <div className="flex items-center gap-2 text-[11px] font-bold text-gray-500 truncate">
-            <Icon className="w-3.5 h-3.5 text-gray-300 shrink-0" />
-            <span className="truncate">{value}</span>
+        <div className="flex flex-col gap-1 min-w-0">
+            <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-5">{label}</p>
+            <div className="flex items-center gap-2 text-[11px] font-bold text-gray-500 truncate">
+                <Icon className="w-3.5 h-3.5 text-gray-300 shrink-0" />
+                <span className="truncate">{value}</span>
+            </div>
         </div>
     );
 }

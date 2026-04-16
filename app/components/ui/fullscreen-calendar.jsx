@@ -258,7 +258,7 @@ export function FullScreenCalendar({
                   onClick={() => setSelectedDay(day)}
                   className={cn(
                     dayIdx === 0 && colStartClasses[getDay(day)],
-                    "bg-white relative flex flex-col hover:bg-gray-50/80 transition-colors focus:z-10 min-h-[75px]",
+                    "bg-white relative flex flex-col hover:bg-gray-50/80 transition-colors focus:z-10 min-h-[75px] group",
                     !isEqual(day, selectedDay) && "hover:bg-gray-50"
                   )}>
                   <header className="flex items-center justify-between p-2.5">
@@ -282,7 +282,7 @@ export function FullScreenCalendar({
                         "bg-black text-white",
                         (isEqual(day, selectedDay) || isToday(day)) &&
                         "font-black text-[12px]",
-                        "flex h-8 w-8 items-center justify-center rounded-2xl text-[10px] font-bold text-gray-400 hover:text-black transition-colors"
+                        "flex h-8 w-8 items-center justify-center rounded-2xl text-[10px] font-bold text-gray-400 group-hover:text-black transition-colors"
                       )}>
                       <time dateTime={format(day, "yyyy-MM-dd")}>
                         {format(day, "d")}

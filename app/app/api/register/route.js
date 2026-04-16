@@ -17,10 +17,10 @@ export async function POST(req) {
         
         let email = body.email.toLowerCase().trim();
 
-        // Check if user already exists in permanent User records
-        const existingUser = await User.findOne({ 
-            $or: [{ email: email }, { phone: body.phone }] 
-        });
+        // Check if user already exists
+        const query = { email };
+        const existingUser = await User.findOne(query);
+        
         if (existingUser) {
             return NextResponse.json({ message: "Already account is there" }, { status: 400 });
         }

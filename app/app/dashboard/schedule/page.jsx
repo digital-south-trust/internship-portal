@@ -51,13 +51,13 @@ export default function InternSchedulePage() {
             if (!acc[dayKey]) acc[dayKey] = { day: localDate, events: [] };
             acc[dayKey].events.push({
                 id: schedule._id,
-                name: `Meeting with Admin`,
+                name: schedule.tag === 'review' ? 'Weekly Review' : `Meeting with Admin`,
                 description: schedule.description,
                 time: schedule.time,
                 datetime: `${dayKey}T${schedule.time}`,
                 meetingLink: schedule.meetingLink,
                 status: 'Scheduled',
-                tag: 'meeting'
+                tag: schedule.tag || 'meeting'
             });
             return acc;
         }, {})
@@ -244,6 +244,12 @@ export default function InternSchedulePage() {
                                                             <span className="text-[8px] font-black uppercase tracking-widest">Node Active</span>
                                                         </div>
                                                     )}
+                                                    {schedule.tag === 'review' && !isToday && (
+                                                        <div className="absolute top-8 right-10 flex items-center gap-1.5 px-3 py-1 bg-blue-600 text-white rounded-full">
+                                                            <Activity className="w-2 h-2" />
+                                                            <span className="text-[8px] font-black uppercase tracking-widest">Review Mode</span>
+                                                        </div>
+                                                    )}
 
                                                     <div className="flex items-center gap-5 mb-10">
                                                         <div className={`w-16 h-16 rounded-3xl flex flex-col items-center justify-center border shadow-lg ${
@@ -282,7 +288,7 @@ export default function InternSchedulePage() {
                                                             }`}
                                                         >
                                                             <LinkIcon className="w-3.5 h-3.5" />
-                                                            {isPast ? 'Archive Accessed' : 'Initialize Session'}
+                                                            {isPast ? 'Archive Accessed' : 'Join Session'}
                                                             {!isPast && <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-1" />}
                                                         </a>
                                                     </div>
