@@ -29,25 +29,25 @@ export async function uploadFile(file, fileName, contentType) {
             });
             return result.videoId;
         } else {
-            // Document Handler (PDF, Docs, etc.)
+            // Document Handler (PDF, Docs, etc.) - matching user provided endpoint format
             try {
-                const formData = new FormData();
-                formData.append('document', fileToUpload);
-                formData.append('documentTitle', fileName || "Internship_Doc");
+                const docData = new FormData();
+                docData.append('document', fileToUpload);
 
-                const res = await fetch(`https://api.streamlet.in/${process.env.streamlet_api || process.env.STREAMLET_API_KEY}/upload-document`, {
+                const res = await fetch(`https://api.streamlet.in/api-key/upload-document`, {
                     method: 'POST',
                     headers: {
-                        'x-account-number': process.env.streamlet_accountid || process.env.STREAMLET_ACCOUNT_NUMBER
+                        'x-streamlet-api-key': process.env.streamlet_api || process.env.STREAMLET_API_KEY,
+                        'x-streamlet-account-number': process.env.streamlet_accountid || process.env.STREAMLET_ACCOUNT_NUMBER
                     },
-                    body: formData
+                    body: docData
                 });
                 
                 if (!res.ok) throw new Error("Document upload failed");
                 const result = await res.json();
-                return result.cdnUrl || result.documentUrl;
+                return result.cdnUrl;
             } catch (err) {
-                // Fallback to uploadImage if API is unified but SDK is old
+                console.error("Document upload failed, attempting image fallback:", err);
                 const result = await client.uploadImage({ file: fileToUpload });
                 return result.cdnUrl;
             }
