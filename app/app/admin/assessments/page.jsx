@@ -95,11 +95,16 @@ export default function UnifiedAssessmentsPage() {
 
     useEffect(() => {
         if (isAnyModalOpen) {
+            document.body.style.overflow = 'hidden';
             document.body.classList.add('modal-active');
         } else {
+            document.body.style.overflow = 'unset';
             document.body.classList.remove('modal-active');
         }
-        return () => document.body.classList.remove('modal-active');
+        return () => {
+            document.body.style.overflow = 'unset';
+            document.body.classList.remove('modal-active');
+        };
     }, [isAnyModalOpen]);
 
     // --- Initialization ---
@@ -481,9 +486,9 @@ export default function UnifiedAssessmentsPage() {
     });
 
     return (
-        <div className="relative min-h-screen">
-            <div className={`animate-in fade-in duration-500 flex flex-col min-h-screen ${isAnyModalOpen ? 'blur-md grayscale opacity-40 pointer-events-none' : ''} transition-all duration-700`}>
-            <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-5 border-b border-gray-100 shadow-sm mb-8">
+        <div className="relative min-h-screen bg-white">
+            <div className={`flex flex-col min-h-screen transition-all duration-500 ${isAnyModalOpen ? 'blur-sm grayscale grayscale-0 pointer-events-none' : ''}`}>
+            <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-xl -mx-8 -mt-8 px-8 py-5 border-b border-gray-100 shadow-sm mb-8">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="w-1.5 h-8 bg-black rounded-full" />
@@ -583,7 +588,11 @@ export default function UnifiedAssessmentsPage() {
                                         {isBulkMode && (
                                             <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm animate-in zoom-in-95">
                                                 <textarea className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-6 text-[10px] font-mono h-64 outline-none" placeholder="Paste questions..." value={bulkImportText} onChange={e => setBulkImportText(e.target.value)} />
-                                                <button onClick={handleBulkImport} className="w-full py-5 bg-black text-white rounded-2xl font-black uppercase tracking-widest mt-6">Upload</button>
+                                                <div className="flex justify-start">
+                                                    <button onClick={handleBulkImport} className="w-max px-20 py-4 bg-black text-white rounded-2xl font-black uppercase tracking-widest mt-6 hover:scale-[1.02] active:scale-95 transition-all">
+                                                        Upload
+                                                    </button>
+                                                </div>
                                             </div>
                                         )}
 
@@ -749,40 +758,42 @@ export default function UnifiedAssessmentsPage() {
                     </div>
                 )}
             </div>
-
-
-
+            </div>
 
             {showSaveModal && selectedExam && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowSaveModal(false)} />
-                    <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95">
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowSaveModal(false)} />
+                    <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl relative z-[10001] overflow-hidden border border-gray-50 animate-in fade-in zoom-in-95 duration-300">
                         <div className="p-8 border-b border-gray-100 text-center bg-gray-50/30">
                             <h3 className="text-xl font-black uppercase tracking-tighter">Paper Protocol</h3>
-                            <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mt-2">Update release status for {selectedExam.title}</p>
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">Update release status for {selectedExam.title}</p>
                         </div>
-                        <div className="p-8 space-y-4">
-                            <button onClick={() => { handleToggleStatus(selectedExam._id, 'scheduled'); setShowSaveModal(false); }} className="w-full py-4 bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white rounded-2xl border border-emerald-100 font-black uppercase tracking-widest transition-all">Enable Access</button>
-                            <button onClick={() => { handleToggleStatus(selectedExam._id, 'active'); setShowSaveModal(false); }} className="w-full py-4 bg-amber-50 text-amber-600 hover:bg-amber-600 hover:text-white rounded-2xl border border-amber-100 font-black uppercase tracking-widest transition-all">Freeze Access</button>
+                        <div className="p-8 space-y-3">
+                            <button onClick={() => { handleToggleStatus(selectedExam._id, 'scheduled'); setShowSaveModal(false); }} className="w-full py-4 bg-black text-white hover:bg-neutral-800 rounded-2xl font-black uppercase tracking-widest transition-all">Enable Access</button>
+                            <button onClick={() => { handleToggleStatus(selectedExam._id, 'active'); setShowSaveModal(false); }} className="w-full py-4 bg-gray-50 text-black hover:bg-gray-100 rounded-2xl border border-gray-100 font-black uppercase tracking-widest transition-all">Freeze Access</button>
+                            <button onClick={() => setShowSaveModal(false)} className="w-full py-3 text-[9px] font-black text-gray-300 uppercase tracking-widest hover:text-black transition-all">Cancel Request</button>
                         </div>
                     </div>
                 </div>
             )}
 
             {viewingAadhaarUser && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setViewingAadhaarUser(null)} />
-                    <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95">
-                        <div className="p-8 border-b border-gray-100 flex items-center justify-between">
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setViewingAadhaarUser(null)} />
+                    <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl relative z-[10001] overflow-hidden border border-gray-50 animate-in fade-in zoom-in-95 duration-300">
+                        <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/30">
                             <h3 className="text-xl font-black uppercase tracking-tighter">Identity Proof</h3>
                             <button onClick={() => setViewingAadhaarUser(null)} className="p-2 text-gray-400 hover:text-black"><X className="w-5 h-5" /></button>
                         </div>
-                        <div className="p-8 flex flex-col md:flex-row gap-6">
-                            <img src={viewingAadhaarUser.passportPhoto || 'https://placehold.co/400x500'} className="w-32 h-40 object-cover rounded-2xl border" />
-                            <div className="flex-1 bg-gray-50 p-6 rounded-2xl">
+                        <div className="p-8 flex flex-col md:flex-row gap-8">
+                            <img src={viewingAadhaarUser.passportPhoto || 'https://placehold.co/400x500'} alt="Candidate" className="w-40 h-52 object-cover rounded-2xl border border-gray-100 shadow-sm" />
+                            <div className="flex-1 bg-gray-50/50 p-8 rounded-2xl border border-gray-100">
                                 <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-4">Aadhaar Document</p>
-                                <img src={viewingAadhaarUser.aadhaarCard || 'https://placehold.co/800x500'} className="w-full h-32 object-contain rounded-xl" />
-                                <p className="mt-6 text-2xl font-black font-mono tracking-widest">{viewingAadhaarUser.aadhaarNumber?.replace(/(.{4})/g, '$1 ') || 'XXXX XXXX XXXX'}</p>
+                                <img src={viewingAadhaarUser.aadhaarCard || 'https://placehold.co/800x500'} alt="Aadhaar" className="w-full h-40 object-contain rounded-xl" />
+                                <div className="mt-8">
+                                    <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-2">Verified Unique ID</p>
+                                    <p className="text-3xl font-black font-mono tracking-[0.2em] text-black bg-white inline-block px-4 py-2 rounded-xl border border-gray-100">{viewingAadhaarUser.aadhaarNumber?.replace(/(.{4})/g, '$1 ') || 'XXXX XXXX XXXX'}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -790,10 +801,10 @@ export default function UnifiedAssessmentsPage() {
             )}
 
             {deleteQuestionTarget && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setDeleteQuestionTarget(null)} />
-                    <div className="bg-white w-full max-w-md rounded-[2.5rem] p-10 text-center relative z-10 animate-in zoom-in-95">
-                        <div className="w-20 h-20 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setDeleteQuestionTarget(null)} />
+                    <div className="bg-white w-full max-w-md rounded-[2.5rem] p-10 text-center relative z-[10001] border border-gray-50 animate-in fade-in zoom-in-95 duration-300">
+                        <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6">
                             <Trash2 className="w-10 h-10" />
                         </div>
                         <h3 className="text-xl font-black uppercase tracking-tighter">Remove Module</h3>
@@ -806,12 +817,11 @@ export default function UnifiedAssessmentsPage() {
                                 const qid = deleteQuestionTarget._id;
                                 setDeleteQuestionTarget(null);
                                 handleDeleteQuestion(qid);
-                            }} className="flex-1 py-4 bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg shadow-red-500/20">Purge</button>
+                            }} className="flex-1 py-4 bg-rose-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all shadow-xl shadow-rose-500/20">Purge</button>
                         </div>
                     </div>
                 </div>
             )}
-        </div>
         </div>
     );
 }
