@@ -3,6 +3,7 @@ import connectMongo from '@/lib/mongodb';
 import WeeklyReview from '@/models/WeeklyReview';
 import User from '@/models/User';
 import { scheduleMonthlyReviews } from '@/lib/scheduleReviews';
+import { sendMeetingCancellation } from '@/lib/mailer';
 
 const DEFAULT_LINK = 'https://meet.google.com/vcd-gfct-jqa';
 
@@ -30,6 +31,7 @@ export async function POST(req) {
             internId,
             meetLink = DEFAULT_LINK,
             startDate, // optional ISO date — defaults to today
+            startTime = '10:00'
         } = body;
 
         if (!internId) {
@@ -48,7 +50,7 @@ export async function POST(req) {
                 ? new Date(intern.joinDate)
                 : new Date();
 
-        const created = await scheduleMonthlyReviews(intern, from, meetLink);
+        const created = await scheduleMonthlyReviews(intern, from, meetLink, startTime);
 
         return NextResponse.json({
             message: `Scheduled ${created.length} review(s) for ${intern.fullName}. (${4 - created.length} already existed.)`,
@@ -76,6 +78,21 @@ export async function PATCH(req) {
 
         const updated = await WeeklyReview.findByIdAndUpdate(id, { $set: updates }, { new: true });
         if (!updated) return NextResponse.json({ message: 'Review not found' }, { status: 404 });
+
+        // If status changed to Cancelled, send email
+        if (status === 'Cancelled') {
+            const intern = await User.findById(updated.internId).select('fullName email');
+            if (intern) {
+                sendMeetingCancellation({
+                    to: intern.email,
+                    internName: intern.fullName,
+                    date: updated.scheduledDate,
+                    time: updated.scheduledTime,
+                    description: `Weekly Review — ${updated.weekLabel}`
+                }).catch(e => console.error("Cancellation email error:", e));
+            }
+        }
+
         return NextResponse.json(updated, { status: 200 });
     } catch (err) {
         console.error(err);

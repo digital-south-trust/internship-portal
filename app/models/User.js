@@ -80,6 +80,9 @@ const UserSchema = new mongoose.Schema({
     collegeName: { type: String },
     workingDetails: { type: String },
     resumeDocument: { type: String },
+    educationCertificate: { type: String },
+    pancardPhoto: { type: String },
+    experienceLetter: { type: String },
     avatarSeed: {
         type: String,
     },
@@ -127,6 +130,10 @@ const UserSchema = new mongoose.Schema({
     aadharVerificationTries: {
         type: Number,
         default: 0,
+    },
+    referralCodeUsed: {
+        type: String,
+        default: null,
     },
 }, { timestamps: true });
 

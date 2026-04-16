@@ -20,7 +20,7 @@ import {
 export default function RegistrationPage() {
     const router = useRouter();
     const [formData, setFormData] = useState({
-        fullName: "", email: "", password: "", track: "", phone: ""
+        fullName: "", email: "", password: "", track: ""
     });
     const [loading, setLoading] = useState(false);
     const [activeTracks, setActiveTracks] = useState([]);
@@ -77,7 +77,7 @@ export default function RegistrationPage() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!formData.email || !formData.password || !formData.track || !formData.fullName || !formData.phone) {
+        if (!formData.email || !formData.password || !formData.track || !formData.fullName) {
             toast.error("Please fill in all details.");
             return;
         }
@@ -158,18 +158,7 @@ export default function RegistrationPage() {
                                 className="w-full text-black px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
                             />
                         </div>
-                        <div className="space-y-1">
-                            <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Mobile Number</label>
-                            <input
-                                type="tel"
-                                name="phone"
-                                value={formData.phone}
-                                onChange={handleChange}
-                                placeholder="+91 99999 99999"
-                                required
-                                className="w-full text-black px-4 py-3 rounded-xl border border-gray-200 focus:ring-2 focus:ring-black focus:border-transparent outline-none transition-all"
-                            />
-                        </div>
+
                         <div className="space-y-1">
                             <label className="text-xs font-black text-gray-400 uppercase tracking-[0.2em] ml-1">Password</label>
                             <input

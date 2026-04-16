@@ -154,7 +154,26 @@ Always respond with valid JSON. Do NOT wrap in markdown code blocks.`;
             { role: 'user', parts: [{ text: message }] }
         ];
 
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
+        // --- Robust AI Fetch with Retry Logic ---
+        const fetchWithRetry = async (url, options, maxRetries = 3) => {
+            let lastResponse;
+            for (let i = 0; i < maxRetries; i++) {
+                lastResponse = await fetch(url, options);
+                
+                // If service is busy (503) or rate limited (429), wait and retry
+                if (lastResponse.status === 503 || lastResponse.status === 429) {
+                    const delay = Math.pow(2, i + 1) * 1000; // 2s, 4s, 8s
+                    console.warn(`[AI RETRY] Status ${lastResponse.status}. Attempt ${i + 1}/${maxRetries}. Waiting ${delay}ms...`);
+                    await new Promise(res => setTimeout(res, delay));
+                    continue;
+                }
+                
+                return lastResponse;
+            }
+            return lastResponse;
+        };
+
+        const response = await fetchWithRetry(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents })
@@ -163,7 +182,16 @@ Always respond with valid JSON. Do NOT wrap in markdown code blocks.`;
         const data = await response.json();
 
         if (!response.ok) {
-            console.error("Gemini API Error:", data);
+            console.error("Gemini API Ultimate Failure:", data);
+            
+            // Custom friendly message for 503 after all retries fail
+            if (response.status === 503) {
+                return NextResponse.json({ 
+                    message: "Google's AI servers are currently overloaded. I'm trying my best to connect, but please try again in a few minutes.",
+                    isSystem: true 
+                }, { status: 503 });
+            }
+
             return NextResponse.json({ message: "AI Service Error." }, { status: response.status });
         }
 

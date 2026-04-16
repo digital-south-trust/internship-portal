@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { X, Award, Upload, Download, ChevronRight, Check, Image as ImageIcon, Sparkles } from "lucide-react";
+import { X, Award, Upload, Download, ChevronRight, Check, Image as ImageIcon, Sparkles, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 
@@ -14,11 +14,13 @@ const TEMPLATES = [
 ];
 
 function drawCertificate(canvas, template, data) {
+    if (!canvas || !template) return;
     const ctx = canvas.getContext("2d");
     const W = 1200, H = 850;
     canvas.width = W; canvas.height = H;
 
-    // Background
+    // Clear and background
+    ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = template.bg;
     ctx.fillRect(0, 0, W, H);
 
@@ -67,89 +69,90 @@ function drawCertificate(canvas, template, data) {
 
     // Organization
     ctx.fillStyle = template.accent;
-    ctx.font = `bold 14px ${template.font}, serif`;
+    ctx.font = `bold 16px ${template.font}, serif`;
     ctx.textAlign = "center";
     ctx.fillText("DIGITAL SOUTH", W / 2, 110);
 
     // Title
     ctx.fillStyle = template.textColor;
-    ctx.font = `bold 42px ${template.font}, serif`;
+    ctx.font = `bold 54px ${template.font}, serif`;
     ctx.fillText("CERTIFICATE", W / 2, 190);
-    ctx.font = `18px ${template.font}, serif`;
+    ctx.font = `22px ${template.font}, serif`;
     ctx.fillStyle = template.accent;
     ctx.fillText("OF ACHIEVEMENT", W / 2, 220);
 
     // Divider
     ctx.fillStyle = template.accent;
-    ctx.fillRect(W / 2 - 100, 245, 200, 2);
+    ctx.fillRect(W / 2 - 120, 245, 240, 3);
 
     // "Presented to"
     ctx.fillStyle = template.textColor + "aa";
-    ctx.font = `italic 16px ${template.font}, serif`;
-    ctx.fillText("This certificate is proudly presented to", W / 2, 300);
+    ctx.font = `italic 18px ${template.font}, serif`;
+    ctx.fillText("This certificate is proudly presented to", W / 2, 305);
 
     // Name
     ctx.fillStyle = template.textColor;
-    ctx.font = `bold 48px ${template.font}, serif`;
-    ctx.fillText(data.name || "Intern Name", W / 2, 370);
+    ctx.font = `bold 62px ${template.font}, serif`;
+    ctx.fillText(data.name || "Intern Name", W / 2, 380);
 
     // Underline
     const nameW = ctx.measureText(data.name || "Intern Name").width;
     ctx.strokeStyle = template.accent;
     ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(W / 2 - nameW / 2 - 20, 385); ctx.lineTo(W / 2 + nameW / 2 + 20, 385); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W / 2 - nameW / 2 - 20, 395); ctx.lineTo(W / 2 + nameW / 2 + 20, 395); ctx.stroke();
 
     // Description
     ctx.fillStyle = template.textColor + "cc";
-    ctx.font = `16px ${template.font}, serif`;
+    ctx.font = `20px ${template.font}, serif`;
     const desc = `For successfully completing the ${data.track || "Internship"} program`;
-    ctx.fillText(desc, W / 2, 430);
+    ctx.fillText(desc, W / 2, 445);
 
     // Certificate title
     ctx.fillStyle = template.accent;
-    ctx.font = `bold 22px ${template.font}, serif`;
-    ctx.fillText(`"${data.title || "Internship Completion"}"`, W / 2, 475);
+    ctx.font = `bold 26px ${template.font}, serif`;
+    ctx.fillText(`"${data.title || "Internship Completion"}"`, W / 2, 495);
 
     // Project info
     if (data.project) {
         ctx.fillStyle = template.textColor + "99";
-        ctx.font = `14px ${template.font}, serif`;
-        ctx.fillText(`Project: ${data.project}`, W / 2, 520);
+        ctx.font = `16px ${template.font}, serif`;
+        ctx.fillText(`Project: ${data.project}`, W / 2, 545);
     }
 
     // Bottom section
     ctx.fillStyle = template.accent;
-    ctx.fillRect(W / 2 - 100, 570, 200, 2);
+    ctx.fillRect(W / 2 - 120, 595, 240, 2);
 
     // Date & ID
     ctx.fillStyle = template.textColor + "88";
-    ctx.font = `13px ${template.font}, sans-serif`;
-    const dateStr = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    ctx.font = `14px ${template.font}, sans-serif`;
+    const d = new Date();
+    const dateStr = d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
     ctx.textAlign = "left";
-    ctx.fillText(`Date: ${dateStr}`, 120, 680);
+    ctx.fillText(`Date: ${dateStr}`, 140, 710);
     ctx.textAlign = "right";
-    ctx.fillText(`Certificate ID: ${data.certId || "DS-CERT-XXXX"}`, W - 120, 680);
+    ctx.fillText(`Certificate ID: ${data.certId || "DS-CERT-XXXX"}`, W - 140, 710);
 
     // Signatures
     ctx.strokeStyle = template.accent + "60";
     ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(180, 750); ctx.lineTo(380, 750); ctx.stroke();
-    ctx.beginPath(); ctx.moveTo(W - 380, 750); ctx.lineTo(W - 180, 750); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(200, 780); ctx.lineTo(400, 780); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(W - 400, 780); ctx.lineTo(W - 200, 780); ctx.stroke();
 
     ctx.fillStyle = template.textColor + "99";
-    ctx.font = `12px ${template.font}, sans-serif`;
+    ctx.font = `14px ${template.font}, sans-serif`;
     ctx.textAlign = "center";
-    ctx.fillText("Program Director", 280, 775);
-    ctx.fillText("Chief Executive", W - 280, 775);
+    ctx.fillText("Program Director", 300, 805);
+    ctx.fillText("Chief Executive", W - 300, 805);
 
     // Seal
-    ctx.beginPath(); ctx.arc(W / 2, 730, 35, 0, Math.PI * 2);
+    ctx.beginPath(); ctx.arc(W / 2, 740, 45, 0, Math.PI * 2);
     ctx.fillStyle = template.accent + "15"; ctx.fill();
     ctx.strokeStyle = template.accent; ctx.lineWidth = 2; ctx.stroke();
     ctx.fillStyle = template.accent;
-    ctx.font = `bold 10px ${template.font}, sans-serif`;
-    ctx.fillText("DIGITAL", W / 2, 727);
-    ctx.fillText("SOUTH", W / 2, 740);
+    ctx.font = `bold 12px ${template.font}, sans-serif`;
+    ctx.fillText("DIGITAL", W / 2, 737);
+    ctx.fillText("SOUTH", W / 2, 750);
 }
 
 export default function CertificateIssuer({ user, projects, certificates, setCertificates, showModal, setShowModal }) {
@@ -160,6 +163,8 @@ export default function CertificateIssuer({ user, projects, certificates, setCer
     const [customImage, setCustomImage] = useState(null);
     const [useCustom, setUseCustom] = useState(false);
     const [isIssuing, setIsIssuing] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(null); // ID of cert being deleted
+    const [viewingCert, setViewingCert] = useState(null); 
     const canvasRef = useRef(null);
     const fileInputRef = useRef(null);
 
@@ -167,22 +172,46 @@ export default function CertificateIssuer({ user, projects, certificates, setCer
         if (user?.track) setCertTitle(`${user.track} Internship Completion`);
     }, [user?.track]);
 
-    const renderPreview = useCallback(() => {
-        if (!canvasRef.current || useCustom) return;
-        const tpl = TEMPLATES.find(t => t.id === selectedTemplate);
-        const year = new Date().getFullYear();
-        const month = String(new Date().getMonth() + 1).padStart(2, "0");
-        const rand = Math.floor(1000 + Math.random() * 9000);
-        drawCertificate(canvasRef.current, tpl, {
-            name: user?.fullName || "Intern",
-            track: user?.track,
-            title: certTitle,
-            project: selectedProject,
-            certId: `DS-CERT-${year}${month}-${rand}`
-        });
-    }, [selectedTemplate, certTitle, selectedProject, user, useCustom]);
+    const renderPreview = useCallback((node) => {
+        const targetCanvas = node || canvasRef.current;
+        if (!targetCanvas || useCustom || viewingCert?.customUrl) return;
+        
+        // Use viewingCert if available, fallback to selectedTemplate
+        const activeThemeId = viewingCert?.themeId || selectedTemplate;
+        const tpl = TEMPLATES.find(t => t.id === Number(activeThemeId)) || TEMPLATES[0];
+        
+        const name = viewingCert?.internName || user?.fullName || "Intern";
+        const track = viewingCert?.track || user?.track;
+        const title = viewingCert?.title || certTitle;
+        const certId = viewingCert?.certificateId || "DS-CERT-PREVIEW";
 
-    useEffect(() => { if (step === "issue") renderPreview(); }, [step, renderPreview]);
+        requestAnimationFrame(() => {
+            drawCertificate(targetCanvas, tpl, {
+                name,
+                track,
+                title,
+                project: selectedProject,
+                certId
+            });
+        });
+    }, [selectedTemplate, certTitle, selectedProject, user, useCustom, viewingCert]);
+
+    // Callback ref to handle immediate drawing when canvas mounts
+    const setCanvasRef = useCallback(node => {
+        if (node) {
+            canvasRef.current = node;
+            renderPreview(node);
+        }
+    }, [renderPreview]);
+
+    useEffect(() => { 
+        if ((step === "issue" || step === "view") && canvasRef.current) {
+            renderPreview();
+            // High-frequency failsafe rendering for the first 500ms
+            const timers = [10, 50, 150, 300, 600].map(ms => setTimeout(renderPreview, ms));
+            return () => timers.forEach(t => clearTimeout(t));
+        }
+    }, [step, renderPreview]);
 
     const handleCustomUpload = (e) => {
         const file = e.target.files?.[0];
@@ -206,47 +235,113 @@ export default function CertificateIssuer({ user, projects, certificates, setCer
         }
     };
 
-    const handleIssue = async () => {
-        if (!certTitle.trim()) return toast.error("Please provide a certificate title");
-        setIsIssuing(true);
+    const handleDelete = async (certId) => {
+        if (!confirm("Are you sure you want to PERMANENTLY DELETE this certificate?")) return;
+        setIsDeleting(certId);
+        const tid = toast.loading("Executing identity extraction...");
         try {
+            const res = await fetch(`/api/admin/certificates?id=${certId}`, { method: "DELETE" });
+            if (res.ok) {
+                setCertificates(prev => prev.filter(c => c._id !== certId));
+                toast.success("Certificate purged from database", { id: tid });
+            } else {
+                toast.error("Deletion sequence failed", { id: tid });
+            }
+        } catch {
+            toast.error("Network Link Unstable", { id: tid });
+        } finally {
+            setIsDeleting(null);
+        }
+    };
+
+    const handleIssue = async () => {
+        if (!certTitle.trim() && !useCustom) return toast.error("Please provide a certificate title");
+        setIsIssuing(true);
+        const tid = toast.loading("Processing certificate issuance...");
+        try {
+            let finalCustomUrl = null;
+
+            // 1. If custom image used, upload it first
+            if (useCustom && customImage) {
+                // customImage is base64 from reader.readAsDataURL
+                const blob = await (await fetch(customImage)).blob();
+                const file = new File([blob], "custom_certificate.png", { type: "image/png" });
+                
+                const formData = new FormData();
+                formData.append("file", file);
+                formData.append("email", user.email);
+                formData.append("type", "Certificates");
+
+                const uploadRes = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData
+                });
+                if (uploadRes.ok) {
+                    const uploadData = await uploadRes.json();
+                    finalCustomUrl = uploadData.url;
+                } else {
+                    throw new Error("Custom image upload failed");
+                }
+            }
+
+            // 2. Create certificate record
             const res = await fetch("/api/admin/certificates", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     internEmail: user.email,
                     internName: user.fullName,
-                    title: certTitle,
+                    title: certTitle || (useCustom ? "Professional Certificate" : ""),
                     track: user.track,
-                    type: "Completion"
+                    type: "Completion",
+                    themeId: Number(selectedTemplate),
+                    customUrl: finalCustomUrl
                 })
             });
             if (res.ok) {
                 const newCert = await res.json();
                 setCertificates(prev => [newCert, ...prev]);
-                toast.success(`Certificate issued to ${user.fullName}!`);
-                handleDownload();
+                toast.success("Certificate issued successfully!", { id: tid });
                 setStep("list");
-            } else { toast.error("Failed to issue certificate"); }
-        } catch { toast.error("Error issuing certificate"); }
-        finally { setIsIssuing(false); }
+            } else {
+                toast.error("Issuance sequence failed", { id: tid });
+            }
+        } catch (err) {
+            toast.error(err.message || "Network Link Unstable", { id: tid });
+        } finally {
+            setIsIssuing(false);
+        }
+    };
+
+    const openIssue = () => {
+        setViewingCert(null);
+        setStep("issue");
+    };
+
+    const openView = (cert) => {
+        setViewingCert(cert);
+        setUseCustom(false);
+        if (cert.themeId) setSelectedTemplate(cert.themeId);
+        setStep("issue"); // Reuse the step UI
     };
 
     if (!showModal) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                onClick={() => { setShowModal(false); setStep("list"); }}
-                className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+        <AnimatePresence>
+            {showModal && (
+                <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        onClick={() => { setShowModal(false); setStep("list"); }}
+                        className="absolute inset-0 bg-black/60 backdrop-blur-md" />
 
-            <AnimatePresence mode="wait">
-                {step === "list" ? (
-                    <motion.div key="list" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
-                        className="relative w-full max-w-4xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
+                    <AnimatePresence mode="wait">
+                        {step === "list" ? (
+                            <motion.div key="list" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+                                className="relative w-full max-w-4xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[85vh] flex flex-col">
 
-                        {/* Header */}
-                        <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
+                                {/* Header */}
+                                <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 bg-black rounded-2xl flex items-center justify-center shadow-lg shadow-black/10">
                                     <Award className="w-6 h-6 text-white" />
@@ -281,9 +376,23 @@ export default function CertificateIssuer({ user, projects, certificates, setCer
                                                 <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center border border-emerald-100 shadow-inner group-hover:scale-110 transition-transform">
                                                     <Award className="w-6 h-6 text-emerald-600" />
                                                 </div>
-                                                <span className="text-[10px] font-black uppercase text-emerald-600 px-3 py-1.5 bg-emerald-50 rounded-xl border border-emerald-100 shadow-sm flex items-center gap-1.5">
-                                                    <Check className="w-3.5 h-3.5" /> Verified
-                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    <button 
+                                                        onClick={() => openView(cert)}
+                                                        className="w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center text-gray-500 hover:text-black hover:border-black transition-all shadow-sm group/view"
+                                                        title="View Certificate"
+                                                    >
+                                                        <Sparkles className="w-4 h-4" />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDelete(cert._id)}
+                                                        disabled={isDeleting === cert._id}
+                                                        className="w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center text-gray-300 hover:text-red-500 hover:border-red-500 transition-all shadow-sm group/del"
+                                                        title="Delete Certificate"
+                                                    >
+                                                        <Trash2 className={`w-4 h-4 ${isDeleting === cert._id ? 'animate-pulse' : ''}`} />
+                                                    </button>
+                                                </div>
                                             </div>
                                             <div className="relative z-10 space-y-4">
                                                 <h3 className="text-lg font-black text-gray-900 leading-tight">{cert.title}</h3>
@@ -305,7 +414,7 @@ export default function CertificateIssuer({ user, projects, certificates, setCer
 
                         {/* Footer */}
                         <div className="p-8 bg-gray-50 border-t border-gray-100 flex justify-end">
-                            <button onClick={() => { setStep("issue"); setUseCustom(false); setCustomImage(null); }}
+                            <button onClick={openIssue}
                                 className="px-8 py-4 bg-black text-white rounded-[1.25rem] text-xs font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/10 flex items-center gap-2">
                                 <Award className="w-4 h-4" /> Issue New Certificate
                             </button>
@@ -323,7 +432,7 @@ export default function CertificateIssuer({ user, projects, certificates, setCer
                                     <ChevronRight className="w-4 h-4 rotate-180" />
                                 </button>
                                 <div>
-                                    <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight">Issue Certificate</h3>
+                                    <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight">{viewingCert ? "Review Certificate" : "Issue Certificate"}</h3>
                                     <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">For {user?.fullName}</p>
                                 </div>
                             </div>
@@ -341,8 +450,10 @@ export default function CertificateIssuer({ user, projects, certificates, setCer
                                     {/* Certificate Title */}
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Certificate Title</label>
-                                        <input className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3 text-sm font-bold text-gray-800 focus:outline-none focus:ring-4 focus:ring-black/5 transition-all"
-                                            value={certTitle} onChange={e => setCertTitle(e.target.value)}
+                                        <input className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3 text-sm font-bold text-gray-800 focus:outline-none focus:ring-4 focus:ring-black/5 transition-all disabled:opacity-70 disabled:grayscale-[0.5]"
+                                            value={viewingCert ? viewingCert.title : certTitle} 
+                                            onChange={e => setCertTitle(e.target.value)}
+                                            disabled={!!viewingCert}
                                             placeholder="E.g. Full Stack Web Development" />
                                     </div>
 
@@ -350,7 +461,8 @@ export default function CertificateIssuer({ user, projects, certificates, setCer
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Link to Project (Optional)</label>
                                         <select value={selectedProject} onChange={e => setSelectedProject(e.target.value)}
-                                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3 text-sm font-bold text-gray-800 focus:outline-none focus:ring-4 focus:ring-black/5 appearance-none cursor-pointer">
+                                            disabled={!!viewingCert}
+                                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-3 text-sm font-bold text-gray-800 focus:outline-none focus:ring-4 focus:ring-black/5 appearance-none cursor-pointer disabled:opacity-70">
                                             <option value="">No project linked</option>
                                             {projects.map((p, idx) => <option key={p._id || `proj-${idx}`} value={p.projectName}>{p.projectName}</option>)}
                                         </select>
@@ -361,8 +473,10 @@ export default function CertificateIssuer({ user, projects, certificates, setCer
                                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Choose Template</label>
                                         <div className="grid grid-cols-5 gap-2">
                                             {TEMPLATES.map(tpl => (
-                                                <button key={tpl.id} onClick={() => { setSelectedTemplate(tpl.id); setUseCustom(false); }}
-                                                    className={`relative p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1.5 group ${selectedTemplate === tpl.id && !useCustom ? "border-black shadow-lg scale-105" : "border-gray-100 hover:border-gray-300"}`}>
+                                                <button key={tpl.id} 
+                                                    onClick={() => { if (!viewingCert) { setSelectedTemplate(tpl.id); setUseCustom(false); } }}
+                                                    disabled={!!viewingCert}
+                                                    className={`relative p-3 rounded-xl border-2 transition-all flex flex-col items-center gap-1.5 group ${selectedTemplate === tpl.id && !useCustom ? "border-black shadow-lg scale-105" : "border-gray-100 hover:border-gray-300"} disabled:hover:scale-100 disabled:cursor-not-allowed`}>
                                                     <div className="w-full h-10 rounded-lg" style={{ background: tpl.bg, border: `2px solid ${tpl.border}` }} />
                                                     <span className="text-[7px] font-black uppercase tracking-wider text-gray-500 group-hover:text-black">{tpl.name}</span>
                                                     {selectedTemplate === tpl.id && !useCustom && (
@@ -375,15 +489,16 @@ export default function CertificateIssuer({ user, projects, certificates, setCer
                                         </div>
                                     </div>
 
-                                    {/* Custom Upload */}
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Or Upload Custom Certificate</label>
-                                        <input type="file" ref={fileInputRef} accept="image/*" onChange={handleCustomUpload} className="hidden" />
-                                        <button onClick={() => fileInputRef.current?.click()}
-                                            className={`w-full py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all border-2 border-dashed ${useCustom ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-gray-50 text-gray-400 border-gray-200 hover:border-black hover:text-black"}`}>
-                                            {useCustom ? <><Check className="w-4 h-4" /> Custom Image Loaded</> : <><Upload className="w-4 h-4" /> Upload PNG / JPG</>}
-                                        </button>
-                                    </div>
+                                    {!viewingCert && (
+                                        <div className="space-y-2">
+                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Or Upload Custom Certificate</label>
+                                            <input type="file" ref={fileInputRef} accept="image/*" onChange={handleCustomUpload} className="hidden" />
+                                            <button onClick={() => fileInputRef.current?.click()}
+                                                className={`w-full py-3 rounded-2xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-all border-2 border-dashed ${useCustom ? "bg-emerald-50 text-emerald-700 border-emerald-200" : "bg-gray-50 text-gray-400 border-gray-200 hover:border-black hover:text-black"}`}>
+                                                {useCustom ? <><Check className="w-4 h-4" /> Custom Image Loaded</> : <><Upload className="w-4 h-4" /> Upload PNG / JPG</>}
+                                            </button>
+                                        </div>
+                                    )}
 
                                     {/* Actions */}
                                     <div className="flex gap-3 pt-2">
@@ -395,19 +510,35 @@ export default function CertificateIssuer({ user, projects, certificates, setCer
                                             className="flex-1 py-3 bg-white text-black rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 transition-all border border-gray-200 flex items-center justify-center gap-2">
                                             <Download className="w-3.5 h-3.5" /> Download PNG
                                         </button>
-                                        <button onClick={handleIssue} disabled={isIssuing}
-                                            className="flex-[1.5] py-3 bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 shadow-lg flex items-center justify-center gap-2">
-                                            <Sparkles className="w-3.5 h-3.5" /> {isIssuing ? "Issuing..." : "Issue & Download"}
-                                        </button>
+                                        {!viewingCert && (
+                                            <button onClick={handleIssue} disabled={isIssuing}
+                                                className="flex-[1.5] py-3 bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 shadow-lg flex items-center justify-center gap-2">
+                                                <Sparkles className="w-3.5 h-3.5" /> {isIssuing ? "Issuing..." : "Issue Certificate"}
+                                            </button>
+                                        )}
                                     </div>
+                                    
+                                    {viewingCert && (
+                                        <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl space-y-2">
+                                            <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-2">
+                                                <Check className="w-3 h-3" /> Record Authenticated
+                                            </p>
+                                            <p className="text-[10px] text-emerald-600/70 font-medium leading-relaxed">
+                                                This is a digital reproduction of the issued record ID: <span className="font-bold underline">{viewingCert.certificateId}</span>.
+                                                Template choice: <span className="font-bold">{TEMPLATES.find(t => t.id === Number(viewingCert.themeId))?.name || `Default (RAW: ${viewingCert.themeId})`}</span>.
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Right: Preview */}
                                 <div className="bg-gray-100 rounded-3xl p-4 flex items-center justify-center min-h-[400px] shadow-inner">
-                                    {useCustom && customImage ? (
+                                    { (useCustom && customImage) ? (
                                         <img src={customImage} alt="Custom certificate" className="max-w-full max-h-[500px] rounded-2xl shadow-xl border border-white" />
+                                    ) : (viewingCert?.customUrl) ? (
+                                        <img src={viewingCert.customUrl} alt="Issued certificate" className="max-w-full max-h-[500px] rounded-2xl shadow-xl border border-white" />
                                     ) : (
-                                        <canvas ref={canvasRef} className="max-w-full max-h-[500px] rounded-2xl shadow-xl border border-white" style={{ width: "100%", height: "auto" }} />
+                                        <canvas ref={setCanvasRef} className="max-w-full max-h-[500px] rounded-2xl shadow-xl border border-white" style={{ width: "100%", height: "auto" }} />
                                     )}
                                 </div>
                             </div>
@@ -416,5 +547,7 @@ export default function CertificateIssuer({ user, projects, certificates, setCer
                 )}
             </AnimatePresence>
         </div>
+        )}
+        </AnimatePresence>
     );
 }

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import connectMongo from '@/lib/mongodb';
 import Schedule from '@/models/Schedule';
+import WeeklyReview from '@/models/WeeklyReview';
 import User from '@/models/User';
-import { sendMeetingReminder } from '@/lib/mailer';
+import { sendMeetingReminder, sendMeetingCancellation } from '@/lib/mailer';
 
 export async function POST(req) {
     try {
@@ -78,15 +79,41 @@ export async function GET(req) {
         if (role === 'admin') {
             schedules = await Schedule.find({ adminEmail: email })
                 .populate('userId', 'fullName email track')
-                .sort({ date: 1, time: 1 });
+                .lean();
         } else {
             const user = await User.findOne({ email });
             if (!user) {
                 return NextResponse.json({ message: "User not found" }, { status: 404 });
             }
-            schedules = await Schedule.find({ userId: user._id })
+            
+            // Fetch ad-hoc meetings
+            const adhocMeetings = await Schedule.find({ userId: user._id })
                 .populate('userId', 'fullName')
-                .sort({ date: 1, time: 1 });
+                .lean();
+                
+            // Fetch automated weekly reviews
+            const reviews = await WeeklyReview.find({ internId: user._id })
+                .lean();
+                
+            // Normalize and Combine
+            const normalizedMeetings = adhocMeetings.map(m => ({
+                ...m,
+                type: 'meeting',
+                tag: 'meeting'
+            }));
+            
+            const normalizedReviews = reviews.map(r => ({
+                ...r,
+                date: r.scheduledDate,
+                time: r.scheduledTime,
+                meetingLink: r.meetLink,
+                description: `Weekly Review: ${r.weekLabel}. Progress: ${r.progressRating || 'Pending'}`,
+                adminEmail: r.assignedAdmin,
+                type: 'review',
+                tag: 'review'
+            }));
+            
+            schedules = [...normalizedMeetings, ...normalizedReviews].sort((a, b) => new Date(a.date) - new Date(b.date));
         }
 
         return NextResponse.json(schedules, { status: 200 });
@@ -98,17 +125,29 @@ export async function GET(req) {
 export async function PATCH(req) {
     try {
         await connectMongo();
-        const { id, date, time, meetingLink } = await req.json();
+        const { id, date, time, meetingLink, status } = await req.json();
 
         const updates = {};
         if (date) updates.date = new Date(date);
         if (time) updates.time = time;
         if (meetingLink) updates.meetingLink = meetingLink;
+        if (status) updates.status = status;
 
-        const updated = await Schedule.findByIdAndUpdate(id, { $set: updates }, { new: true });
+        const updated = await Schedule.findByIdAndUpdate(id, { $set: updates }, { new: true }).populate('userId', 'fullName email');
 
         if (!updated) {
             return NextResponse.json({ message: "Schedule not found" }, { status: 404 });
+        }
+
+        // If status changed to Cancelled, send email
+        if (status === 'Cancelled' && updated.userId) {
+            sendMeetingCancellation({
+                to: updated.userId.email,
+                internName: updated.userId.fullName,
+                date: updated.date,
+                time: updated.time,
+                description: updated.description
+            }).catch(e => console.error("Cancellation email error:", e));
         }
 
         return NextResponse.json({ message: "Schedule updated successfully!", schedule: updated }, { status: 200 });

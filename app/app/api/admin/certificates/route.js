@@ -2,17 +2,23 @@ import dbConnect from "@/lib/mongodb";
 import Certificate from "@/models/Certificate";
 import { sendEmail } from "@/lib/mailer";
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
+
+// Force load latest schema
+const CertModel = mongoose.models.Certificate || mongoose.model('Certificate', Certificate.schema);
 
 export async function GET(req) {
     try {
         await dbConnect();
         const { searchParams } = new URL(req.url);
         const email = searchParams.get('email');
+        const id = searchParams.get('id');
         
         let query = {};
         if (email) query.internEmail = email;
+        if (id) query._id = id;
 
-        const certificates = await Certificate.find(query).sort({ issuedDate: -1 });
+        const certificates = await CertModel.find(query).sort({ issuedDate: -1 });
         return NextResponse.json(certificates, { status: 200 });
     } catch (error) {
         return NextResponse.json({ message: "Error fetching certificates", error: error.message }, { status: 500 });
@@ -23,7 +29,7 @@ export async function POST(req) {
     try {
         await dbConnect();
         const body = await req.json();
-        const { internEmail, internName, title, track, type } = body;
+        const { internEmail, internName, title, track, type, themeId, customUrl } = body;
 
         if (!internEmail || !internName || !title) {
             return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
@@ -36,15 +42,22 @@ export async function POST(req) {
         const random = Math.floor(1000 + Math.random() * 9000); // random 4 digits
         const certificateId = `DS-CERT-${year}${month}-${random}`;
 
-        const newCertificate = await Certificate.create({
+        const newCertData = {
             internEmail,
             internName,
             title,
             certificateId,
             track,
             type: type || 'Completion',
-            issuedDate: date
-        });
+            themeId: themeId ? Number(themeId) : 1,
+            customUrl,
+            issuedDate: date,
+            createdAt: date,
+            updatedAt: date
+        };
+
+        const result = await mongoose.connection.collection('certificates').insertOne(newCertData);
+        const newCertificate = { ...newCertData, _id: result.insertedId };
 
         // Send email notification to the intern
         try {
@@ -103,5 +116,24 @@ export async function POST(req) {
         return NextResponse.json(newCertificate, { status: 201 });
     } catch (error) {
         return NextResponse.json({ message: "Error issuing certificate", error: error.message }, { status: 500 });
+    }
+}
+
+export async function DELETE(req) {
+    try {
+        await dbConnect();
+        const url = new URL(req.url);
+        const id = url.searchParams.get('id');
+
+        if (!id) {
+            return NextResponse.json({ message: "Certificate ID is required" }, { status: 400 });
+        }
+
+        const deleted = await CertModel.findByIdAndDelete(id);
+        if (!deleted) return NextResponse.json({ message: "Certificate not found" }, { status: 404 });
+        
+        return NextResponse.json({ message: "Certificate deleted successfully" }, { status: 200 });
+    } catch (error) {
+        return NextResponse.json({ message: "Error deleting certificate", error: error.message }, { status: 500 });
     }
 }

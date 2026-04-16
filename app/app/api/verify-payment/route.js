@@ -61,8 +61,8 @@ export async function POST(req) {
                 ambassador.earnings += (baseFee * (ambassador.commissionPercentage || 10)) / 100;
                 await ambassador.save();
                 
-                // Link user to referral code for records
-                user.referralCodeUsed = referralCode;
+                // Link user to referral code for records (Normalized to uppercase)
+                user.referralCodeUsed = referralCode.toUpperCase();
             }
         }
 

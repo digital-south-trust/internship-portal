@@ -19,7 +19,11 @@ export async function GET(req, { params }) {
         let user = await User.findById(id).select('-password').lean();
         let isAmbassador = false;
 
-        if (!user) {
+        if (user) {
+            if (user.role?.toLowerCase() === 'ambassador') {
+                isAmbassador = true;
+            }
+        } else {
             user = await Ambassador.findById(id).select('-password').lean();
             if (user) {
                 isAmbassador = true;
@@ -33,10 +37,22 @@ export async function GET(req, { params }) {
         let referredUsers = [];
 
         if (isAmbassador) {
-            // Find users who joined with this ambassador's code
-            referredUsers = await User.find({ referralCodeUsed: user.referralCode })
-                .select('fullName email status createdAt track')
-                .sort({ createdAt: -1 });
+            // Find users who joined with this ambassador's code (Search both collections)
+            const query = { 
+                referralCodeUsed: { $regex: new RegExp('^' + (user.referralCode || '') + '$', 'i') } 
+            };
+            
+            const [refUsers, refAmbassadors] = await Promise.all([
+                User.find(query).select('fullName email status createdAt track').lean(),
+                Ambassador.find(query).select('fullName email status createdAt referralCode').lean() 
+            ]);
+
+            // Merge and format
+            referredUsers = [
+                ...refUsers,
+                ...refAmbassadors.map(a => ({ ...a, status: 'Active', track: 'Ambassador' }))
+            ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
         } else {
             projects = await ProjectRequest.find({ internId: id }).sort({ createdAt: -1 });
         }
@@ -57,6 +73,19 @@ export async function PATCH(req, { params }) {
 
         const allowedFields = {};
         if (body.assignedAdmin !== undefined) allowedFields.assignedAdmin = body.assignedAdmin;
+        
+        // General fields
+        if (body.fullName !== undefined) allowedFields.fullName = body.fullName;
+        if (body.phone !== undefined) allowedFields.phone = body.phone;
+        if (body.aadhaarNumber !== undefined) allowedFields.aadhaarNumber = body.aadhaarNumber;
+        if (body.collegeName !== undefined) allowedFields.collegeName = body.collegeName;
+
+        // Ambassador specific
+        if (body.referralCode !== undefined) allowedFields.referralCode = body.referralCode;
+        if (body.commissionPercentage !== undefined) allowedFields.commissionPercentage = body.commissionPercentage;
+        if (body.discountPercentage !== undefined) allowedFields.discountPercentage = body.discountPercentage;
+        if (body.earnings !== undefined) allowedFields.earnings = body.earnings;
+
         if (body.status !== undefined) {
             allowedFields.status = body.status;
             if (['SELECTED', 'PROFILE_PENDING', 'VERIFIED', 'ACTIVE', 'Active'].includes(body.status)) {

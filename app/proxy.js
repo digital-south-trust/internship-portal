@@ -63,7 +63,7 @@ export async function proxy(request) {
                     // Status-based route mapping
                     const roadmap = {
                         'OTP_VERIFIED': '/assessment',
-                        'ASSESSMENT_COMPLETED': '/internship/result-pending',
+                        'ASSESSMENT_COMPLETED': '/assessment',
                         'SELECTED': '/dashboard/complete-profile',
                         'PROFILE_PENDING': '/dashboard/complete-profile',
                         'REJECTED': '/internship/rejected',
@@ -75,7 +75,7 @@ export async function proxy(request) {
                     
                     const isAllowed = (path) => {
                         if (status === 'OTP_VERIFIED' && path === '/assessment') return true;
-                        if (status === 'ASSESSMENT_COMPLETED' && path === '/internship/result-pending') return true;
+                        if (status === 'ASSESSMENT_COMPLETED' && path === '/assessment') return true;
                         if (status === 'REJECTED' && path === '/internship/rejected') return true;
                         if (status.includes('SELECTED') || status.includes('PENDING') || status === 'VERIFIED') {
                             if (path.startsWith('/dashboard/complete-profile')) return true;

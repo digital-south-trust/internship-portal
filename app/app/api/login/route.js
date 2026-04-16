@@ -65,7 +65,7 @@ export async function POST(req) {
         // Determine redirection based on status
         const roadmap = {
             'OTP_VERIFIED': '/assessment',
-            'ASSESSMENT_COMPLETED': '/internship/result-pending',
+            'ASSESSMENT_COMPLETED': '/assessment',
             'SELECTED': '/dashboard/complete-profile',
             'PROFILE_PENDING': '/dashboard/complete-profile',
             'REJECTED': '/internship/rejected',

@@ -34,6 +34,11 @@ const ScheduleSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    status: {
+        type: String,
+        enum: ['Scheduled', 'Completed', 'Cancelled'],
+        default: 'Scheduled'
+    },
     createdAt: {
         type: Date,
         default: Date.now

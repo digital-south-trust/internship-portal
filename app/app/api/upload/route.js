@@ -19,7 +19,10 @@ export async function POST(req) {
             'aadhaar': 'Aadhar',
             'passport': 'profile_photo',
             'profile': 'profile_photo',
-            'resume': 'resume'
+            'resume': 'resume',
+            'pancardphoto': 'Identification',
+            'educationcertificate': 'Academics',
+            'experienceletter': 'Professional_Docs'
         };
         const folder = folderMapping[type.toLowerCase()] || type;
 

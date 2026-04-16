@@ -121,6 +121,9 @@ export default function AIAssistantPage() {
         setLoading(true);
         setCurrentConversationId(id);
         setIsNewChatMode(false);
+        setNoCount(0);
+        setShowMentorHelp(false);
+        setMentorRequestStatus(null);
         try {
             const res = await fetch(`/api/ai/chat?id=${id}`);
             if (res.ok) {
@@ -422,11 +425,11 @@ export default function AIAssistantPage() {
 
                             {showResolutionCheck && !loading && (
                                 <div className="flex justify-center py-4">
-                                    <div className="bg-white border border-neutral-100 shadow-lg rounded-2xl p-6 text-center space-y-3 max-w-xs">
-                                        <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-widest">Query Resolved?</p>
+                                    <div className="bg-white border border-neutral-100 shadow-lg rounded-2xl p-6 text-center space-y-3 max-w-sm">
+                                        <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">QUERY RESOLVED?</p>
                                         <div className="flex gap-2">
-                                            <button onClick={() => handleResolution(true)} className="flex-1 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-bold uppercase">Yes</button>
-                                            <button onClick={() => handleResolution(false)} className="flex-1 py-1.5 bg-red-50 text-red-500 rounded-lg text-[9px] font-bold uppercase">No</button>
+                                            <button onClick={() => handleResolution(true)} className="flex-1 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all">Yes</button>
+                                            <button onClick={() => handleResolution(false)} className="flex-1 py-1.5 bg-red-50 text-red-500 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all">No</button>
                                         </div>
                                     </div>
                                 </div>
@@ -435,8 +438,8 @@ export default function AIAssistantPage() {
                             {showSupportOption && (
                                 <div className="bg-neutral-50 border border-neutral-100 rounded-2xl p-8 text-center space-y-4">
                                     <div className="space-y-1">
-                                        <h3 className="text-sm font-bold text-gray-900 uppercase">Need more help?</h3>
-                                        <p className="text-[8px] text-neutral-400 font-bold uppercase italic tracking-widest leading-relaxed">
+                                        <h3 className="text-[12px] font-black text-gray-900 uppercase tracking-widest">NEED MORE HELP?</h3>
+                                        <p className="text-[10px] text-neutral-400 font-bold uppercase tracking-tight leading-relaxed">
                                             It seems you still have doubts. Would you like to connect with a technical mentor?
                                         </p>
                                     </div>
@@ -450,16 +453,16 @@ export default function AIAssistantPage() {
                                             <button
                                                 disabled={mentorRequestStatus === 'sending'}
                                                 onClick={() => handleRequestMentorHelp(true)}
-                                                className="px-6 py-2 bg-black text-white rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all flex items-center gap-2"
+                                                className="px-6 py-2 bg-black text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-neutral-800 transition-all flex items-center gap-2"
                                             >
-                                                {mentorRequestStatus === 'sending' ? 'Sending...' : 'Yes, Connect'}
+                                                {mentorRequestStatus === 'sending' ? 'Sending...' : 'YES, CONNECT'}
                                             </button>
                                             <button
                                                 disabled={mentorRequestStatus === 'sending'}
                                                 onClick={() => handleRequestMentorHelp(false)}
-                                                className="px-6 py-2 bg-white border border-neutral-200 text-neutral-500 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-neutral-50 transition-all"
+                                                className="px-6 py-2 bg-white border border-neutral-200 text-neutral-500 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-neutral-50 transition-all"
                                             >
-                                                No, Thanks
+                                                NO, THANKS
                                             </button>
                                         </div>
                                     )}

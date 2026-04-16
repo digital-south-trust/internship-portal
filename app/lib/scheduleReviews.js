@@ -28,8 +28,9 @@ function addMinutes(timeStr, mins) {
  * @param {string} meetLink  - Google Meet / Zoom URL
  * @returns {Array}  created WeeklyReview docs
  */
-export async function scheduleMonthlyReviews(intern, startDate, meetLink = DEFAULT_LINK) {
+export async function scheduleMonthlyReviews(intern, startDate, meetLink = DEFAULT_LINK, startTime = '10:00') {
     const created = [];
+    const baseTimeForDay = startTime || BASE_TIME;
 
     for (let week = 0; week < MEETINGS_PER_MONTH; week++) {
         // Target date = startDate + 7*week days (spread weekly)
@@ -44,7 +45,7 @@ export async function scheduleMonthlyReviews(intern, startDate, meetLink = DEFAU
             scheduledDate: { $gte: dateStart, $lte: dateEnd },
         });
 
-        const slotTime = addMinutes(BASE_TIME, existingCount * SLOT_MINUTES);
+        const slotTime = addMinutes(baseTimeForDay, existingCount * SLOT_MINUTES);
 
         // Label e.g. "Week 1 — Mar 10, 2026"
         const weekLabel = `Week ${week + 1} — ${target.toLocaleDateString('en-US', {
