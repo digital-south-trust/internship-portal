@@ -29,10 +29,13 @@ import {
     X
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function AdminProjectsPage() {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
     const [activeTab, setActiveTab] = useState('available'); 
     const [available, setAvailable] = useState([]);
     const [requests, setRequests] = useState([]);
@@ -70,10 +73,11 @@ export default function AdminProjectsPage() {
         setIsAddModalOpen(false);
         setFormStep(1);
         setFormPhases([]);
-        if (tracks["CODING"]?.[0]) {
-            setSelectedTrackName(tracks["CODING"][0].name);
-            setSelectedCategory("CODING");
-            setFormPhases(tracks["CODING"][0].formPhases || []);
+        const firstCat = Object.keys(tracks)[0];
+        if (firstCat && tracks[firstCat]?.[0]) {
+            setSelectedCategory(firstCat);
+            setSelectedTrackName(tracks[firstCat][0].name);
+            setFormPhases(tracks[firstCat][0].formPhases || []);
         }
     };
 
@@ -131,9 +135,21 @@ export default function AdminProjectsPage() {
 
             if (tracksRes.ok) {
                 const tracksData = await tracksRes.json();
-                setTracks(tracksData);
-                if (!selectedTrackName && tracksData["CODING"]?.[0]) {
-                    setSelectedTrackName(tracksData["CODING"][0].name);
+                const groupedTracks = {};
+                tracksData.forEach(track => {
+                    const cat = track.category || 'OTHER';
+                    if (!groupedTracks[cat]) groupedTracks[cat] = [];
+                    groupedTracks[cat].push(track);
+                });
+                setTracks(groupedTracks);
+                if (!selectedTrackName) {
+                    const firstCat = Object.keys(groupedTracks)[0];
+                    if (firstCat) {
+                        setSelectedCategory(firstCat);
+                        if (groupedTracks[firstCat]?.[0]) {
+                            setSelectedTrackName(groupedTracks[firstCat][0].name);
+                        }
+                    }
                 }
             }
 
@@ -308,7 +324,7 @@ export default function AdminProjectsPage() {
                     <div className="flex items-center gap-3">
                         <div className="flex bg-gray-50/50 p-1 rounded-xl border border-gray-100 shadow-sm">
                             {[
-                                { id: 'available', label: 'Nodes' },
+                                { id: 'available', label: 'Projects' },
                                 { id: 'requests', label: 'Proposals' },
                                 { id: 'preset', label: 'Presets' }
                             ].map(tab => (
@@ -350,7 +366,7 @@ export default function AdminProjectsPage() {
                                     {searchOpen && <input ref={searchInputRef} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="Search..." className="flex-1 bg-transparent pr-3 text-[11px] font-bold outline-none" />}
                                 </motion.div>
                                 <button onClick={() => setIsAddModalOpen(true)} className="px-6 py-3 bg-black text-white rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-2 hover:scale-[1.02] transition-all">
-                                    <Plus className="w-4 h-4" /> New Asset
+                                    <Plus className="w-4 h-4" /> New Project
                                 </button>
                             </div>
                             <div className="overflow-x-auto">
@@ -417,9 +433,10 @@ export default function AdminProjectsPage() {
             </AnimatePresence>
 
             {/* Add Project Modal */}
+            {mounted && createPortal(
             <AnimatePresence>
                 {isAddModalOpen && (
-                    <div className="fixed top-0 right-0 bottom-0 left-64 z-[100] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddModalOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-2xl" />
                         <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="relative bg-white rounded-[2.5rem] p-8 max-w-6xl w-full shadow-2xl border border-gray-100 flex flex-col max-h-[90vh]">
                             <div className="flex justify-between items-start mb-6">
@@ -439,24 +456,36 @@ export default function AdminProjectsPage() {
 
                             <form className="space-y-6 overflow-y-auto pr-4 custom-scrollbar" onSubmit={handleAddProjectSubmit}>
                                 <div className={`${formStep !== 1 ? 'hidden' : 'space-y-6 animate-in fade-in duration-300'}`}>
-                                    <div className="space-y-3">
-                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Asset Category</label>
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <button type="button" onClick={() => { setSelectedCategory("CODING"); setSelectedTrackName(tracks["CODING"]?.[0]?.name || ""); }} className={`p-4 rounded-2xl border-2 text-left transition-all ${selectedCategory === "CODING" ? "border-black bg-black text-white shadow-xl" : "border-gray-100 bg-gray-50 text-gray-500"}`}>
-                                                <div className="text-[15px] font-black uppercase tracking-tight leading-none">💻 Coding</div>
-                                            </button>
-                                            <button type="button" onClick={() => { setSelectedCategory("RESEARCH"); setSelectedTrackName(tracks["RESEARCH"]?.[0]?.name || ""); }} className={`p-4 rounded-2xl border-2 text-left transition-all ${selectedCategory === "RESEARCH" ? "border-black bg-black text-white shadow-xl" : "border-gray-100 bg-gray-50 text-gray-500"}`}>
-                                                <div className="text-[15px] font-black uppercase tracking-tight leading-none">🔬 Research</div>
-                                            </button>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Asset Category (Main Track)</label>
+                                            <select 
+                                                value={selectedCategory} 
+                                                onChange={(e) => {
+                                                    const cat = e.target.value;
+                                                    setSelectedCategory(cat);
+                                                    if (tracks[cat]?.[0]) setSelectedTrackName(tracks[cat][0].name);
+                                                    else setSelectedTrackName("");
+                                                }} 
+                                                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none cursor-pointer"
+                                            >
+                                                {Object.keys(tracks).map(cat => (
+                                                    <option key={cat} value={cat}>{cat.replace(/_/g, ' ')}</option>
+                                                ))}
+                                            </select>
                                         </div>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Specific Track</label>
-                                        <div className="flex flex-wrap gap-2">
-                                            {(tracks[selectedCategory] || []).map((t) => (
-                                                <button key={t.name} type="button" onClick={() => setSelectedTrackName(t.name)} className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all border ${selectedTrackName === t.name ? "bg-black text-white border-black shadow-md" : "bg-white text-gray-500 border-gray-200"}`}>{t.name}</button>
-                                            ))}
+                                        <div className="space-y-1.5">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Specific Track</label>
+                                            <select 
+                                                name="track"
+                                                value={selectedTrackName} 
+                                                onChange={(e) => setSelectedTrackName(e.target.value)} 
+                                                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-sm font-bold outline-none cursor-pointer"
+                                            >
+                                                {(tracks[selectedCategory] || []).map(t => (
+                                                    <option key={t.name} value={t.name}>{t.name}</option>
+                                                ))}
+                                            </select>
                                         </div>
                                     </div>
 
@@ -542,12 +571,13 @@ export default function AdminProjectsPage() {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </AnimatePresence>, document.body)}
 
             {/* Edit Project Modal */}
+            {mounted && createPortal(
             <AnimatePresence>
                 {isEditModalOpen && editingProject && (
-                    <div className="fixed top-0 right-0 bottom-0 left-64 z-[100] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsEditModalOpen(false)} className="absolute inset-0 bg-black/60 backdrop-blur-2xl" />
                         <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="relative bg-white rounded-[2.5rem] p-8 max-w-6xl w-full shadow-2xl border border-gray-100 flex flex-col max-h-[90vh]">
                             <div className="flex justify-between items-center mb-6">
@@ -561,7 +591,7 @@ export default function AdminProjectsPage() {
                                         <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em] border-l-4 border-black pl-3 mb-4">Phase I: Classification</h4>
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-1.5"><label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Asset Category</label><div className="w-full bg-gray-100 rounded-xl px-4 py-3 text-[12px] font-black text-gray-500 uppercase">{editingProject.category || "CODING"}</div></div>
-                                            <div className="space-y-1.5"><label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Specific Track</label><select name="track" defaultValue={editingProject.track} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-[12px] font-bold outline-none">{tracks[editingProject.category || "CODING"].map(t => <option key={t.name} value={t.name}>{t.name}</option>)}</select></div>
+                                            <div className="space-y-1.5"><label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Specific Track</label><select name="track" defaultValue={editingProject.track} className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-[12px] font-bold outline-none">{(tracks[editingProject.category || "CODING"] || []).map(t => <option key={t.name} value={t.name}>{t.name}</option>)}</select></div>
                                         </div>
                                         <div className="space-y-1.5"><label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Problem Descriptor</label><input name="title" defaultValue={editingProject.title} required className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-[12px] font-bold outline-none" /></div>
                                         <div className="grid grid-cols-2 gap-4">
@@ -626,12 +656,13 @@ export default function AdminProjectsPage() {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </AnimatePresence>, document.body)}
 
             {/* Proposal Details Modal omitted for brevity, same as original structure but using formPhases */}
+             {mounted && createPortal(
              <AnimatePresence>
                 {isDetailsModalOpen && selectedRequest && (
-                    <div className="fixed top-0 right-0 bottom-0 left-64 z-[110] flex items-center justify-center p-4">
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsDetailsModalOpen(false)} className="absolute inset-0 bg-black/40 backdrop-blur-md" />
                         <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="relative bg-white rounded-[2rem] max-w-4xl w-full shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[85vh]">
                             <div className="p-6 border-b border-gray-50 bg-gray-50/30">
@@ -700,7 +731,7 @@ export default function AdminProjectsPage() {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </AnimatePresence>, document.body)}
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 4px; }

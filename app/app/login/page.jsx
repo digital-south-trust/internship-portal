@@ -156,13 +156,16 @@ export default function LoginPage() {
                         </div>
                     )}
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full py-3.5 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-gray-900/10 active:scale-[0.98]"
-                    >
-                        {loading ? "Signing in..." : "Sign In"}
-                    </button>
+                    {loading ? (
+                        <div className="w-full h-[52px] bg-gray-200 animate-pulse rounded-xl shadow-sm"></div>
+                    ) : (
+                        <button
+                            type="submit"
+                            className="w-full py-3.5 bg-black text-white font-bold rounded-xl hover:bg-gray-800 transition-all shadow-lg shadow-gray-900/10 active:scale-[0.98]"
+                        >
+                            Sign In
+                        </button>
+                    )}
                 </form>
 
                 <div className="text-center text-sm text-gray-500">

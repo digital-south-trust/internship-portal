@@ -35,10 +35,12 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
-
-
+import { createPortal } from "react-dom";
 
 export default function AdminLiveBookPage() {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+    const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: '', id: null, title: '', message: '' });
     const [view, setView] = useState("library"); // library, course, module, editor
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [selectedModule, setSelectedModule] = useState(null);
@@ -276,52 +278,61 @@ export default function AdminLiveBookPage() {
         }
     };
 
-    const handleDeleteTopic = async (topicId) => {
-        if (!confirm("Are you sure you want to permanently delete this topic?")) return;
-        try {
-            const res = await fetch(`/api/admin/content/topics?id=${topicId}`, { method: 'DELETE' });
-            if (res.ok) {
-                setTopics(prev => prev.filter(t => t._id !== topicId));
-                toast.success("Topic Purged.");
+    const confirmDeleteAction = async () => {
+        const { type, id } = deleteConfirm;
+        if (type === 'topic') {
+            try {
+                const res = await fetch(`/api/admin/content/topics?id=${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    setTopics(prev => prev.filter(t => t._id !== id));
+                    toast.success("Topic deleted.");
+                }
+            } catch (e) {
+                toast.error("Failed to delete topic.");
             }
-        } catch (e) {
-            toast.error("Failed to delete topic.");
+        } else if (type === 'course') {
+            try {
+                const res = await fetch(`/api/admin/content/courses?id=${id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    setCourses(prev => prev.filter(c => c._id !== id));
+                    setSelectedCourse(null);
+                    setView("library");
+                    toast.success("LiveBook deleted.");
+                }
+            } catch (e) {
+                toast.error("Failed to delete course.");
+            }
+        } else if (type === 'module') {
+            try {
+                const newModules = selectedCourse.modules.filter(m => m.id !== id);
+                const res = await fetch('/api/admin/content/courses', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: selectedCourse._id, modules: newModules })
+                });
+                if (res.ok) {
+                    const updated = await res.json();
+                    setCourses(prev => prev.map(c => c._id === updated._id ? updated : c));
+                    setSelectedCourse(updated);
+                    toast.success("Module deleted.");
+                }
+            } catch (e) {
+                toast.error("Failed to delete module.");
+            }
         }
+        setDeleteConfirm({ isOpen: false, type: '', id: null, title: '', message: '' });
     };
 
-    const handleDeleteCourse = async (courseId) => {
-        if (!confirm("Delete entire LiveBook? All embedded modules will be lost.")) return;
-        try {
-            const res = await fetch(`/api/admin/content/courses?id=${courseId}`, { method: 'DELETE' });
-            if (res.ok) {
-                setCourses(prev => prev.filter(c => c._id !== courseId));
-                setSelectedCourse(null);
-                setView("library");
-                toast.success("LiveBook Purged.");
-            }
-        } catch (e) {
-            toast.error("Failed to delete course.");
-        }
+    const handleDeleteTopic = (topicId) => {
+        setDeleteConfirm({ isOpen: true, type: 'topic', id: topicId, title: 'Delete Topic', message: 'Are you sure you want to permanently delete this topic?' });
     };
 
-    const handleDeleteModule = async (moduleId) => {
-        if (!confirm("Remove this module? Topics will remain but will be unlinked.")) return;
-        try {
-            const newModules = selectedCourse.modules.filter(m => m.id !== moduleId);
-            const res = await fetch('/api/admin/content/courses', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: selectedCourse._id, modules: newModules })
-            });
-            if (res.ok) {
-                const updated = await res.json();
-                setCourses(prev => prev.map(c => c._id === updated._id ? updated : c));
-                setSelectedCourse(updated);
-                toast.success("Module Unlinked.");
-            }
-        } catch (e) {
-            toast.error("Failed to remove module.");
-        }
+    const handleDeleteCourse = (courseId) => {
+        setDeleteConfirm({ isOpen: true, type: 'course', id: courseId, title: 'Delete LiveBook', message: 'Delete entire LiveBook? All embedded modules will be lost.' });
+    };
+
+    const handleDeleteModule = (moduleId) => {
+        setDeleteConfirm({ isOpen: true, type: 'module', id: moduleId, title: 'Remove Module', message: 'Remove this module? Topics will remain but will be unlinked.' });
     };
 
     const getYoutubeId = (url) => {
@@ -402,7 +413,7 @@ export default function AdminLiveBookPage() {
                                 }}
                                 className="bg-black text-white px-6 py-3 rounded-2xl flex items-center gap-2 font-black uppercase text-[11px] tracking-widest shadow-xl hover:scale-105 active:scale-95 transition-all group"
                             >
-                                <Plus className="w-4 h-4" /> Deploy Intel
+                                <Plus className="w-4 h-4" /> Deploy 
                             </button>
                         )}
                     </div>
@@ -931,6 +942,7 @@ export default function AdminLiveBookPage() {
                 </AnimatePresence>
             </div>
 
+            {mounted && createPortal(
             <AnimatePresence>
                 {isAddCourseModalOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -1125,8 +1137,9 @@ export default function AdminLiveBookPage() {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </AnimatePresence>, document.body)}
 
+            {mounted && createPortal(
             <AnimatePresence>
                 {isAddModuleModalOpen && (
                     <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
@@ -1206,7 +1219,7 @@ export default function AdminLiveBookPage() {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </AnimatePresence>, document.body)}
 
             <AnimatePresence>
                 {showPreviewModal && (
@@ -1275,6 +1288,30 @@ export default function AdminLiveBookPage() {
                     </div>
                 )}
             </AnimatePresence>
+
+            {mounted && createPortal(
+                <AnimatePresence>
+                    {deleteConfirm.isOpen && (
+                        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDeleteConfirm({ ...deleteConfirm, isOpen: false })} className="absolute inset-0 bg-black/60 backdrop-blur-2xl" />
+                            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="relative bg-white rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl border border-gray-100 flex flex-col">
+                                <div className="mb-6">
+                                    <div className="w-12 h-12 bg-rose-50 text-rose-500 rounded-2xl flex items-center justify-center mb-4">
+                                        <Trash2 className="w-6 h-6" />
+                                    </div>
+                                    <h3 className="text-2xl font-black text-gray-900 uppercase tracking-tighter mb-2">{deleteConfirm.title}</h3>
+                                    <p className="text-[12px] font-bold text-gray-400">{deleteConfirm.message}</p>
+                                </div>
+                                <div className="flex gap-4">
+                                    <button onClick={() => setDeleteConfirm({ ...deleteConfirm, isOpen: false })} className="flex-1 py-4 bg-gray-50 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all">Cancel</button>
+                                    <button onClick={confirmDeleteAction} className="flex-1 py-4 bg-rose-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 shadow-xl shadow-rose-500/20 transition-all flex items-center justify-center gap-2">Confirm <Trash2 className="w-3.5 h-3.5" /></button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
 
             <style jsx global>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 8px; }

@@ -227,13 +227,16 @@ export default function RegistrationPage() {
                         </div>
                     </div>
 
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="w-full bg-black hover:bg-neutral-800 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                        {loading ? "Creating Account..." : "Sign Up & Take Assessment"} <ChevronRight className="w-5 h-5" />
-                    </button>
+                    {loading ? (
+                        <div className="w-full h-[56px] bg-gray-200 animate-pulse rounded-xl shadow-sm"></div>
+                    ) : (
+                        <button
+                            type="submit"
+                            className="w-full bg-black hover:bg-neutral-800 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2"
+                        >
+                            Sign Up & Take Assessment <ChevronRight className="w-5 h-5" />
+                        </button>
+                    )}
 
                     <p className="text-center text-sm text-gray-600 mt-4">
                         Already have an account?{" "}

@@ -49,6 +49,7 @@ function AssessmentContent() {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
     const [reviewQuestions, setReviewQuestions] = useState(new Set());
     const [showHelpModal, setShowHelpModal] = useState(false);
+    const [helpView, setHelpView] = useState('options');
     const [helpQuery, setHelpQuery] = useState('');
     const [isSubmittingHelp, setIsSubmittingHelp] = useState(false);
     const [hasAgreedTerms, setHasAgreedTerms] = useState(false);
@@ -251,7 +252,7 @@ function AssessmentContent() {
                 body: JSON.stringify({
                     type: 'Assessment Query',
                     title: `Assessment Help - ${user.fullName}`,
-                    description: helpQuery,
+                    description: `[From Assessment - User is still in Selection Process]\n\n${helpQuery}`,
                     reportedBy: user.email,
                     status: 'Open'
                 })
@@ -314,16 +315,13 @@ function AssessmentContent() {
                         <span className="font-black text-lg tracking-tight">DIGITAL SOUTH</span>
                     </div>
                     <div className="flex items-center gap-4">
-                        <button onClick={() => window.location.href = 'mailto:internship@digitalsouth.co.in'} className="flex items-center gap-2 bg-white border border-gray-100 text-black px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-gray-50 transition-all">
-                            <Mail className="w-4 h-4 text-emerald-600" /> Contact Support
-                        </button>
-                        <button onClick={() => setShowHelpModal(true)} className="flex items-center gap-2 bg-white border border-gray-100 text-black px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-gray-50 transition-all">
-                            <HelpCircle className="w-4 h-4 text-blue-600" /> Ask Help
+                        <button onClick={() => { setHelpView('options'); setShowHelpModal(true); }} className="flex items-center gap-2 bg-white border border-gray-100 text-black px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-gray-50 transition-all">
+                            <HelpCircle className="w-4 h-4 text-blue-600" /> Help
                         </button>
                         <button 
                             onClick={() => {
                                 localStorage.clear();
-                                router.push('/login');
+                                window.location.href = '/login';
                             }} 
                             className="flex items-center gap-2 bg-black text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-black/10 hover:bg-neutral-800 transition-all active:scale-95"
                         >
@@ -427,25 +425,43 @@ function AssessmentContent() {
                     {showHelpModal && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
                             <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl p-10 space-y-8 animate-in zoom-in-95 duration-300">
-                                <div className="text-center">
-                                    <div className="w-16 h-16 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-4">
-                                        <HelpCircle className="w-8 h-8 text-blue-600" />
-                                    </div>
-                                    <h3 className="text-xl font-black uppercase tracking-tighter">Assessment Support</h3>
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">Facing issues? Describe your problem below.</p>
-                                </div>
-                                <textarea 
-                                    value={helpQuery} 
-                                    onChange={(e) => setHelpQuery(e.target.value)} 
-                                    placeholder="Write your problem here..." 
-                                    className="w-full h-40 bg-gray-50 border border-gray-100 rounded-2xl p-6 text-sm font-semibold outline-none focus:border-blue-500 transition-all resize-none" 
-                                />
-                                <div className="flex flex-col gap-3">
-                                    <button onClick={submitHelpQuery} disabled={isSubmittingHelp} className="w-full py-5 bg-black text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2">
-                                        {isSubmittingHelp ? 'Sending...' : <><Send className="w-4 h-4" /> Submit Query</>}
-                                    </button>
-                                    <button onClick={() => setShowHelpModal(false)} className="w-full py-4 text-gray-300 hover:text-gray-600 font-black uppercase text-[10px] tracking-widest">Cancel</button>
-                                </div>
+                                {helpView === 'options' ? (
+                                    <>
+                                        <div className="text-center">
+                                    
+                                            <h3 className="text-xl font-black uppercase tracking-tighter">How can we help?</h3>
+                                        </div>
+                                        <div className="flex flex-col gap-3">
+                                            <button onClick={() => window.location.href = 'mailto:internship@digitalsouth.co.in'} className="w-full py-5 bg-white border border-gray-200 text-black rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-gray-50">
+                                                <Mail className="w-4 h-4" /> Contact Support
+                                            </button>
+                                            <button onClick={() => setHelpView('query')} className="w-full py-5 bg-black text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2">
+                                                <Send className="w-4 h-4" /> Write Query
+                                            </button>
+                                            <button onClick={() => setShowHelpModal(false)} className="w-full py-4 text-gray-400 hover:text-black font-black uppercase text-[10px] tracking-widest mt-2">Close</button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="text-center">
+                                   
+                                            <h3 className="text-xl font-black uppercase tracking-tighter">Assessment Support</h3>
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">Facing issues? Describe your problem below.</p>
+                                        </div>
+                                        <textarea 
+                                            value={helpQuery} 
+                                            onChange={(e) => setHelpQuery(e.target.value)} 
+                                            placeholder="Write your problem here..." 
+                                            className="w-full h-40 bg-gray-50 border border-gray-100 rounded-2xl p-6 text-sm font-semibold outline-none focus:border-blue-500 transition-all resize-none" 
+                                        />
+                                        <div className="flex flex-col gap-3">
+                                            <button onClick={submitHelpQuery} disabled={isSubmittingHelp} className="w-full py-5 bg-black text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2">
+                                                {isSubmittingHelp ? 'Sending...' : <><Send className="w-4 h-4" /> Submit Query</>}
+                                            </button>
+                                            <button onClick={() => setHelpView('options')} className="w-full py-4 text-gray-300 hover:text-gray-600 font-black uppercase text-[10px] tracking-widest">Back</button>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </div>
                     ) }
@@ -470,20 +486,20 @@ function AssessmentContent() {
 
                     <span className="font-black text-lg tracking-tight">DIGITAL SOUTH</span>
                 </div>
-                <div className="flex items-center gap-4">
-                    <button onClick={() => window.location.href = 'mailto:internship@digitalsouth.co.in'} className="flex items-center gap-2 bg-white border border-gray-100 text-black px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-gray-50 transition-all">
-                        <Mail className="w-4 h-4 text-emerald-600" /> Contact Support
-                    </button>
-                    <button 
-                        onClick={() => {
-                            localStorage.clear();
-                            router.push('/login');
-                        }} 
-                        className="flex items-center gap-2 bg-black text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-black/10 hover:bg-neutral-800 transition-all active:scale-95"
-                    >
-                        <LogOut className="w-4 h-4" /> Log Out
-                    </button>
-                </div>
+                    <div className="flex items-center gap-4">
+                        <button onClick={() => { setHelpView('options'); setShowHelpModal(true); }} className="flex items-center gap-2 bg-white border border-gray-100 text-black px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-gray-50 transition-all">
+                            <HelpCircle className="w-4 h-4 text-emerald-600" /> Help
+                        </button>
+                        <button 
+                            onClick={() => {
+                                localStorage.clear();
+                                window.location.href = '/login';
+                            }} 
+                            className="flex items-center gap-2 bg-black text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-black/10 hover:bg-neutral-800 transition-all active:scale-95"
+                        >
+                            <LogOut className="w-4 h-4" /> Log Out
+                        </button>
+                    </div>
             </header>
 
             <div className="max-w-md w-full mx-auto relative z-10 flex flex-col items-center space-y-8 pt-48 text-center bg-white p-12 rounded-[3.5rem] border border-gray-100 shadow-2xl">
@@ -510,8 +526,17 @@ function AssessmentContent() {
             }}
         >
             <div className="absolute inset-0 z-0 pointer-events-none bg-white/30"></div>
-            <nav className="h-24 flex items-center px-12 relative z-10">
+            <nav className="h-24 flex items-center justify-between px-12 relative z-10">
                 <span className="font-black text-xl tracking-tighter">DIGITAL SOUTH</span>
+                <button 
+                    onClick={() => {
+                        localStorage.clear();
+                        window.location.href = '/login';
+                    }} 
+                    className="flex items-center gap-2 bg-black text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-black/10 hover:bg-neutral-800 transition-all active:scale-95"
+                >
+                    <LogOut className="w-4 h-4" /> Log Out
+                </button>
             </nav>
 
             <main className="flex-1 px-12 py-12 max-w-7xl mx-auto w-full space-y-16">
@@ -775,7 +800,7 @@ function AssessmentContent() {
                                 disabled={!modalAgreed}
                                 className={`flex-1 py-4 px-6 rounded-2xl bg-black text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-black/10 transition-all active:scale-95 ${!modalAgreed ? 'opacity-20 grayscale cursor-not-allowed' : 'hover:bg-neutral-800'}`}
                             >
-                                I Accept & Agree
+                                Continue
                             </button>
                         </div>
                     </div>
@@ -882,10 +907,9 @@ function AssessmentContent() {
                     </div>
                     
                     <div className="flex items-center gap-6">
-                        <button onClick={() => setShowHelpModal(true)} className="flex items-center gap-2 text-[9px] font-black uppercase tracking-widest hover:text-blue-600 transition-all">
-                            <HelpCircle className="w-4 h-4 text-blue-500" /> Ask Help
+                        <button onClick={() => setShowConfirmSubmit(true)} className="bg-[#ccff00] text-black px-6 py-2.5 rounded-xl font-black shadow-sm hover:shadow-md transition-all uppercase text-[10px] tracking-widest">
+                            Finish Assessment
                         </button>
-                        <span className="text-[10px] font-black text-gray-400">{currentQuestionIndex + 1} OF {exam.questions.length}</span>
                     </div>
                 </div>
 
@@ -893,16 +917,36 @@ function AssessmentContent() {
                 {showHelpModal && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/5 backdrop-blur-sm">
                         <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl p-10 space-y-8">
-                            <div className="text-center">
-                                <HelpCircle className="w-12 h-12 text-blue-500 mx-auto mb-4" />
-                                <h3 className="text-xl font-black uppercase tracking-tighter">Support Request</h3>
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">Briefly describe your issue</p>
-                            </div>
-                            <textarea value={helpQuery} onChange={(e) => setHelpQuery(e.target.value)} placeholder="Type here..." className="w-full h-32 bg-gray-50 border border-gray-100 rounded-2xl p-5 text-sm font-bold outline-none resize-none" />
-                            <div className="flex flex-col gap-2">
-                                <button onClick={submitHelpQuery} disabled={isSubmittingHelp} className="w-full py-4 bg-black text-white rounded-xl font-black uppercase text-[10px] tracking-widest">{isSubmittingHelp ? 'Sending...' : 'Send Query'}</button>
-                                <button onClick={() => setShowHelpModal(false)} className="w-full py-3 text-gray-400 hover:text-black font-black uppercase text-[9px]">Close</button>
-                            </div>
+                            {helpView === 'options' ? (
+                                <>
+                                    <div className="text-center">
+                                        <HelpCircle className="w-12 h-12 text-blue-500 mx-auto mb-4" />
+                                        <h3 className="text-xl font-black uppercase tracking-tighter">How can we help?</h3>
+                                    </div>
+                                    <div className="flex flex-col gap-3">
+                                        <button onClick={() => window.location.href = 'mailto:internship@digitalsouth.co.in'} className="w-full py-4 bg-white border border-gray-200 text-black rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-gray-50">
+                                            <Mail className="w-4 h-4" /> Contact Support
+                                        </button>
+                                        <button onClick={() => setHelpView('query')} className="w-full py-4 bg-black text-white rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2">
+                                            <Send className="w-4 h-4" /> Write Query
+                                        </button>
+                                        <button onClick={() => setShowHelpModal(false)} className="w-full py-3 text-gray-400 hover:text-black font-black uppercase text-[9px] mt-2">Close</button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="text-center">
+                                        <HelpCircle className="w-12 h-12 text-blue-500 mx-auto mb-4" />
+                                        <h3 className="text-xl font-black uppercase tracking-tighter">Support Request</h3>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-2">Briefly describe your issue</p>
+                                    </div>
+                                    <textarea value={helpQuery} onChange={(e) => setHelpQuery(e.target.value)} placeholder="Type here..." className="w-full h-32 bg-gray-50 border border-gray-100 rounded-2xl p-5 text-sm font-bold outline-none resize-none" />
+                                    <div className="flex flex-col gap-2">
+                                        <button onClick={submitHelpQuery} disabled={isSubmittingHelp} className="w-full py-4 bg-black text-white rounded-xl font-black uppercase text-[10px] tracking-widest">{isSubmittingHelp ? 'Sending...' : 'Send Query'}</button>
+                                        <button onClick={() => setHelpView('options')} className="w-full py-3 text-gray-400 hover:text-black font-black uppercase text-[9px]">Back</button>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 )}
@@ -962,9 +1006,12 @@ function AssessmentContent() {
                 {showConfirmSubmit && (
                     <div className="fixed inset-0 bg-neutral-900/10 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                         <div className="bg-white p-12 rounded-[2.5rem] max-w-md w-full text-center space-y-10 shadow-2xl">
-                             <div className="space-y-2">
+                             <div className="space-y-6">
                                 <h2 className="text-3xl font-black uppercase tracking-tight">Ready to Submit?</h2>
-                                <p className="text-gray-400 text-sm font-medium">Please review all answers. Attempted: {attemptedCount}/{exam.questions.length}</p>
+                                <div className="space-y-2">
+                                    <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Questions Attempted</p>
+                                    <p className="text-5xl font-black">{attemptedCount} <span className="text-3xl text-gray-300">/ {exam.questions.length}</span></p>
+                                </div>
                             </div>
                             <div className="flex flex-col gap-3">
                                 <button onClick={() => submitExam()} disabled={isSubmitting} className="w-full py-5 bg-black text-white rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-xl hover:shadow-black/10 transition-all">{isSubmitting ? 'Submitting...' : 'Yes, Submit My Exam'}</button>
