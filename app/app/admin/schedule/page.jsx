@@ -5,9 +5,12 @@ import { Calendar, Clock, Link as LinkIcon, Edit3, Send, Search, RefreshCw, Layo
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 import { FullScreenCalendar } from "@/components/ui/fullscreen-calendar";
 
 export default function AdminSchedulePage() {
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
     const router = useRouter();
     const [users, setUsers] = useState([]);
     const [selectedUser, setSelectedUser] = useState("");
@@ -27,6 +30,7 @@ export default function AdminSchedulePage() {
     const [scheduling, setScheduling] = useState(false);
     const [wrInternId, setWrInternId] = useState('');
     const [wrSearch, setWrSearch] = useState('');
+    const [wrStartDate, setWrStartDate] = useState(() => new Date().toISOString().split('T')[0]);
     const [wrTime, setWrTime] = useState('10:00');
     const [wrMeetLink, setWrMeetLink] = useState('https://meet.google.com/vcd-gfct-jqa');
     const [filterInternId, setFilterInternId] = useState(''); // '' = all
@@ -88,12 +92,13 @@ export default function AdminSchedulePage() {
 
     const handleAutoSchedule = async () => {
         if (!wrInternId) { toast.error('Please select an intern.'); return; }
+        if (!wrStartDate) { toast.error('Please select a start date.'); return; }
         setScheduling(true);
         try {
             const res = await fetch('/api/admin/weekly-review', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ internId: wrInternId, meetLink: wrMeetLink, startTime: wrTime }),
+                body: JSON.stringify({ internId: wrInternId, meetLink: wrMeetLink, startDate: wrStartDate, startTime: wrTime }),
             });
             const data = await res.json();
             if (res.ok || res.status === 201) {
@@ -675,6 +680,7 @@ export default function AdminSchedulePage() {
             </div>
 
             {/* ── Schedule Intern Modal ── */}
+            {mounted && createPortal(
             <AnimatePresence>
                 {showScheduleModal && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -725,13 +731,23 @@ export default function AdminSchedulePage() {
                                 </div>
 
                                 {/* Meet link */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-1.5">
-                                        <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Start Time</label>
-                                        <div className="relative">
-                                            <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
-                                            <input type="time" value={wrTime} onChange={e => setWrTime(e.target.value)}
-                                                className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-11 pr-4 py-3 text-[11px] font-bold focus:ring-4 focus:ring-black/5 outline-none" />
+                                <div className="space-y-4">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Start Date</label>
+                                            <div className="relative">
+                                                <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                                                <input type="date" value={wrStartDate} onChange={e => setWrStartDate(e.target.value)}
+                                                    className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-11 pr-4 py-3 text-[11px] font-bold focus:ring-4 focus:ring-black/5 outline-none" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-[8px] font-black text-gray-400 uppercase tracking-widest ml-1">Start Time</label>
+                                            <div className="relative">
+                                                <Clock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
+                                                <input type="time" value={wrTime} onChange={e => setWrTime(e.target.value)}
+                                                    className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-11 pr-4 py-3 text-[11px] font-bold focus:ring-4 focus:ring-black/5 outline-none" />
+                                            </div>
                                         </div>
                                     </div>
                                     <div className="space-y-1.5">
@@ -749,7 +765,7 @@ export default function AdminSchedulePage() {
                                     <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest">What happens next</p>
                                     <ul className="space-y-1.5">
                                         {[
-                                            '4 weekly meetings created from today',
+                                            '4 weekly meetings created from selected date',
                                             `Slots start at ${wrTime} (spaced 20m per intern)`,
                                             'Confirmation emails sent to intern + admin',
                                             '24h + 1h before reminders sent automatically',
@@ -770,8 +786,9 @@ export default function AdminSchedulePage() {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </AnimatePresence>, document.body)}
             {/* ── Postpone Modal ── */}
+            {mounted && createPortal(
             <AnimatePresence>
                 {postponeEvent && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -826,7 +843,7 @@ export default function AdminSchedulePage() {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </AnimatePresence>, document.body)}
         </div>
     );
 }

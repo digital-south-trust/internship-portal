@@ -922,11 +922,6 @@ function UserDetailView({ data, loading, onBack, onStatusUpdate }) {
 
             {assessment && (
                 <div className="mt-12 space-y-8 px-4">
-                    <div className="flex items-center gap-4">
-                        <div className="h-0.5 flex-1 bg-gray-100" />
-                        <h3 className="text-2xl font-black uppercase tracking-tighter text-gray-400">Question-Level Intelligence</h3>
-                        <div className="h-0.5 flex-1 bg-gray-100" />
-                    </div>
                     <div className="space-y-4 max-w-5xl mx-auto">
                         {assessment.answers?.map((ans, idx) => (
                             <div key={idx} className={`p-8 rounded-[2.5rem] border transition-all hover:shadow-lg ${!ans.selectedOption ? 'bg-gray-50 border-gray-100' : ans.isCorrect ? 'bg-emerald-50/20 border-emerald-100/50' : 'bg-red-50/20 border-red-100/50'}`}>

@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bug, RefreshCw, CheckCircle, AlertCircle, Clock, X, User, Calendar, MessageSquare, Ticket, Zap, ChevronDown, Send, Mail } from "lucide-react";
+import { createPortal } from "react-dom";
+import { Bug, RefreshCw, CheckCircle,Target, AlertCircle, Clock, X, User, Calendar, MessageSquare, Ticket, Zap, ChevronDown, Send, Mail, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 
@@ -34,8 +35,14 @@ export default function AdminTicketsPage() {
     // Reply and Resolve state
     const [replyText, setReplyText] = useState("");
     const [confirmingResolve, setConfirmingResolve] = useState(false);
+    const [mounted, setMounted] = useState(false);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [searchExpanded, setSearchExpanded] = useState(false);
 
-    useEffect(() => { fetchTickets(); }, []);
+    useEffect(() => { 
+        setMounted(true);
+        fetchTickets(); 
+    }, []);
 
     // Close dropdown on outside click
     useEffect(() => {
@@ -101,7 +108,16 @@ export default function AdminTicketsPage() {
     };
 
     const FILTERS = ["All", "Open", "In Progress", "Resolved"];
-    const filtered = filter === "All" ? tickets : tickets.filter(t => t.status === filter);
+    const filtered = tickets.filter(t => {
+        const matchesFilter = filter === "All" || t.status === filter;
+        const matchesSearch = searchQuery === "" || 
+            (t.description?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+             t.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+             t.reportedBy?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+             t._id?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+             t.type?.toLowerCase().includes(searchQuery.toLowerCase()));
+        return matchesFilter && matchesSearch;
+    });
     const stats = {
         All: tickets.length,
         Open: tickets.filter(t => t.status === 'Open').length,
@@ -173,6 +189,32 @@ export default function AdminTicketsPage() {
                                 )}
                             </AnimatePresence>
                         </div>
+                        <div className="flex items-center">
+                            <AnimatePresence>
+                                {searchExpanded && (
+                                    <motion.input
+                                        initial={{ width: 0, opacity: 0 }}
+                                        animate={{ width: 200, opacity: 1 }}
+                                        exit={{ width: 0, opacity: 0 }}
+                                        transition={{ duration: 0.2 }}
+                                        value={searchQuery}
+                                        onChange={(e) => setSearchQuery(e.target.value)}
+                                        placeholder="Search tickets..."
+                                        className="h-10 px-4 bg-gray-50 border border-gray-100 rounded-l-xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-black"
+                                        autoFocus
+                                    />
+                                )}
+                            </AnimatePresence>
+                            <button
+                                onClick={() => {
+                                    setSearchExpanded(!searchExpanded);
+                                    if (searchExpanded) setSearchQuery("");
+                                }}
+                                className={`p-2.5 bg-gray-50 hover:bg-black hover:text-white transition-all border border-gray-100 shadow-sm ${searchExpanded ? 'rounded-r-xl border-l-0' : 'rounded-xl mr-3'}`}
+                            >
+                                <Search className="w-4 h-4" />
+                            </button>
+                        </div>
                         <button
                             onClick={fetchTickets}
                             disabled={loading}
@@ -215,15 +257,16 @@ export default function AdminTicketsPage() {
                     <p className="text-gray-400 font-bold text-sm">No tickets found.</p>
                 </div>
             ) : (
-                <div className="space-y-3">
+                <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden">
                     {/* Header for the list view */}
-                    <div className="grid grid-cols-12 gap-4 px-8 py-3 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50/50 rounded-2xl border border-gray-100 mb-2">
+                    <div className="grid grid-cols-12 gap-4 px-8 py-4 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50/50 border-b border-gray-100">
                         <div className="col-span-2">Type / ID</div>
                         <div className="col-span-4">Concern Summary</div>
                         <div className="col-span-2">Reporter</div>
                         <div className="col-span-2">Status</div>
                         <div className="col-span-2 text-right">Activity / Date</div>
                     </div>
+                    <div className="divide-y divide-gray-50">
 
                     <AnimatePresence>
                         {filtered.map((ticket, i) => {
@@ -238,7 +281,7 @@ export default function AdminTicketsPage() {
                                     exit={{ opacity: 0, scale: 0.98 }}
                                     transition={{ delay: i * 0.03 }}
                                     onClick={() => { setSelectedTicket(ticket); setReplyText(""); setConfirmingResolve(false); }}
-                                    className="grid grid-cols-12 gap-4 px-8 py-5 bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-black/10 transition-all cursor-pointer group items-center"
+                                    className="grid grid-cols-12 gap-4 px-8 py-5 bg-white hover:bg-gray-50 transition-all cursor-pointer group items-center"
                                 >
                                     {/* Title / ID */}
                                     <div className="col-span-2 flex flex-col gap-1">
@@ -295,13 +338,15 @@ export default function AdminTicketsPage() {
                             );
                         })}
                     </AnimatePresence>
+                    </div>
                 </div>
             )}
 
             {/* ── Detail Modal ── */}
+            {mounted && createPortal(
             <AnimatePresence>
                 {selectedTicket && (
-                    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 md:p-8">
+                    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 md:p-8">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             onClick={() => setSelectedTicket(null)}
                             className="absolute inset-0 bg-black/60 backdrop-blur-3xl" />
@@ -498,7 +543,7 @@ export default function AdminTicketsPage() {
                         </motion.div>
                     </div>
                 )}
-            </AnimatePresence>
+            </AnimatePresence>, document.body)}
             </div>
         </div>
     );

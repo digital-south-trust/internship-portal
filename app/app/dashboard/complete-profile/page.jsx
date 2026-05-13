@@ -19,7 +19,8 @@ import {
     FileText,
     ArrowRight,
     CreditCard,
-    Clock
+    Clock,
+    Eye
 } from 'lucide-react';
 import Script from 'next/script';
 import { toast } from 'react-hot-toast';
@@ -173,9 +174,12 @@ export default function CompleteProfilePage() {
         }
 
         const typeMap = {
-            'passportPhoto': 'profile_photo',
-            'aadhaarCard': 'Aadhar',
-            'resumeDocument': 'resume'
+            'passportPhoto': 'passport',
+            'aadhaarCard': 'aadhaar',
+            'resumeDocument': 'resume',
+            'pancardPhoto': 'pancardphoto',
+            'educationCertificate': 'educationcertificate',
+            'experienceLetter': 'experienceletter'
         };
 
         const loadingToast = toast.loading(`Uploading ${fieldName.replace(/([A-Z])/g, ' $1').toLowerCase()}...`);
@@ -191,7 +195,14 @@ export default function CompleteProfilePage() {
                 body: uploadFormData,
             });
 
-            const data = await res.json();
+            let data;
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                data = await res.json();
+            } else {
+                const text = await res.text();
+                throw new Error(text || `Server error: ${res.status}`);
+            }
 
             if (res.ok) {
                 setFormData(prev => ({ ...prev, [fieldName]: data.url }));
@@ -201,7 +212,7 @@ export default function CompleteProfilePage() {
             }
         } catch (error) {
             console.error("Upload error:", error);
-            toast.error("File upload failed. Please try again.");
+            toast.error(error.message || "File upload failed. Please try again.");
             e.target.value = null;
         } finally {
             toast.dismiss(loadingToast);
@@ -505,31 +516,27 @@ export default function CompleteProfilePage() {
                                     />
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FileUploadField label="Passport Photo" uploaded={!!formData.passportPhoto} onChange={(e) => handleFileUpload(e, 'passportPhoto')} accept="image/*" />
-                                    <FileUploadField label="Aadhaar Card" uploaded={!!formData.aadhaarCard} onChange={(e) => handleFileUpload(e, 'aadhaarCard')} accept=".pdf,image/*" />
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FileUploadField label="PAN Card" uploaded={!!formData.pancardPhoto} onChange={(e) => handleFileUpload(e, 'pancardPhoto')} accept=".pdf,image/*" />
-                                    <FileUploadField label="Education Certificate" uploaded={!!formData.educationCertificate} onChange={(e) => handleFileUpload(e, 'educationCertificate')} accept=".pdf,image/*" />
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FileUploadField label="Resume (PDF)" uploaded={!!formData.resumeDocument} onChange={(e) => handleFileUpload(e, 'resumeDocument')} accept=".pdf" icon={FileText} />
-                                    <FileUploadField label="Experience Letter" uploaded={!!formData.experienceLetter} onChange={(e) => handleFileUpload(e, 'experienceLetter')} accept=".pdf,image/*" icon={FileText} />
+                                    <FileUploadField label="Passport Photo" uploaded={formData.passportPhoto} onChange={(e) => handleFileUpload(e, 'passportPhoto')} accept="image/*" />
+                                    <FileUploadField label="Aadhaar Card" uploaded={formData.aadhaarCard} onChange={(e) => handleFileUpload(e, 'aadhaarCard')} accept=".pdf,image/*" />
                                 </div>
                             </div>
                         )}
 
                         {step === 4 && (
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                                {/* Left column: Pricing */}
-                                <div className="space-y-6 lg:pr-10 lg:border-r border-gray-100">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 animate-in fade-in slide-in-from-bottom-8 duration-700 relative">
+                                <button 
+                                    type="button" 
+                                    onClick={() => setStep(step - 1)} 
+                                    className="absolute top-6 right-0 md:top-0 md:right-0 flex items-center gap-1.5 text-[9px] font-black text-gray-400 uppercase tracking-widest hover:text-black transition-colors underline underline-offset-4 cursor-pointer"
+                                >
+                                    <ChevronLeft className="w-3.5 h-3.5" /> Go Back
+                                </button>
+                                <div className="space-y-6 lg:pr-10 lg:border-r border-gray-100 mt-6 md:mt-0">
                                     <div className="space-y-4">
                                         <div className="space-y-1">
                                             <h1 className="text-xl font-black text-black uppercase tracking-tight">Complete Your Profile</h1>
-                                            <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest leading-loose">Provide details to finalize your onboarding.</p>
-                                        </div>
+                                             </div>
                                         <div className="space-y-1">
-                                            <h2 className="text-base font-black text-black uppercase tracking-tight">Onboarding Payment</h2>
                                             <p className="text-[9px] text-gray-400 font-bold uppercase tracking-widest leading-loose">Finalize enrollment by paying the verification fee.</p>
                                         </div>
                                     </div>
@@ -614,25 +621,19 @@ export default function CompleteProfilePage() {
                                     </div>
 
                                     <div className="space-y-4">
-                                        <button
-                                            type="button"
-                                            onClick={paymentStatus === 'success' ? () => setShowSplash(true) : handlePayment}
-                                            disabled={loading || (paymentStatus !== 'success' && !agreedPaymentTerms)}
-                                            className={`w-full font-black py-5 rounded-[2rem] shadow-2xl transition-all flex items-center justify-center gap-4 disabled:opacity-30 ${paymentStatus === 'success' ? 'bg-emerald-500 text-white shadow-emerald-200' : 'bg-black text-white hover:scale-[1.03] active:scale-[0.97] shadow-black/20'}`}
-                                        >
-                                            <span className="text-xs uppercase tracking-[0.2em]">{loading ? "Processing..." : paymentStatus === 'success' ? "Start Journey" : "Pay & Start Journey"}</span>
-                                            <ArrowRight className="w-5 h-5" />
-                                        </button>
-                                        
-                                        <div className="flex justify-start items-center px-4">
-                                            <button 
-                                                type="button" 
-                                                onClick={() => setStep(step - 1)} 
-                                                className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-black transition-colors"
+                                        {loading ? (
+                                            <div className="w-full h-14 bg-gray-200 animate-pulse rounded-[2rem]"></div>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={paymentStatus === 'success' ? () => setShowSplash(true) : handlePayment}
+                                                disabled={paymentStatus !== 'success' && !agreedPaymentTerms}
+                                                className={`w-full font-black py-5 rounded-[2rem] shadow-2xl transition-all flex items-center justify-center gap-4 disabled:opacity-30 ${paymentStatus === 'success' ? 'bg-emerald-500 text-white shadow-emerald-200' : 'bg-black text-white hover:scale-[1.03] active:scale-[0.97] shadow-black/20'}`}
                                             >
-                                                <ChevronLeft className="w-4 h-4" /> Go Back
+                                                <span className="text-xs uppercase tracking-[0.2em]">{paymentStatus === 'success' ? "Start Journey" : "Pay & Start Journey"}</span>
+                                                <ArrowRight className="w-5 h-5" />
                                             </button>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -644,8 +645,10 @@ export default function CompleteProfilePage() {
                                 <div className="flex-1"></div>
                                 {step < 3 ? (
                                     <button type="button" onClick={() => setStep(step + 1)} className="bg-black text-white px-8 py-3 rounded-xl font-bold flex items-center gap-2 hover:bg-neutral-800 transition-all shadow-md">Next Step <ChevronRight className="w-5 h-5" /></button>
+                                ) : loading ? (
+                                    <div className="w-48 h-10 bg-gray-200 animate-pulse rounded-xl"></div>
                                 ) : (
-                                    <button type="submit" disabled={loading} className="bg-black text-white px-8 py-3 rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 hover:bg-neutral-800 transition-all shadow-lg shadow-gray-200">{loading ? "Syncing..." : "Confirm & Proceed"} <ChevronRight className="w-4 h-4" /></button>
+                                    <button type="submit" className="bg-black text-white px-8 py-3 rounded-xl font-black uppercase text-xs tracking-widest flex items-center gap-2 hover:bg-neutral-800 transition-all shadow-lg shadow-gray-200">Confirm & Proceed <ChevronRight className="w-4 h-4" /></button>
                                 )}
                             </div>
                         )}
@@ -657,7 +660,7 @@ export default function CompleteProfilePage() {
             <TermsModal 
                 isOpen={showPaymentTermsModal} 
                 onClose={() => setShowPaymentTermsModal(false)} 
-                onAccept={() => setAgreedPaymentTerms(true)}
+                onAccept={(val) => setAgreedPaymentTerms(val)}
                 accepted={agreedPaymentTerms}
             />
         </div>
@@ -665,7 +668,11 @@ export default function CompleteProfilePage() {
 }
 
 function TermsModal({ isOpen, onClose, onAccept, accepted }) {
-    const [isChecked, setIsChecked] = useState(false);
+    const [isChecked, setIsChecked] = useState(accepted || false);
+    
+    useEffect(() => {
+        setIsChecked(accepted);
+    }, [accepted, isOpen]);
     
     if (!isOpen) return null;
     return (
@@ -760,7 +767,10 @@ function TermsModal({ isOpen, onClose, onAccept, accepted }) {
                                     type="checkbox" 
                                     id="modalCheck" 
                                     checked={isChecked}
-                                    onChange={(e) => setIsChecked(e.target.checked)}
+                                    onChange={(e) => {
+                                        setIsChecked(e.target.checked);
+                                        onAccept(e.target.checked);
+                                    }}
                                     className="w-5 h-5 accent-black rounded-lg cursor-pointer shrink-0"
                                 />
                                 <label htmlFor="modalCheck" className="text-[11px] font-black text-black uppercase tracking-tight leading-relaxed cursor-pointer select-none">
@@ -781,10 +791,10 @@ function TermsModal({ isOpen, onClose, onAccept, accepted }) {
                     </button>
                     <button 
                         disabled={!isChecked}
-                        onClick={() => { onAccept(); onClose(); }}
+                        onClick={() => { onAccept(isChecked); onClose(); }}
                         className={`flex-1 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl transition-all disabled:opacity-20 disabled:grayscale ${accepted ? 'bg-emerald-500 text-white shadow-emerald-200' : 'bg-black text-white shadow-black/20 hover:scale-[1.03] active:scale-[0.97]'}`}
                     >
-                        {accepted ? 'Terms Accepted' : 'Save & Agree'}
+                        {accepted ? 'Continue' : 'Save & Agree'}
                     </button>
                 </div>
             </div>
@@ -793,21 +803,45 @@ function TermsModal({ isOpen, onClose, onAccept, accepted }) {
 }
 
 function FileUploadField({ label, uploaded, onChange, accept, icon: Icon = Upload }) {
+    if (uploaded) {
+        return (
+            <div className="p-4 rounded-xl border-2 border-dashed bg-green-50 border-green-200 transition-all flex flex-col items-center gap-3">
+                <div className="flex flex-col items-center gap-1">
+                    <div className="bg-green-500 text-white p-1.5 rounded-full mb-1 shadow-sm">
+                        <Check className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] font-black uppercase text-center tracking-tight text-green-800">{label} Uploaded</span>
+                </div>
+                <div className="flex items-center gap-2 w-full mt-1">
+                    <button 
+                        type="button" 
+                        onClick={() => window.open(uploaded, '_blank')}
+                        className="flex-1 bg-white border border-green-200 text-green-700 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-green-100 transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                    >
+                     View
+                    </button>
+                    <label className="flex-1 cursor-pointer">
+                        <div className="bg-black text-white py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-neutral-800 hover:scale-[1.02] active:scale-[0.98] transition-all text-center block shadow-md shadow-black/10">
+                            Change
+                        </div>
+                        <input type="file" className="hidden" onChange={onChange} accept={accept} />
+                    </label>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className={`p-4 rounded-xl border-2 border-dashed transition-all ${uploaded ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-            <label className="cursor-pointer block">
-                <div className="flex flex-col items-center gap-2">
-                    {uploaded ? (
-                        <div className="bg-green-500 text-white p-1 rounded-full">
-                            <Check className="w-3 h-3" />
-                        </div>
-                    ) : (
-                        <div className="bg-black/5 p-2 rounded-xl text-black">
-                            <Icon className="w-4 h-4" />
-                        </div>
-                    )}
-                    <span className="text-[10px] font-black uppercase text-center tracking-tight">{label}</span>
-                    <span className="text-[9px] text-gray-400 font-bold uppercase">{uploaded ? 'Change file' : 'Click to upload'}</span>
+        <div className="p-5 rounded-xl border-2 border-dashed bg-gray-50 border-gray-200 transition-all hover:border-black/30 hover:bg-gray-100 group cursor-pointer">
+            <label className="cursor-pointer block w-full h-full">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="bg-black/5 p-3 rounded-2xl text-black transition-transform group-hover:scale-110 group-hover:bg-black group-hover:text-white">
+                        <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="flex flex-col items-center gap-1">
+                        <span className="text-[11px] font-black uppercase text-center tracking-tight text-black">{label}</span>
+                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Click to upload</span>
+                    </div>
                 </div>
                 <input type="file" className="hidden" onChange={onChange} accept={accept} />
             </label>

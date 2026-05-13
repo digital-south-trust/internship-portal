@@ -76,15 +76,16 @@ function DigiLockerMockContent() {
                                 </div>
                             </div>
 
-                            <button
-                                onClick={handleLogin}
-                                disabled={loading}
-                                className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
-                            >
-                                {loading ? (
-                                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                ) : "Sign In"}
-                            </button>
+                            {loading ? (
+                                <div className="w-full h-14 bg-gray-200 animate-pulse rounded-xl"></div>
+                            ) : (
+                                <button
+                                    onClick={handleLogin}
+                                    className="w-full bg-blue-600 text-white py-4 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
+                                >
+                                    Sign In
+                                </button>
+                            )}
 
                             <div className="text-center">
                                 <p className="text-xs text-gray-400">Not registered? <span className="text-blue-600 font-bold cursor-pointer">Sign Up</span></p>
@@ -105,20 +106,17 @@ function DigiLockerMockContent() {
                             </div>
 
                             <div className="space-y-3">
-                                <button
-                                    onClick={handleConsent}
-                                    disabled={loading}
-                                    className="w-full bg-green-600 text-white py-4 rounded-xl font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-100 flex items-center justify-center gap-2"
-                                >
-                                    {loading ? (
-                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                    ) : (
-                                        <>
-                                            <Check className="w-5 h-5" />
-                                            Allow Access
-                                        </>
-                                    )}
-                                </button>
+                                {loading ? (
+                                    <div className="w-full h-14 bg-gray-200 animate-pulse rounded-xl"></div>
+                                ) : (
+                                    <button
+                                        onClick={handleConsent}
+                                        className="w-full bg-green-600 text-white py-4 rounded-xl font-bold hover:bg-green-700 transition-all shadow-lg shadow-green-100 flex items-center justify-center gap-2"
+                                    >
+                                        <Check className="w-5 h-5" />
+                                        Allow Access
+                                    </button>
+                                )}
                                 <button
                                     onClick={() => router.back()}
                                     className="w-full bg-white text-gray-500 py-3 rounded-xl font-bold hover:bg-gray-50 transition-all"

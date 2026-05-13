@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import {
     UserPlus,
@@ -82,6 +83,9 @@ export default function UnifiedUsersPage() {
     const [viewingAadhaarUser, setViewingAadhaarUser] = useState(null);
     const [userToDelete, setUserToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => setMounted(true), []);
 
     // --- Global Blur Effect ---
     useEffect(() => {
@@ -155,7 +159,7 @@ export default function UnifiedUsersPage() {
             if (res.ok) {
                 const users = await res.json();
                 setAdmins(users.filter(u => u.role === 'admin'));
-                setInterns(users.filter(u => u.role === 'intern'));
+                setInterns(users.filter(u => u.role === 'intern' && (u.selectionStatus === 'Selected' || u.selectionStatus === 'Access given by admin')));
             }
         } catch (error) { console.error(error); } finally { setLoading(false); }
     };
@@ -681,7 +685,7 @@ export default function UnifiedUsersPage() {
                 )}
 
             {/* Aadhaar Modal */}
-            {viewingAadhaarUser && (
+            {mounted && viewingAadhaarUser && createPortal(
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setViewingAadhaarUser(null)}></div>
                     <div className="bg-white w-full max-w-2xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-300">
@@ -747,10 +751,10 @@ export default function UnifiedUsersPage() {
                         </div>
                     </div>
                 </div>
-            )}
+            , document.body)}
 
             {/* Delete Confirmation Modal */}
-            {userToDelete && (
+            {mounted && userToDelete && createPortal(
                 <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setUserToDelete(null)}></div>
                     <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl relative z-10 overflow-hidden animate-in zoom-in-95 duration-200 border border-red-50">
@@ -801,7 +805,7 @@ export default function UnifiedUsersPage() {
                         </div>
                     </div>
                 </div>
-            )}
+            , document.body)}
             </div>
         </div>
     );

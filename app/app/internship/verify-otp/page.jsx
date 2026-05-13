@@ -210,13 +210,17 @@ function VerifyOTPContent() {
                     </div>
 
                     <div className="space-y-4">
-                        <button
-                            type="submit"
-                            disabled={loading || otp.some(d => !d)}
-                            className="w-full bg-black hover:bg-neutral-800 text-white font-bold py-4 rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
-                        >
-                            {loading ? "Verifying..." : "Verify & Start Journey"} <ChevronRight className="w-5 h-5" />
-                        </button>
+                        {loading ? (
+                            <div className="w-full h-[56px] bg-gray-200 animate-pulse rounded-xl shadow-sm"></div>
+                        ) : (
+                            <button
+                                type="submit"
+                                disabled={otp.some(d => !d)}
+                                className="w-full bg-black hover:bg-neutral-800 text-white font-bold py-4 rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
+                            >
+                                Verify & Start Journey <ChevronRight className="w-5 h-5" />
+                            </button>
+                        )}
                     </div>
 
                     <div className="text-center">
@@ -224,14 +228,15 @@ function VerifyOTPContent() {
                             Didn't receive the email?{" "}
                             {timeLeft > 0 ? (
                                 <span className="text-black font-semibold ml-1">Resend in {formatTime(timeLeft)}</span>
+                            ) : resendLoading ? (
+                                <span className="inline-block w-20 h-4 bg-gray-200 animate-pulse rounded align-middle ml-1"></span>
                             ) : (
                                 <button 
                                     type="button" 
                                     className="text-black hover:underline font-bold ml-1 active:scale-95 transition-transform" 
                                     onClick={handleResend}
-                                    disabled={resendLoading}
                                 >
-                                    {resendLoading ? "Resending..." : "Resend Code"}
+                                    Resend Code
                                 </button>
                             )}
                         </p>
@@ -247,7 +252,7 @@ function VerifyOTPContent() {
 
 export default function VerifyOTPPage() {
     return (
-        <Suspense fallback={<div className="min-h-screen flex items-center justify-center">Loading...</div>}>
+        <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-gray-200 border-t-black rounded-full animate-spin"></div></div>}>
             <VerifyOTPContent />
         </Suspense>
     );
