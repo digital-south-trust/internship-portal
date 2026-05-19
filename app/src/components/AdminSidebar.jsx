@@ -17,7 +17,8 @@ import {
     Bug,
     FileText,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    IdCard
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -25,6 +26,7 @@ const sidebarItems = [
     { icon: LayoutDashboard, label: "Dashboard", href: "/admin" },
     { icon: Layout, label: "Projects", href: "/admin/projects" },
     { icon: Users, label: "Users", href: "/admin/users" },
+    { icon: IdCard, label: "Worklogs", href: "/admin/worklogs" },
     { icon: BookOpen, label: "LiveBook", href: "/admin/content" },
     { icon: Shield, label: "Tracks", href: "/admin/tracks" },
     { icon: FileText, label: "Assessments", href: "/admin/assessments" },

@@ -125,6 +125,13 @@ export default function AdminDashboard() {
     return (
         <div className="space-y-8 pb-8">
 
+            {/* Welcome Greeting */}
+            <div className="animate-in fade-in duration-300">
+                <h1 className="text-3xl font-black text-gray-900 tracking-tight">
+                    Hello {adminName}👋
+                </h1>
+            </div>
+
             {/* ── Stat Cards ── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {STAT_CARDS.map((card, i) => {

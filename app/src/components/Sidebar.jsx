@@ -15,7 +15,8 @@ import {
     Sparkles,
     Award,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    IdCard
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -24,6 +25,7 @@ const sidebarItems = [
     { icon: BookOpen, label: "LiveBook", href: "/dashboard/livebook" },
     { icon: FolderGit2, label: "Projects", href: "/dashboard/projects" },
     { icon: Calendar, label: "Schedule", href: "/dashboard/schedule" },
+    { icon: IdCard, label: "Worklogs", href: "/dashboard/worklogs" },
     { icon: Award, label: "Certificate", href: "/dashboard/certificate" },
     { icon: MessageSquare, label: "AI Assistant", href: "/dashboard/ai-assistant" },
     { icon: Settings, label: "Settings", href: "/dashboard/settings" },

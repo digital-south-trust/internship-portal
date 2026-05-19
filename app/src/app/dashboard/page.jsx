@@ -353,8 +353,8 @@ export default function StudentDashboard() {
 
                             {/* Mentor Cartoon Avatar Card */}
                             <div className="lg:col-span-1 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex items-center gap-5 relative overflow-hidden group">
-                                <div className="w-24 h-24 shrink-0 bg-gray-50/80 rounded-full border border-gray-200 overflow-hidden flex items-center justify-center p-2 group-hover:scale-105 transition-transform">
-                                    <img src={`https://api.dicebear.com/7.x/micah/svg?seed=Mentor${user.fullName}&backgroundColor=transparent`} className="w-full h-full scale-110" alt="Mentor" />
+                                <div className="w-24 h-24 shrink-0 bg-gray-50/80 rounded-full border border-gray-200 overflow-hidden flex items-center justify-center group-hover:scale-105 transition-transform">
+                                    <img src={`https://api.dicebear.com/7.x/micah/svg?seed=${encodeURIComponent(avatarSeed)}&backgroundColor=transparent`} className="w-full h-full object-cover mt-2 scale-110" alt="Mentor" />
                                 </div>
                                 <div className="flex-1">
                                     <h3 className="text-base font-semibold text-gray-900 mb-1">Getting Started</h3>
@@ -437,6 +437,9 @@ export default function StudentDashboard() {
                         exit={{ opacity: 0, y: -10 }}
                         className="space-y-8"
                     >
+                        <h1 className="text-3xl font-black text-gray-900 tracking-tight">
+                            Hello {user.fullName?.split(' ')[0]} 👋
+                        </h1>
                         <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
                             {/* Project Main Card */}
                             <div className="lg:col-span-3 bg-white rounded-[2rem] p-10 shadow-sm border border-gray-100 flex flex-col justify-between min-h-[350px] relative overflow-hidden">
@@ -473,10 +476,10 @@ export default function StudentDashboard() {
                             {/* Mentor Motivation Card */}
                             <div className="lg:col-span-2 bg-white rounded-[2rem] p-10 shadow-sm border border-gray-100 flex items-center justify-center relative overflow-hidden">
                                 <div className="flex flex-col items-center text-center space-y-6 relative z-10">
-                                    <div className="w-40 h-40 bg-indigo-50/50 rounded-full flex items-center justify-center p-3 border border-indigo-100/50 shadow-lg">
+                                    <div className="w-40 h-40 bg-indigo-50/50 rounded-full flex items-center justify-center border border-indigo-100/50 shadow-lg overflow-hidden">
                                         <img
-                                            src={`https://api.dicebear.com/7.x/micah/svg?seed=Mentor${user.fullName}&backgroundColor=transparent`}
-                                            className="w-full h-full scale-110"
+                                            src={`https://api.dicebear.com/7.x/micah/svg?seed=${encodeURIComponent(avatarSeed)}&backgroundColor=transparent`}
+                                            className="w-full h-full object-cover mt-4 scale-110"
                                             alt="Mentor"
                                         />
                                     </div>

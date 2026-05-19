@@ -452,7 +452,7 @@ export default function ProjectsPage() {
                 </div>
             </header>
 
-            <div className="px-8 pb-20 max-w-[1400px] mx-auto space-y-12">
+            <div className="w-full pb-20 space-y-12">
                     <div className="space-y-12">
                         {projects.length === 0 ? (
                             <div className="py-32 text-center border-2 border-dashed border-gray-100 rounded-[3rem]">

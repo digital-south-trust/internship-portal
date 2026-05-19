@@ -69,68 +69,9 @@ function VerifyOTPContent() {
         return `${mins}:${secs.toString().padStart(2, "0")}`;
     };
 
-    const handleChange = (index, value) => {
-        if (!/^\d*$/.test(value)) return;
-        
-        const newOtp = [...otp];
-        newOtp[index] = value.substring(value.length - 1);
-        setOtp(newOtp);
-
-        if (value && index < 5) {
-            inputRefs[index + 1].current.focus();
-        }
-    };
-
-    const handleKeyDown = (index, e) => {
-        if (e.key === "Backspace" && !otp[index] && index > 0) {
-            inputRefs[index - 1].current.focus();
-        }
-    };
-
-    const handlePaste = (e) => {
-        const pasteData = e.clipboardData.getData("text").slice(0, 6).split("");
-        if (pasteData.length > 0) {
-            const newOtp = [...otp];
-            pasteData.forEach((char, i) => {
-                if (i < 6 && /^\d$/.test(char)) newOtp[i] = char;
-            });
-            setOtp(newOtp);
-            // Focus the last input or next empty one
-            const nextIndex = Math.min(pasteData.length, 5);
-            inputRefs[nextIndex].current.focus();
-        }
-    };
-
-    const handleResend = async () => {
-        if (timeLeft > 0 || resendLoading) return;
-        setResendLoading(true);
-        const tid = toast.loading("Resending code...");
-        try {
-            const res = await fetch("/api/auth/resend-otp", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email }),
-            });
-            const data = await res.json();
-            if (res.ok) {
-                toast.success("New code sent to your email!", { id: tid });
-                setTimeLeft(120); // Reset countdown (2 mins)
-                setOtp(["", "", "", "", "", ""]); // Clear existing input
-                inputRefs[0].current.focus();
-            } else {
-                toast.error(data.message || "Failed to resend code", { id: tid });
-            }
-        } catch (error) {
-            console.error("Resend error:", error);
-            toast.error("An error occurred during resend.", { id: tid });
-        } finally {
-            setResendLoading(false);
-        }
-    };
-
-    const handleSubmit = async (e) => {
+    const handleSubmit = async (e, forcedOtp = null) => {
         if (e) e.preventDefault();
-        const fullOtp = otp.join("");
+        const fullOtp = forcedOtp || otp.join("");
         if (fullOtp.length !== 6) {
             toast.error("Please enter the full 6-digit code.");
             return;
@@ -158,13 +99,84 @@ function VerifyOTPContent() {
                     router.push("/assessment");
                 }, 1000);
             } else {
-                toast.error(data.message || "Verification failed", { id: tid });
+                toast.error(data.message || "Verification failed. Code is wrong.", { id: tid });
             }
         } catch (error) {
             console.error("Verification error:", error);
             toast.error("An error occurred during verification.", { id: tid });
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleChange = (index, value) => {
+        if (!/^\d*$/.test(value)) return;
+        
+        const newOtp = [...otp];
+        newOtp[index] = value.substring(value.length - 1);
+        setOtp(newOtp);
+
+        if (value && index < 5) {
+            inputRefs[index + 1].current.focus();
+        }
+
+        // Auto submit if complete
+        const fullOtp = newOtp.join("");
+        if (fullOtp.length === 6) {
+            handleSubmit(null, fullOtp);
+        }
+    };
+
+    const handleKeyDown = (index, e) => {
+        if (e.key === "Backspace" && !otp[index] && index > 0) {
+            inputRefs[index - 1].current.focus();
+        }
+    };
+
+    const handlePaste = (e) => {
+        const pasteData = e.clipboardData.getData("text").slice(0, 6).split("");
+        if (pasteData.length > 0) {
+            const newOtp = [...otp];
+            pasteData.forEach((char, i) => {
+                if (i < 6 && /^\d$/.test(char)) newOtp[i] = char;
+            });
+            setOtp(newOtp);
+            // Focus the last input or next empty one
+            const nextIndex = Math.min(pasteData.length, 5);
+            inputRefs[nextIndex].current.focus();
+
+            // Auto submit if complete
+            const fullOtp = newOtp.join("");
+            if (fullOtp.length === 6) {
+                handleSubmit(null, fullOtp);
+            }
+        }
+    };
+
+    const handleResend = async () => {
+        if (timeLeft > 0 || resendLoading) return;
+        setResendLoading(true);
+        const tid = toast.loading("Resending code...");
+        try {
+            const res = await fetch("/api/auth/resend-otp", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                toast.success("New code sent to your email!", { id: tid });
+                setTimeLeft(120); // Reset countdown (2 mins)
+                setOtp(["", "", "", "", "", ""]); // Clear existing input
+                inputRefs[0].current.focus();
+            } else {
+                toast.error(data.message || "Failed to resend code", { id: tid });
+            }
+        } catch (error) {
+            console.error("Resend error:", error);
+            toast.error("An error occurred during resend.", { id: tid });
+        } finally {
+            setResendLoading(false);
         }
     };
 
