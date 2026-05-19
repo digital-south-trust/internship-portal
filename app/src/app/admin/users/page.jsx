@@ -281,21 +281,74 @@ export default function UnifiedUsersPage() {
         );
     }
 
-    const allUsers = [...interns, ...admins, ...ambassadors.map(a => ({ ...a, role: 'ambassador' }))];
+    const allUsers = useMemo(() => {
+        const merged = new Map();
 
-    const filteredUsers = allUsers
-        .filter(u => userFilter === 'all' || u.role?.toLowerCase() === userFilter.toLowerCase())
-        .filter(u =>
-            u.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            u.track?.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-        .sort((a, b) => {
-            if (sortBy === 'score') return (b.assessmentScore || 0) - (a.assessmentScore || 0);
-            if (sortBy === 'name') return (a.fullName || '').localeCompare(b.fullName || '');
-            if (sortBy === 'role') return (a.role || '').localeCompare(b.role || '');
-            return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+        // 1. Add interns/admins
+        const userRecords = [...interns, ...admins];
+        userRecords.forEach(u => {
+            const emailKey = u.email?.toLowerCase();
+            if (emailKey) {
+                merged.set(emailKey, {
+                    ...u,
+                    isAmbassador: false,
+                    roles: [u.role?.toLowerCase()]
+                });
+            }
         });
+
+        // 2. Merge ambassadors
+        ambassadors.forEach(a => {
+            const emailKey = a.email?.toLowerCase();
+            if (emailKey) {
+                if (merged.has(emailKey)) {
+                    const existing = merged.get(emailKey);
+                    merged.set(emailKey, {
+                        ...existing,
+                        isAmbassador: true,
+                        referralCode: a.referralCode,
+                        earnings: a.earnings,
+                        userCount: a.userCount,
+                        discountPercentage: a.discountPercentage,
+                        commissionPercentage: a.commissionPercentage,
+                        ambassadorId: a._id,
+                        roles: [...existing.roles, 'ambassador']
+                    });
+                } else {
+                    merged.set(emailKey, {
+                        ...a,
+                        role: 'ambassador',
+                        isAmbassador: true,
+                        roles: ['ambassador']
+                    });
+                }
+            }
+        });
+
+        return Array.from(merged.values());
+    }, [interns, admins, ambassadors]);
+
+    const filteredUsers = useMemo(() => {
+        return allUsers
+            .filter(u => {
+                if (userFilter === 'all') return true;
+                if (u.roles) {
+                    return u.roles.includes(userFilter.toLowerCase());
+                }
+                return u.role?.toLowerCase() === userFilter.toLowerCase();
+            })
+            .filter(u =>
+                u.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                u.track?.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+            .sort((a, b) => {
+                if (sortBy === 'score') return (b.assessmentScore || 0) - (a.assessmentScore || 0);
+                if (sortBy === 'name') return (a.fullName || '').localeCompare(b.fullName || '');
+                if (sortBy === 'role') return (a.role || '').localeCompare(b.role || '');
+                return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+            });
+    }, [allUsers, userFilter, searchQuery, sortBy]);
 
     return (
         <div className="animate-in fade-in duration-500">
@@ -442,26 +495,43 @@ export default function UnifiedUsersPage() {
                                                         <div className="space-y-0.5">
                                                             <p className="text-xs font-black text-black uppercase tracking-tight flex items-center gap-2">
                                                                 {user.fullName}
-                                                                {user.role?.toLowerCase() === 'admin' && <span className="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[7px] font-black tracking-widest uppercase">Admin</span>}
-                                                                {user.role?.toLowerCase() === 'ambassador' && <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded text-[7px] font-black tracking-widest uppercase">Ambassador</span>}
+                                                                {user.roles ? (
+                                                                    <>
+                                                                        {user.roles.includes('admin') && <span className="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[7px] font-black tracking-widest uppercase">Admin</span>}
+                                                                        {user.roles.includes('intern') && <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[7px] font-black tracking-widest uppercase">Intern</span>}
+                                                                        {user.roles.includes('ambassador') && <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded text-[7px] font-black tracking-widest uppercase">Ambassador</span>}
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        {user.role?.toLowerCase() === 'admin' && <span className="px-1.5 py-0.5 bg-purple-50 text-purple-600 rounded text-[7px] font-black tracking-widest uppercase">Admin</span>}
+                                                                        {user.role?.toLowerCase() === 'ambassador' && <span className="px-1.5 py-0.5 bg-amber-50 text-amber-600 rounded text-[7px] font-black tracking-widest uppercase">Ambassador</span>}
+                                                                    </>
+                                                                )}
                                                             </p>
                                                             <p className="text-[9px] font-bold text-gray-400 tracking-tight flex items-center gap-1.5"><Mail className="w-3 h-3 text-gray-200" /> {user.email}</p>
-                                                            {user.role?.toLowerCase() === 'ambassador' && <p className="text-[8px] font-black text-amber-500 tracking-widest uppercase">Code: {user.referralCode}</p>}
+                                                            {user.isAmbassador && <p className="text-[8px] font-black text-amber-500 tracking-widest uppercase">Code: {user.referralCode}</p>}
                                                         </div>
                                                     </div>
                                                 </td>
                                                 <td className="p-6 text-center">
                                                     <span className="text-[9px] font-black uppercase bg-gray-50 px-3 py-1.5 rounded-lg text-black border border-gray-100 tracking-widest">
-                                                        {user.role?.toLowerCase() === 'admin' ? 'Overseer' : user.role?.toLowerCase() === 'ambassador' ? 'Recruitment Hub' : (user.track || '--')}
+                                                        {user.roles?.includes('admin') && user.roles?.includes('ambassador')
+                                                            ? 'Overseer & Ambassador'
+                                                            : user.roles?.includes('admin')
+                                                            ? 'Overseer'
+                                                            : user.roles?.includes('ambassador')
+                                                            ? 'Recruitment Hub'
+                                                            : (user.track || '--')}
                                                     </span>
                                                 </td>
                                                 <td className="p-6 text-center flex flex-col items-center justify-center space-y-1">
-                                                    {user.role?.toLowerCase() === 'ambassador' ? (
-                                                        <div className="flex flex-col items-center gap-0.5">
+                                                    {user.isAmbassador && (
+                                                        <div className="flex flex-col items-center gap-0.5 mb-1">
                                                             <span className="text-[10px] font-black text-black">{user.userCount || 0} Users</span>
                                                             <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">₹{user.earnings || 0} Earned</span>
                                                         </div>
-                                                    ) : (
+                                                    )}
+                                                    {(!user.roles || user.roles.includes('admin') || user.roles.includes('intern')) && (
                                                         <>
                                                             <SelectionBadge status={user.status} />
                                                             {user.selectionStatus === 'Access given by admin' && (

@@ -20,14 +20,11 @@ export async function GET(req, { params }) {
         let isAmbassador = false;
 
         if (user) {
-            // If the user is an admin or ambassador, we need to check the Ambassador collection for their management data
-            if (user.role?.toLowerCase() === 'admin' || user.role?.toLowerCase() === 'ambassador') {
-                const ambassadorData = await Ambassador.findOne({ email: user.email }).lean();
-                if (ambassadorData) {
-                    isAmbassador = true;
-                    // Merge ambassador data into user object
-                    user = { ...user, ...ambassadorData, _id: user._id }; // Keep the original User ID
-                }
+            const ambassadorData = await Ambassador.findOne({ email: user.email }).lean();
+            if (ambassadorData) {
+                isAmbassador = true;
+                // Merge ambassador data into user object
+                user = { ...user, ...ambassadorData, _id: user._id, isAmbassador: true }; // Keep the original User ID
             }
         } else {
             // If not found in User collection, try Ambassador collection directly
@@ -114,12 +111,27 @@ export async function PATCH(req, { params }) {
             { new: true }
         ).select('-password');
 
+        if (updated) {
+            const amb = await Ambassador.findOneAndUpdate(
+                { email: updated.email },
+                { $set: allowedFields },
+                { new: true }
+            ).lean();
+            if (amb) {
+                updated = { ...updated.toObject(), ...amb, _id: updated._id, isAmbassador: true };
+            }
+        }
+
         if (!updated) {
             updated = await Ambassador.findByIdAndUpdate(
                 id,
                 { $set: allowedFields },
                 { new: true }
-            ).select('-password');
+            ).select('-password').lean();
+            if (updated) {
+                updated.role = 'ambassador';
+                updated.isAmbassador = true;
+            }
         }
 
         if (!updated) return NextResponse.json({ message: "User not found" }, { status: 404 });
@@ -163,7 +175,8 @@ export async function DELETE(req, { params }) {
             await Promise.all([
                 Ticket.deleteMany({ reportedBy: userEmail }),
                 Certificate.deleteMany({ internEmail: userEmail }),
-                Meeting.deleteMany({ intern: userEmail })
+                Meeting.deleteMany({ intern: userEmail }),
+                Ambassador.deleteOne({ email: userEmail })
             ]);
         }
         

@@ -22,6 +22,78 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
+
+function ConfettiEffect() {
+    useEffect(() => {
+        const canvas = document.getElementById('confetti-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let animationFrameId;
+
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+
+        const colors = ['#f43f5e', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#eab308'];
+        const particles = Array.from({ length: 150 }).map(() => ({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height - canvas.height,
+            size: Math.random() * 6 + 4,
+            speedX: Math.random() * 3 - 1.5,
+            speedY: Math.random() * 3 + 2,
+            rotation: Math.random() * 360,
+            rotationSpeed: Math.random() * 4 - 2,
+            color: colors[Math.floor(Math.random() * colors.length)]
+        }));
+
+        let isRunning = true;
+        const stopTimer = setTimeout(() => {
+            isRunning = false;
+        }, 7000);
+
+        const handleResize = () => {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        };
+        window.addEventListener('resize', handleResize);
+
+        const draw = () => {
+            if (!isRunning) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles.forEach((p) => {
+                ctx.save();
+                ctx.translate(p.x, p.y);
+                ctx.rotate((p.rotation * Math.PI) / 180);
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                ctx.restore();
+
+                p.y += p.speedY;
+                p.x += p.speedX;
+                p.rotation += p.rotationSpeed;
+
+                if (p.y > canvas.height) {
+                    p.y = -20;
+                    p.x = Math.random() * canvas.width;
+                }
+            });
+            animationFrameId = requestAnimationFrame(draw);
+        };
+
+        draw();
+
+        return () => {
+            clearTimeout(stopTimer);
+            cancelAnimationFrame(animationFrameId);
+            window.removeEventListener('resize', handleResize);
+        };
+    }, []);
+
+    return <canvas id="confetti-canvas" className="fixed inset-0 pointer-events-none z-50 w-full h-full" />;
+}
+
 function AssessmentContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -70,11 +142,24 @@ function AssessmentContent() {
                      setUser(data);
                      if (data.isAssessmentDone) {
                          setIsSubmitted(true);
-                         setLoading(false);
-                         return;
+                         if (data.assessmentResult) {
+                             setAssessmentResult(data.assessmentResult);
+                             const restoredAnswers = {};
+                             data.assessmentResult.answers?.forEach(ans => {
+                                 const qId = (ans.questionId && typeof ans.questionId === 'object') ? ans.questionId._id : ans.questionId;
+                                 if (qId) restoredAnswers[qId] = ans.selectedOption;
+                             });
+                             setAnswers(restoredAnswers);
+                         }
                      }
-                    const examUrl = `/api/assessment/get-by-track?track=${encodeURIComponent(data.track)}&email=${encodeURIComponent(email)}${urlExamId ? `&examId=${urlExamId}` : ''}`;
-                    const examRes = await fetch(examUrl);
+                     const targetExamId = urlExamId || data.assessmentResult?.exam?._id || data.assessmentResult?.exam;
+                     let examUrl = `/api/assessment/get-by-track?track=${encodeURIComponent(data.track)}`;
+                     if (targetExamId) {
+                         examUrl += `&examId=${targetExamId}`;
+                     } else {
+                         examUrl += `&email=${encodeURIComponent(email)}`;
+                     }
+                     const examRes = await fetch(examUrl);
                      if (examRes.ok) {
                          const examData = await examRes.json();
                           setExam({ ...examData.exam, questions: examData.questions });
@@ -298,173 +383,183 @@ function AssessmentContent() {
         const isRejected = user?.status === 'REJECTED' || user?.selectionStatus === 'Rejected';
         const isSelected = user?.selectionStatus === 'Selected';
         
+        // Calculations
+        const finalScore = assessmentResult?.score ?? user?.assessmentResult?.score ?? 0;
+        const totalQuestions = assessmentResult?.totalQuestions ?? user?.assessmentResult?.totalQuestions ?? exam?.questions?.length ?? 0;
+        const scorePct = user?.assessmentScore ?? assessmentResult?.scorePercentage ?? 0;
+        
+        const timeTaken = assessmentResult?.timeTaken ?? user?.assessmentResult?.timeTaken;
+        const minutes = timeTaken !== undefined ? Math.floor(timeTaken / 60) : 0;
+        const seconds = timeTaken !== undefined ? timeTaken % 60 : 0;
+        const formattedTime = timeTaken !== undefined ? `${minutes}M ${seconds}S` : 'N/A';
+        
+        const performance = scorePct >= 90 ? 'EXCELLENT' : scorePct >= 75 ? 'GOOD' : 'AVERAGE';
+        const enrollmentStatus = isSelected ? 'SELECTED' : isRejected ? 'REJECTED' : 'PENDING REVIEW';
+        const hasPassed = isSelected || scorePct >= 75;
+
         return (
             <div 
-                className="min-h-screen font-sans flex flex-col items-center bg-gray-50/50 relative overflow-hidden bg-center"
+                className="min-h-screen font-sans flex flex-col items-center bg-white relative overflow-hidden bg-center"
                 style={{ 
                     backgroundImage: 'url(/background4.svg)',
                     backgroundSize: '200px',
                     backgroundRepeat: 'repeat'
                 }}
             >
+                {hasPassed && <ConfettiEffect />}
                 <div className="absolute inset-0 z-0 pointer-events-none bg-white/60 backdrop-blur-[2px]"></div>
                 
-                <header className="fixed top-0 left-0 right-0 h-24 flex items-center justify-between px-12 z-50 bg-white/40 backdrop-blur-md border-b border-white/60">
+                <header className="fixed top-0 left-0 right-0 h-24 flex items-center justify-between px-12 z-50 bg-white/40 backdrop-blur-md border-b border-neutral-100">
                     <div className="flex items-center gap-3">
-             
                         <span className="font-black text-lg tracking-tight">DIGITAL SOUTH</span>
                     </div>
                     <div className="flex items-center gap-4">
-                        <button onClick={() => { setHelpView('options'); setShowHelpModal(true); }} className="flex items-center gap-2 bg-white border border-gray-100 text-black px-6 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-gray-50 transition-all">
-                            <HelpCircle className="w-4 h-4 text-blue-600" /> Help
+                        <button onClick={() => { setHelpView('options'); setShowHelpModal(true); }} className="flex items-center gap-2 bg-white border border-neutral-200 text-black px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-gray-50 transition-all">
+                            <HelpCircle className="w-4 h-4 text-neutral-500" /> Help
                         </button>
                         <button 
                             onClick={() => {
                                 localStorage.clear();
                                 window.location.href = '/login';
                             }} 
-                            className="flex items-center gap-2 bg-black text-white px-8 py-3 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-black/10 hover:bg-neutral-800 transition-all active:scale-95"
+                            className="flex items-center gap-2 bg-black text-white px-8 py-3 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-black/10 hover:bg-neutral-800 transition-all active:scale-95"
                         >
                             <LogOut className="w-4 h-4" /> Log Out
                         </button>
                     </div>
                 </header>
 
-                <div className="max-w-5xl w-full mx-auto px-6 pt-36 pb-24 relative z-10 flex flex-col items-center">
-                    {isRejected ? (
-                        <div className="max-w-md w-full bg-white p-12 rounded-[3.5rem] border border-gray-100 shadow-2xl text-center space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-                            <div className="w-32 h-32 mx-auto relative group">
-                                <img src="/sad_intern_avatar.png" alt="Hard Luck" className="w-full h-full object-cover rounded-[2.5rem] shadow-xl border-4 border-white" />
-                                <div className="absolute -bottom-2 -right-2 bg-red-500 text-white p-2.5 rounded-2xl shadow-lg"><Layers className="w-5 h-5 rotate-180" /></div>
-                            </div>
-                            <div className="space-y-4">
-                                <h1 className="text-4xl font-black text-black uppercase tracking-tighter leading-none">Hard Luck!<br/>Not Selected</h1>
-                                <div className="bg-red-50 text-red-600 px-8 py-3 rounded-2xl font-black text-2xl border border-red-100 italic">
-                                    {user?.assessmentScore || 0}%
-                                </div>
-                            </div>
-                            <p className="text-gray-500 font-medium leading-relaxed uppercase text-[10px] tracking-widest">
-                                We appreciate your time, but unfortunately, we won't be moving forward with your application for the {user?.track} track at this time.
-                            </p>
-                            <button onClick={() => window.location.href = '/dashboard'} className="w-full bg-black text-white py-5 rounded-2xl font-black uppercase text-[11px] tracking-widest shadow-xl">Back to Dashboard</button>
-                        </div>
-                    ) : isSelected ? (
-                        <div className="w-full space-y-12 animate-in fade-in duration-1000">
-                             <div className="text-center space-y-4">
-                                <div className="w-20 h-20 bg-[#ccff00] rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-lime-500/20 rotate-3">
-                                    <CheckCircle2 className="w-10 h-10 text-black" />
-                                </div>
-                                <h2 className="text-[10px] font-black text-lime-600 uppercase tracking-[0.4em]">ADMISSION GRANTED</h2>
-                                <h1 className="text-5xl font-black text-black uppercase tracking-tighter">Congratulations!</h1>
-                            </div>
+                <div className="max-w-6xl w-full mx-auto px-6 pt-36 pb-24 relative z-10 flex flex-col items-center">
+                    {/* Header: Greeting */}
+                    <div className="text-center space-y-3 mb-12">
+                        {isRejected ? (
+                            <>
+                                <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.4em]">SELECTION PROCESS COMPLETED</p>
+                                <h1 className="text-5xl font-black text-black uppercase tracking-tighter">HARD LUCK! NOT SELECTED</h1>
+                            </>
+                        ) : isSelected ? (
+                            <>
+                                                              <h1 className="text-5xl font-black text-black uppercase tracking-tighter">Congratulations!</h1>
+                                <p className='text-neutral-500 text-lg font-semibold mt-4'>Welcome to Digital South Intership</p>
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.4em]">EVALUATION COMPLETED</p>
+                                <h1 className="text-5xl font-black text-black uppercase tracking-tighter">YOUR EXAM PAPER IS UNDER REVIEW</h1>
+                            </>
+                        )}
+                    </div>
 
-                            <div className="bg-white p-12 rounded-[4rem] border border-gray-100 shadow-2xl space-y-12 relative overflow-hidden">
-                                <div className="absolute top-0 right-0 p-8">
-                                    <div className="bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 text-right">
-                                        <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Enrollment Status</p>
-                                        <p className="text-[10px] font-black text-emerald-600 uppercase italic">SELECTED</p>
+                    {/* Content Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full">
+                        {/* Left Screen: Profile */}
+                        <div className="bg-white border border-neutral-200 p-8 rounded-lg flex flex-col justify-between min-h-[320px]">
+                            <div>
+                                <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mb-6">CANDIDATE PROFILE</p>
+                                <div className="space-y-4">
+                                    <div>
+                                        <p className="text-[9px] font-black text-neutral-400 uppercase tracking-wider">Candidate Name</p>
+                                        <p className="text-base font-bold text-neutral-900 uppercase">{user.fullName}</p>
                                     </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                                    {[
-                                        { label: 'Exam Set', value: exam?.title || 'Standard' },
-                                        { label: 'Final Score', value: `${user.assessmentScore || 0}%` },
-                                        { label: 'Time Taken', value: assessmentResult ? `${Math.floor(assessmentResult.timeTaken/60)}m ${assessmentResult.timeTaken%60}s` : 'N/A' },
-                                        { label: 'Performance', value: user.assessmentScore >= 90 ? 'EXCELLENT' : 'GOOD' }
-                                    ].map((stat, i) => (
-                                        <div key={i} className="bg-gray-50 p-6 rounded-3xl border border-gray-100">
-                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">{stat.label}</p>
-                                            <p className="text-xl font-black uppercase text-black">{stat.value}</p>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                <div className="space-y-6 pt-6 border-t border-gray-50">
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em]">Evaluation Transcript</p>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        {exam.questions.map((q, i) => {
-                                            const ans = answers[q._id];
-                                            return (
-                                                <div key={i} className="bg-gray-50/50 p-6 rounded-3xl border border-gray-50 flex items-start gap-4">
-                                                    <div className="w-8 h-8 rounded-xl bg-white border border-gray-100 flex items-center justify-center shrink-0 text-xs font-black">{i+1}</div>
-                                                    <div>
-                                                        <p className="text-[11px] font-bold text-gray-800 line-clamp-1">{q.text}</p>
-                                                        <p className="text-[10px] font-black uppercase text-blue-600 mt-1">{ans || 'Skipped'}</p>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                    <div>
+                                        <p className="text-[9px] font-black text-neutral-400 uppercase tracking-wider">Internship Track</p>
+                                        <p className="text-base font-bold text-neutral-900 uppercase">{user.track}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black text-neutral-400 uppercase tracking-wider">Question Paper Set</p>
+                                        <p className="text-base font-bold text-neutral-900 uppercase">{exam?.title || 'Standard'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black text-neutral-400 uppercase tracking-wider">Time Taken</p>
+                                        <p className="text-base font-bold text-neutral-900 uppercase">{formattedTime}</p>
                                     </div>
                                 </div>
                             </div>
-
-                            <div className="flex justify-center">
-                                <button onClick={() => window.location.href = '/dashboard/complete-profile'} className="bg-[#ccff00] text-black px-14 py-5 rounded-[2rem] font-black uppercase text-xs tracking-widest shadow-2xl hover:scale-105 active:scale-95 transition-all flex items-center gap-3">
-                                    Go to Next Step
-                                    <ArrowRight className="w-5 h-5" />
-                                </button>
-                            </div>
                         </div>
-                    ) : (
-                        <div className="w-full space-y-12 animate-in fade-in duration-1000">
-                            <div className="text-center space-y-6">
-                       
-                                <div className="space-y-3">
-                                    <h1 className="text-5xl font-black text-black uppercase tracking-tighter">Your Exam Paper<br/>Is Reviewing</h1>
+
+                        {/* Right Screen: Performance & Status */}
+                        <div className="bg-white border border-neutral-200 p-8 rounded-lg flex flex-col justify-between min-h-[320px]">
+                            <div className="space-y-5">
+                                <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">PERFORMANCE SUMMARY</p>
+                                
+                                <div>
+                                    <p className="text-[9px] font-black text-neutral-400 uppercase tracking-wider mb-1">Final Score</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-4xl font-black text-black">{finalScore}</span>
+                                        <span className="text-xl font-bold text-neutral-300">/ {totalQuestions}</span>
+                                        <span className="text-sm font-black text-neutral-400 ml-2">({Math.round(scorePct)}%)</span>
+                                    </div>
                                 </div>
-                                <p className="text-gray-400 max-w-lg mx-auto font-bold uppercase text-[10px] tracking-widest leading-loose bg-gray-50 p-6 rounded-3xl border border-gray-100">
-                                    Thank you for completing the assessment. Your responses are currently being evaluated by our academic team. You will receive an email once your final selection results are ready.
-                                </p>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <p className="text-[9px] font-black text-neutral-400 uppercase tracking-wider mb-1">Performance</p>
+                                        <p className="text-sm font-black text-black uppercase">{performance}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black text-neutral-400 uppercase tracking-wider mb-1">Enrollment Status</p>
+                                        <span className="inline-block bg-black text-white text-[9px] font-black rounded-lg  tracking-widest uppercase px-3 py-1 rounded">
+                                            {enrollmentStatus}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
 
-                              </div>
-                    ) }
+                            {isSelected && (
+                                <div className="mt-8">
+                                    <button 
+                                        onClick={() => window.location.href = '/dashboard/complete-profile'} 
+                                        className="w-full bg-black text-white hover:bg-neutral-800 transition-all py-4 px-6 rounded-lg font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2"
+                                    >
+                                        Go to Next Step <ArrowRight className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
 
                     {/* Help Modal */}
                     {showHelpModal && (
                         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm">
-                            <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl p-10 space-y-8 animate-in zoom-in-95 duration-300">
+                            <div className="bg-white w-full max-w-md rounded-2xl border border-neutral-200 shadow-2xl p-10 space-y-8 animate-in zoom-in-95 duration-300">
                                 {helpView === 'options' ? (
                                     <>
                                         <div className="text-center">
-                                    
                                             <h3 className="text-xl font-black uppercase tracking-tighter">How can we help?</h3>
                                         </div>
                                         <div className="flex flex-col gap-3">
-                                            <button onClick={() => window.location.href = 'mailto:internship@digitalsouth.co.in'} className="w-full py-5 bg-white border border-gray-200 text-black rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-gray-50">
+                                            <button onClick={() => window.location.href = 'mailto:internship@digitalsouth.co.in'} className="w-full py-5 bg-white border border-neutral-200 text-black rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 hover:bg-gray-50">
                                                 <Mail className="w-4 h-4" /> Contact Support
                                             </button>
-                                            <button onClick={() => setHelpView('query')} className="w-full py-5 bg-black text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2">
+                                            <button onClick={() => setHelpView('query')} className="w-full py-5 bg-black text-white rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2">
                                                 <Send className="w-4 h-4" /> Write Query
                                             </button>
-                                            <button onClick={() => setShowHelpModal(false)} className="w-full py-4 text-gray-400 hover:text-black font-black uppercase text-[10px] tracking-widest mt-2">Close</button>
+                                            <button onClick={() => setShowHelpModal(false)} className="w-full py-4 text-neutral-400 hover:text-black font-black uppercase text-[10px] tracking-widest mt-2">Close</button>
                                         </div>
                                     </>
                                 ) : (
                                     <>
                                         <div className="text-center">
-                                   
                                             <h3 className="text-xl font-black uppercase tracking-tighter">Assessment Support</h3>
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">Facing issues? Describe your problem below.</p>
+                                            <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest mt-2">Facing issues? Describe your problem below.</p>
                                         </div>
                                         <textarea 
                                             value={helpQuery} 
                                             onChange={(e) => setHelpQuery(e.target.value)} 
                                             placeholder="Write your problem here..." 
-                                            className="w-full h-40 bg-gray-50 border border-gray-100 rounded-2xl p-6 text-sm font-semibold outline-none focus:border-blue-500 transition-all resize-none" 
+                                            className="w-full h-40 bg-neutral-50 border border-neutral-200 rounded-xl p-6 text-sm font-semibold outline-none focus:border-black transition-all resize-none" 
                                         />
                                         <div className="flex flex-col gap-3">
-                                            <button onClick={submitHelpQuery} disabled={isSubmittingHelp} className="w-full py-5 bg-black text-white rounded-2xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2">
+                                            <button onClick={submitHelpQuery} disabled={isSubmittingHelp} className="w-full py-5 bg-black text-white rounded-xl font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2">
                                                 {isSubmittingHelp ? 'Sending...' : <><Send className="w-4 h-4" /> Submit Query</>}
                                             </button>
-                                            <button onClick={() => setHelpView('options')} className="w-full py-4 text-gray-300 hover:text-gray-600 font-black uppercase text-[10px] tracking-widest">Back</button>
+                                            <button onClick={() => setHelpView('options')} className="w-full py-4 text-neutral-300 hover:text-neutral-600 font-black uppercase text-[10px] tracking-widest">Back</button>
                                         </div>
                                     </>
                                 )}
                             </div>
                         </div>
-                    ) }
+                    )}
                 </div>
             </div>
         );
@@ -597,7 +692,7 @@ function AssessmentContent() {
             <main className="flex-1 px-12 py-20 max-w-7xl mx-auto w-full relative z-10">
                 <div className="flex flex-col md:flex-row gap-16 md:items-start">
                     {/* Left 1/3: Rules */}
-                    <div className="md:w-1/3 space-y-8 bg-white border border-gray-100 p-8 rounded-[2.5rem]">
+                    <div className="md:w-1/3 space-y-8 bg-white border border-neutral-200 p-8 rounded-lg">
                         <h2 className="text-xs font-black uppercase tracking-[0.3em] text-gray-400">Exam Rules</h2>
                         <div className="space-y-6">
                             {[
@@ -616,17 +711,20 @@ function AssessmentContent() {
                          {!isPaused && (
                             <div className="pt-8">
                                 <button 
-                                    onClick={() => setShowTermsModal(true)}
-                                    className={`flex items-center gap-3 w-full p-4 rounded-3xl border transition-all text-left group ${hasAgreedTerms ? 'bg-emerald-50 border-emerald-100' : 'bg-gray-50 border-gray-100 hover:border-black/20'}`}
+                                    onClick={() => {
+                                        setModalAgreed(hasAgreedTerms);
+                                        setShowTermsModal(true);
+                                    }}
+                                    className={`flex items-center gap-3 w-full p-4 rounded-lg border transition-all text-left group ${hasAgreedTerms ? 'bg-black text-white border-black' : 'bg-gray-50 border-gray-100 hover:border-black/20 text-black'}`}
                                 >
-                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${hasAgreedTerms ? 'bg-emerald-500 text-white' : 'bg-white border border-gray-100 text-gray-400 group-hover:text-black'}`}>
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${hasAgreedTerms ? 'bg-white text-black' : 'bg-white border border-gray-100 text-gray-400 group-hover:text-black'}`}>
                                         {hasAgreedTerms ? <Check className="w-4 h-4" /> : <CornerDownRight className="w-4 h-4" />}
                                     </div>
                                     <div className="flex-1">
-                                        <p className={`text-[9px] font-black uppercase tracking-widest ${hasAgreedTerms ? 'text-emerald-700' : 'text-gray-400 group-hover:text-black'}`}>
+                                        <p className={`text-[9px] font-black uppercase tracking-widest ${hasAgreedTerms ? 'text-white' : 'text-gray-400 group-hover:text-black'}`}>
                                             {hasAgreedTerms ? 'Terms Accepted' : 'Read Assessment Terms'}
                                         </p>
-                                        <p className="text-[8px] font-bold text-gray-400 mt-0.5 uppercase">Mandatory for all evaluations</p>
+                                        <p className={`text-[8px] font-bold mt-0.5 uppercase ${hasAgreedTerms ? 'text-neutral-400' : 'text-gray-400'}`}>Mandatory for all evaluations</p>
                                     </div>
                                 </button>
                             </div>
@@ -634,7 +732,7 @@ function AssessmentContent() {
                     </div>
  
                     {/* Right side: Details */}
-                    <div className="flex-1 space-y-12 bg-white border border-gray-100 p-8 md:p-12 rounded-[3.5rem]">
+                    <div className="flex-1 space-y-12 bg-white border border-neutral-200 p-8 md:p-12 rounded-lg">
                         <div className="space-y-4">
                             {isPaused ? (
                                 <>
@@ -685,22 +783,22 @@ function AssessmentContent() {
             {/* Terms and Condition Modal */}
             {showTermsModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-md">
-                    <div className="bg-white w-full max-w-2xl rounded-[3.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">
+                    <div className="bg-white w-full max-w-2xl rounded-lg shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-300">
                         {/* Header */}
-                        <div className="p-8 border-b border-gray-50 flex justify-between items-center bg-gray-50/50">
+                        <div className="p-8 border-b border-neutral-100 flex justify-between items-center bg-gray-50/50">
                             <div className="flex items-center gap-4">
 
                                 <div>
                                     <h3 className="text-xl font-black uppercase tracking-tighter">Terms & Conditions</h3>
                                       </div>
                             </div>
-                            <button onClick={() => setShowTermsModal(false)} className="p-3 hover:bg-black/5 rounded-2xl transition-all">
+                            <button onClick={() => setShowTermsModal(false)} className="p-3 hover:bg-black/5 rounded-lg transition-all">
                                 <X className="w-6 h-6 text-gray-400" />
                             </button>
                         </div>
 
                         {/* Content */}
-                        <div className="flex-1 overflow-y-auto p-10 space-y-8 text-gray-600">
+                        <div className="flex-1 overflow-y-auto p-10 space-y-8 text-neutral-600">
                             <p className="text-sm font-bold text-black border-l-4 border-black pl-4">
                                 By proceeding to the assessment, you agree to comply with the following terms:
                             </p>
@@ -759,7 +857,7 @@ function AssessmentContent() {
                                 </section>
                             </div>
 
-                            <div className={`p-6 rounded-3xl border transition-all ${modalAgreed ? 'bg-emerald-50 border-emerald-100' : 'bg-gray-50 border-gray-200'}`}>
+                            <div className={`p-6 rounded-lg border transition-all ${modalAgreed ? 'bg-neutral-50 border-neutral-300' : 'bg-neutral-50/50 border-neutral-100'}`}>
                                 <h4 className="text-xs font-black uppercase text-black mb-4 flex items-center gap-2">
                                     <div className="w-1.5 h-1.5 bg-black rounded-full" /> 1.6 Acknowledgment
                                 </h4>
@@ -781,24 +879,26 @@ function AssessmentContent() {
                         </div>
 
                         {/* Footer */}
-                        <div className="p-8 border-t border-gray-50 flex gap-4 bg-gray-50/50">
+                        <div className="p-8 border-t border-neutral-100 flex gap-4 bg-gray-50/50">
                             <button 
                                 onClick={() => {
                                     setShowTermsModal(false);
-                                    setModalAgreed(false);
                                 }}
-                                className="flex-1 py-4 px-6 rounded-2xl border border-gray-200 text-xs font-black uppercase tracking-widest hover:bg-white transition-all"
+                                className="flex-1 py-4 px-6 rounded-lg border border-neutral-200 text-xs font-black uppercase tracking-widest hover:bg-neutral-50 transition-all text-black bg-white"
                             >
                                 Cancel
                             </button>
                             <button 
                                 onClick={() => {
-                                    setHasAgreedTerms(true);
+                                    setHasAgreedTerms(modalAgreed);
                                     setShowTermsModal(false);
-                                    toast.success("Terms Accepted");
+                                    if (modalAgreed) {
+                                        toast.success("Terms Accepted");
+                                    } else {
+                                        toast.error("Terms Declined");
+                                    }
                                 }}
-                                disabled={!modalAgreed}
-                                className={`flex-1 py-4 px-6 rounded-2xl bg-black text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-black/10 transition-all active:scale-95 ${!modalAgreed ? 'opacity-20 grayscale cursor-not-allowed' : 'hover:bg-neutral-800'}`}
+                                className={`flex-1 py-4 px-6 rounded-lg bg-black text-white text-xs font-black uppercase tracking-widest shadow-xl shadow-black/10 transition-all active:scale-95 hover:bg-neutral-800`}
                             >
                                 Continue
                             </button>

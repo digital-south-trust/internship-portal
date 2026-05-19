@@ -448,6 +448,20 @@ export default function UnifiedAssessmentsPage() {
             if (res.ok) {
                 toast.success(`Status Synced`);
                 fetchSubmissions();
+                
+                // Update selectedUserData state immediately if we are viewing this user
+                setSelectedUserData(prev => {
+                    if (prev && prev.user && prev.user._id === userId) {
+                        return {
+                            ...prev,
+                            user: {
+                                ...prev.user,
+                                selectionStatus: status
+                            }
+                        };
+                    }
+                    return prev;
+                });
             }
         } catch { toast.error('Sync Fail'); }
     };

@@ -58,6 +58,16 @@ export default function InternDetailsPage() {
     const [editData, setEditData] = useState({});
     const [savingEdit, setSavingEdit] = useState(false);
 
+    // Tab switching logic for dual-role users
+    const [profileTab, setProfileTab] = useState("");
+    const isMergedUser = user && (user.role?.toLowerCase() === 'admin' || user.role?.toLowerCase() === 'intern') && (user.isAmbassador || user.referralCode);
+
+    useEffect(() => {
+        if (user) {
+            setProfileTab(user.role?.toLowerCase() === 'admin' ? 'admin' : user.role?.toLowerCase() === 'intern' ? 'intern' : 'ambassador');
+        }
+    }, [user]);
+
     const openProject = (project) => {
         setSelectedProject(project);
         setEditProgress(project.progress || 0);
@@ -309,8 +319,33 @@ export default function InternDetailsPage() {
                             </p>
                         </div>
 
+                        {isMergedUser && (
+                            <div className="flex bg-gray-50/80 p-1 rounded-xl border border-gray-100 shadow-sm w-fit mb-5">
+                                <button
+                                    onClick={() => setProfileTab(user.role?.toLowerCase() === 'admin' ? 'admin' : 'intern')}
+                                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                                        profileTab !== 'ambassador'
+                                        ? 'bg-black text-white shadow-md'
+                                        : 'text-gray-400 hover:text-black'
+                                    }`}
+                                >
+                                    {user.role?.toLowerCase() === 'admin' ? 'Admin Profile' : 'Intern Profile'}
+                                </button>
+                                <button
+                                    onClick={() => setProfileTab('ambassador')}
+                                    className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${
+                                        profileTab === 'ambassador'
+                                        ? 'bg-black text-white shadow-md'
+                                        : 'text-gray-400 hover:text-black'
+                                    }`}
+                                >
+                                    Ambassador Profile
+                                </button>
+                            </div>
+                        )}
+
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 pt-5 border-t border-gray-50">
-                            {user.role?.toLowerCase() === 'ambassador' ? (
+                            {profileTab === 'ambassador' ? (
                                 <>
                                     <div>
                                         <p className="text-[9px] font-black uppercase tracking-widest text-gray-400 mb-1">Referral Code</p>
@@ -394,7 +429,7 @@ export default function InternDetailsPage() {
                     {/* Right Vertical Action Stack */}
                     <div className="flex flex-col gap-2 w-full md:w-48 pt-2">
                         {/* Unified Certificates Button - Hidden for Ambassadors */}
-                        {user.role?.toLowerCase() !== 'ambassador' && (
+                        {profileTab !== 'ambassador' && (
                             <button onClick={() => setShowCertsListModal(true)}
                                 className="bg-gray-50 text-gray-600 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black hover:text-white transition-all flex items-center justify-between border border-gray-200">
                                 <div className="flex items-center gap-2">
@@ -433,7 +468,7 @@ export default function InternDetailsPage() {
             </div>
 
             {/* ── Performance & Recruitment (Ambassador Only) ── */}
-            {user.role?.toLowerCase() === 'ambassador' && (
+            {profileTab === 'ambassador' && (
                 <div className="p-8 space-y-10">
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* Analytics Graph */}
@@ -489,7 +524,7 @@ export default function InternDetailsPage() {
             )}
 
             {/* ── Projects - Hidden for Ambassadors ── */}
-            {user.role?.toLowerCase() !== 'ambassador' && (
+            {profileTab !== 'ambassador' && (
                 <div className="p-8 space-y-6">
                     <h2 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
                         <Activity className="w-5 h-5" /> Submitted Projects
@@ -933,23 +968,17 @@ export default function InternDetailsPage() {
                                             className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
                                     </div>
                                     
-                                    {editData.role?.toLowerCase() !== 'ambassador' && (
-                                        <div className="space-y-1.5 col-span-2">
-                                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Institution / College</label>
-                                            <input type="text" value={editData.collegeName || ""} 
-                                                onChange={e => setEditData({...editData, collegeName: e.target.value})}
-                                                className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
-                                        </div>
-                                    )}
+                                    {/* Institution / College */}
+                                    <div className="space-y-1.5 col-span-2">
+                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Institution / College</label>
+                                        <input type="text" value={editData.collegeName || ""} 
+                                            onChange={e => setEditData({...editData, collegeName: e.target.value})}
+                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
+                                    </div>
 
-                                    {editData.role?.toLowerCase() === 'ambassador' && (
+                                    {/* Ambassador Details */}
+                                    {(editData.role?.toLowerCase() === 'ambassador' || editData.isAmbassador || editData.referralCode) && (
                                         <>
-                                            <div className="space-y-1.5 col-span-2">
-                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Institution / College</label>
-                                                <input type="text" value={editData.collegeName || ""} 
-                                                    onChange={e => setEditData({...editData, collegeName: e.target.value})}
-                                                    className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
-                                            </div>
                                             <div className="space-y-1.5">
                                                 <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Referral Code</label>
                                                 <input type="text" value={editData.referralCode || ""} 
