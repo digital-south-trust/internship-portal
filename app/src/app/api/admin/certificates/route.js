@@ -62,7 +62,7 @@ export async function POST(req) {
         // Send email notification to the intern
         try {
             const issuedDateStr = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-            const portalUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+            const portalUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://internship.digitalsouth.co.in';
 
             const html = `
                 <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #dcfce7; border-radius: 12px; padding: 32px; color: #1e293b; background: #ffffff;">

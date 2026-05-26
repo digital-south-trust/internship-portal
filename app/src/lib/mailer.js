@@ -106,7 +106,7 @@ export async function sendSelectionEmail(to, candidateName) {
       </div>
 
       <p style="text-align: center; margin-top: 32px;">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login" style="display: inline-block; padding: 14px 32px; background-color: #22c55e; color: #fff; text-decoration: none; font-weight: bold; border-radius: 12px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);">
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://internship.digitalsouth.co.in'}/login" style="display: inline-block; padding: 14px 32px; background-color: #22c55e; color: #fff; text-decoration: none; font-weight: bold; border-radius: 12px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);">
           Login to Your Dashboard
         </a>
       </p>
@@ -206,7 +206,7 @@ export async function sendAmbassadorOfferLetter({ to, ambassadorName, referralCo
         </div>
   
         <p style="text-align: center; margin-top: 32px;">
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login" style="display: inline-block; padding: 14px 32px; background-color: #000; color: #fff; text-decoration: none; font-weight: bold; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://internship.digitalsouth.co.in'}/login" style="display: inline-block; padding: 14px 32px; background-color: #000; color: #fff; text-decoration: none; font-weight: bold; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
             Access Ambassador Dashboard
           </a>
         </p>
@@ -240,7 +240,7 @@ export async function sendMeetingCancellation({ to, internName, date, time, desc
             </div>
             <p style="line-height: 1.6;">If this was a required weekly review, a new slot will be scheduled for you shortly. Please check your dashboard for updates.</p>
             <div style="text-align: center; margin-top: 32px;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard/schedule" style="display: inline-block; padding: 12px 24px; background-color: #f1f5f9; color: #000; text-decoration: none; font-weight: bold; border-radius: 8px;">View Updated Schedule</a>
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://internship.digitalsouth.co.in'}/dashboard/schedule" style="display: inline-block; padding: 12px 24px; background-color: #f1f5f9; color: #000; text-decoration: none; font-weight: bold; border-radius: 8px;">View Updated Schedule</a>
             </div>
             <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #f1f5f9; text-align: center;">
                 <p style="font-size: 12px; color: #64748b;">This is an automated system notification from the Internship Portal.</p>
@@ -271,7 +271,7 @@ export async function sendManualCredentialEmail({ to, recipientName, password, r
       </div>
       
       <p style="text-align: center; margin-top: 32px; margin-bottom: 24px;">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login" style="display: inline-block; padding: 14px 32px; background-color: #000; color: #fff; text-decoration: none; font-weight: bold; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">Log In Now</a>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://internship.digitalsouth.co.in'}/login" style="display: inline-block; padding: 14px 32px; background-color: #000; color: #fff; text-decoration: none; font-weight: bold; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">Log In Now</a>
       </p>
       
       <p style="font-size: 13px; color: #64748b; text-align: center; line-height: 1.6;">

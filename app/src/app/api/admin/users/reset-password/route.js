@@ -48,7 +48,7 @@ export async function POST(req) {
             <p style="font-size: 14px; color: #e53e3e; text-align: center; font-weight: 600;">⚠️ Please change your password after logging in for security.</p>
             
             <div style="text-align: center; margin-top: 30px;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login" style="display: inline-block; padding: 14px 32px; background-color: #000; color: #fff; text-decoration: none; font-weight: bold; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">Login Now</a>
+                <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://internship.digitalsouth.co.in'}/login" style="display: inline-block; padding: 14px 32px; background-color: #000; color: #fff; text-decoration: none; font-weight: bold; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">Login Now</a>
             </div>
 
             <div style="margin-top: 40px; padding-top: 25px; border-top: 1px solid #edf2f7; text-align: center;">
