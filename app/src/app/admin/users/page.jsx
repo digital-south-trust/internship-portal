@@ -139,7 +139,9 @@ export default function UnifiedUsersPage() {
         aadhaarNumber: "",
         discountPercentage: 10,
         commissionPercentage: 10,
-        collegeName: ""
+        collegeName: "",
+        durationValue: "2",
+        durationUnit: "Months"
     });
 
     useEffect(() => {
@@ -227,14 +229,23 @@ export default function UnifiedUsersPage() {
             const requestedBy = typeof window !== 'undefined' ? localStorage.getItem('userEmail') : null;
             const endpoint = adminForm.role === 'ambassador' ? "/api/admin/ambassador" : "/api/admin/create";
             
+            const finalDuration = adminForm.role === 'intern' ? `${adminForm.durationValue} ${adminForm.durationUnit}` : undefined;
+            const submitPayload = { 
+                ...adminForm, 
+                requestedBy,
+                duration: finalDuration 
+            };
+            delete submitPayload.durationValue;
+            delete submitPayload.durationUnit;
+
             const res = await fetch(endpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ ...adminForm, requestedBy }),
+                body: JSON.stringify(submitPayload),
             });
 
             if (res.ok) {
-                toast.success(`Protocol ACTIVE. Password: ${adminForm.password}`, { 
+                toast.success(`User ID ACTIVE. Password: ${adminForm.password}`, { 
                     id: tid,
                     duration: 10000 
                 });
@@ -248,7 +259,9 @@ export default function UnifiedUsersPage() {
                     discountPercentage: 10,
                     commissionPercentage: 10,
                     aadhaarNumber: "",
-                    collegeName: ""
+                    collegeName: "",
+                    durationValue: "2",
+                    durationUnit: "Months"
                 });
                 fetchUsers();
                 fetchAmbassadors();
@@ -692,40 +705,73 @@ export default function UnifiedUsersPage() {
 
                                     {adminForm.role === 'intern' && (
                                         <div className="space-y-4 animate-in slide-in-from-top-2">
-                                            <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Category</label>
-                                                <div className="relative">
-                                                    <select
-                                                        className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] uppercase appearance-none cursor-pointer"
-                                                        value={adminForm.category}
-                                                        onChange={e => {
-                                                            const newCat = e.target.value;
-                                                            const firstTrack = tracks.find(t => t.category === newCat)?.name || "";
-                                                            setAdminForm({ ...adminForm, category: newCat, track: firstTrack });
-                                                        }}
-                                                        required
-                                                    >
-                                                        {[...new Set(tracks.map(t => t.category))].map(cat => (
-                                                            <option key={cat} value={cat}>{cat}</option>
-                                                        ))}
-                                                    </select>
-                                                    <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Category</label>
+                                                    <div className="relative">
+                                                        <select
+                                                            className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] uppercase appearance-none cursor-pointer"
+                                                            value={adminForm.category}
+                                                            onChange={e => {
+                                                                const newCat = e.target.value;
+                                                                const firstTrack = tracks.find(t => t.category === newCat)?.name || "";
+                                                                setAdminForm({ ...adminForm, category: newCat, track: firstTrack });
+                                                            }}
+                                                            required
+                                                        >
+                                                            {[...new Set(tracks.map(t => t.category))].map(cat => (
+                                                                <option key={cat} value={cat}>{cat}</option>
+                                                            ))}
+                                                        </select>
+                                                        <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Track</label>
+                                                    <div className="relative">
+                                                        <select
+                                                            className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] uppercase appearance-none cursor-pointer"
+                                                            value={adminForm.track}
+                                                            onChange={e => setAdminForm({ ...adminForm, track: e.target.value })}
+                                                            required
+                                                        >
+                                                            {tracks.filter(t => t.category === adminForm.category).map(t => (
+                                                                <option key={t._id} value={t.name}>{t.name}</option>
+                                                            ))}
+                                                        </select>
+                                                        <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="space-y-2">
-                                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Track</label>
-                                                <div className="relative">
-                                                    <select
-                                                        className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] uppercase appearance-none cursor-pointer"
-                                                        value={adminForm.track}
-                                                        onChange={e => setAdminForm({ ...adminForm, track: e.target.value })}
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Internship Duration</label>
+                                                    <input
+                                                        type="number"
+                                                        className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] shadow-inner"
+                                                        placeholder="Duration"
+                                                        value={adminForm.durationValue}
+                                                        onChange={e => setAdminForm({ ...adminForm, durationValue: e.target.value })}
+                                                        min="1"
                                                         required
-                                                    >
-                                                        {tracks.filter(t => t.category === adminForm.category).map(t => (
-                                                            <option key={t._id} value={t.name}>{t.name}</option>
-                                                        ))}
-                                                    </select>
-                                                    <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                                    />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Unit</label>
+                                                    <div className="relative">
+                                                        <select
+                                                            className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] uppercase appearance-none cursor-pointer"
+                                                            value={adminForm.durationUnit}
+                                                            onChange={e => setAdminForm({ ...adminForm, durationUnit: e.target.value })}
+                                                            required
+                                                        >
+                                                            <option value="Months">Month(s)</option>
+                                                            <option value="Years">Year(s)</option>
+                                                            <option value="Weeks">Week(s)</option>
+                                                        </select>
+                                                        <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -733,8 +779,8 @@ export default function UnifiedUsersPage() {
                                 </div>
                             </div>
 
-                            <button type="submit" className="w-full bg-black text-white py-5 rounded-xl font-black uppercase tracking-[0.4em] shadow-2xl hover:bg-neutral-800 transition-all text-[11px] mt-2 flex items-center justify-center gap-3">
-                                COMMIT {adminForm.role.toUpperCase()} ACCESS <ArrowRight className="w-4 h-4" />
+                            <button type="submit" className="w-full bg-black text-white py-5 rounded-xl font-black font-medium  tracking-[0.4em] shadow-2xl hover:bg-neutral-800 transition-all text-[15px] mt-2 flex items-center justify-center gap-3">
+                                Add {adminForm.role.toUpperCase()}  <ArrowRight className="w-4 h-4" />
                             </button>
                         </form>
                         </div>

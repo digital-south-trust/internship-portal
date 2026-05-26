@@ -125,6 +125,10 @@ export default function CompleteProfilePage() {
                         setFormData(prev => ({ ...prev, phone: data.phone }));
                     }
 
+                    if (data.duration && !formData.duration) {
+                        setFormData(prev => ({ ...prev, duration: data.duration }));
+                    }
+
                     if (data.status === 'ACTIVE') {
                         router.push('/dashboard');
                         return;
@@ -359,7 +363,14 @@ export default function CompleteProfilePage() {
 
             if (res.ok) {
                 toast.success("Profile saved!", { id: tid });
-                setStep(4); // Move to Payment
+                if (userData.selectionStatus === 'Access given by admin') {
+                    localStorage.removeItem(`profile_form_${userData.email}`);
+                    localStorage.removeItem(`profile_step_${userData.email}`);
+                    setTimeout(() => { setShowSplash(true); }, 500);
+                    setTimeout(() => { window.location.href = "/dashboard"; }, 4000);
+                } else {
+                    setStep(4); // Move to Payment
+                }
             } else {
                 const data = await res.json();
                 toast.error(data.error || "Failed to update profile", { id: tid });
@@ -488,14 +499,16 @@ export default function CompleteProfilePage() {
                                     <label className="text-[10px] font-black text-black uppercase tracking-widest flex items-center gap-2"><Building className="w-3 h-3" /> College Name</label>
                                     <input type="text" name="collegeName" value={formData.collegeName} onChange={handleChange} required placeholder="Full Institution Name" className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none" />
                                 </div>
-                                <div className="space-y-4">
-                                    <label className="text-[10px] font-black text-black uppercase tracking-widest flex items-center gap-2"><Clock className="w-3 h-3" /> Internship Duration</label>
-                                    <div className="grid grid-cols-3 gap-3">
-                                        {['2 Months', '4 Months', '6 Months'].map(d => (
-                                            <button key={d} type="button" onClick={() => setFormData(prev => ({ ...prev, duration: d }))} className={`py-4 rounded-xl border transition-all flex items-center justify-center ${formData.duration === d ? 'bg-black text-white border-black shadow-xl scale-105' : 'bg-white border-gray-100 text-gray-500 hover:border-gray-300 active:scale-95'}`}><p className="text-[10px] font-black uppercase tracking-widest">{d}</p></button>
-                                        ))}
+                                {userData.selectionStatus !== 'Access given by admin' && (
+                                    <div className="space-y-4">
+                                        <label className="text-[10px] font-black text-black uppercase tracking-widest flex items-center gap-2"><Clock className="w-3 h-3" /> Internship Duration</label>
+                                        <div className="grid grid-cols-3 gap-3">
+                                            {['2 Months', '4 Months', '6 Months'].map(d => (
+                                                <button key={d} type="button" onClick={() => setFormData(prev => ({ ...prev, duration: d }))} className={`py-4 rounded-xl border transition-all flex items-center justify-center ${formData.duration === d ? 'bg-black text-white border-black shadow-xl scale-105' : 'bg-white border-gray-100 text-gray-500 hover:border-gray-300 active:scale-95'}`}><p className="text-[10px] font-black uppercase tracking-widest">{d}</p></button>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         )}
 

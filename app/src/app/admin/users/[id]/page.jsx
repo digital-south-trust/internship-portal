@@ -995,6 +995,17 @@ export default function InternDetailsPage() {
                                             className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
                                     </div>
 
+                                    {/* Internship Duration */}
+                                    {(editData.role?.toLowerCase() === 'intern' || !editData.role) && (
+                                        <div className="space-y-1.5 col-span-2">
+                                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Internship Duration</label>
+                                            <input type="text" value={editData.duration || ""} 
+                                                onChange={e => setEditData({...editData, duration: e.target.value})}
+                                                placeholder="e.g. 2 Months, 4 Months, etc."
+                                                className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
+                                        </div>
+                                    )}
+
                                     {/* Ambassador Details */}
                                     {(editData.role?.toLowerCase() === 'ambassador' || editData.isAmbassador || editData.referralCode) && (
                                         <>
