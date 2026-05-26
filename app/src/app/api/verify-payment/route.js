@@ -95,7 +95,7 @@ export async function POST(req) {
                                 <p><strong>Order ID:</strong> ${razorpay_order_id}</p>
                                 <p><strong>Payment ID:</strong> ${razorpay_payment_id}</p>
                             </div>
-                            <p>Please log in at <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard">Internship Portal</a>.</p>
+                            <p>Please log in at <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://internship.digitalsouth.co.in'}/dashboard">Internship Portal</a>.</p>
                             <p>Best regards,<br/>The Onboarding Team</p>
                         </div>
                     `,
