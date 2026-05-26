@@ -83,6 +83,7 @@ export async function PATCH(req, { params }) {
         if (body.phone !== undefined) allowedFields.phone = body.phone;
         if (body.aadhaarNumber !== undefined) allowedFields.aadhaarNumber = body.aadhaarNumber;
         if (body.collegeName !== undefined) allowedFields.collegeName = body.collegeName;
+        if (body.duration !== undefined) allowedFields.duration = body.duration;
 
         // Ambassador specific
         if (body.referralCode !== undefined) allowedFields.referralCode = body.referralCode;

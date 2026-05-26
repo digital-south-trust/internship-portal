@@ -34,7 +34,12 @@ export async function POST(req) {
         Object.assign(user, profileData);
         user.isProfileComplete = true;
         user.isApplicationSubmitted = true;
-        user.status = 'VERIFIED'; 
+        
+        if (user.selectionStatus === 'Access given by admin') {
+            user.status = 'ACTIVE';
+        } else {
+            user.status = 'VERIFIED';
+        }
         
         await user.save();
 
