@@ -4,6 +4,7 @@ import User from "@/models/User";
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { verifyAdmin } from "@/lib/auth";
+import { sendManualCredentialEmail } from "@/lib/mailer";
 
 export async function POST(req) {
     try {
@@ -58,6 +59,18 @@ export async function POST(req) {
         }
 
         const newUser = await User.create(newUserConfig);
+
+        // Send email with login credentials
+        try {
+            await sendManualCredentialEmail({
+                to: body.email,
+                recipientName: body.fullName,
+                password: body.password,
+                role: role
+            });
+        } catch (mailErr) {
+            console.error("Failed to send manual credentials email:", mailErr);
+        }
 
         // Don't return password
         const userResponse = newUser.toObject();

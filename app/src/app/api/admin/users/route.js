@@ -18,8 +18,33 @@ export async function GET(req) {
             selectionStatus: { $ne: 'Rejected' }
         };
 
+        const search = searchParams.get('search');
+        const roleFilter = searchParams.get('roleFilter');
+        const sortParam = searchParams.get('sort');
+
+        if (search) {
+            query.$or = [
+                { fullName: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } },
+                { track: { $regex: search, $options: 'i' } }
+            ];
+        }
+
+        if (roleFilter && roleFilter !== 'all') {
+             query.role = roleFilter;
+        }
+
+        let sort = { createdAt: -1 };
+        if (sortParam === 'name') {
+            sort = { fullName: 1 };
+        } else if (sortParam === 'role') {
+            sort = { role: 1 };
+        } else if (sortParam === 'score') {
+            sort = { assessmentScore: -1 };
+        }
+
         // Delegate db operations to the Service Layer
-        const result = await UserService.getUsersPaginated({ page, limit, query });
+        const result = await UserService.getUsersPaginated({ page, limit, query, sort });
 
         return NextResponse.json(result, { status: 200 });
     } catch (error) {

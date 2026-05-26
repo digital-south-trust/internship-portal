@@ -58,7 +58,8 @@ export default function AdminProjectsPage() {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [selectedRequest, setSelectedRequest] = useState(null);
-    const [editingProject, setEditingProject] = useState(null);
+    const [projectToDelete, setProjectToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState("CODING");
     const [selectedTrackName, setSelectedTrackName] = useState("");
@@ -187,23 +188,26 @@ export default function AdminProjectsPage() {
         }
     }, [selectedTrackName, selectedCategory, tracks, isAddModalOpen, isEditModalOpen]);
 
-    const handleDeleteProject = async (id) => {
-        if (!window.confirm("Are you sure you want to remove this project from the pool?")) return;
-        
+    const handleDeleteProject = async () => {
+        if (!projectToDelete) return;
+        setIsDeleting(true);
         try {
-            const res = await fetch(`/api/admin/projects/pool?id=${id}`, {
+            const res = await fetch(`/api/admin/projects/pool?id=${projectToDelete}`, {
                 method: 'DELETE'
             });
             if (res.ok) {
-                setAvailable(prev => prev.filter(p => (p._id || p.id) !== id));
+                setAvailable(prev => prev.filter(p => (p._id || p.id) !== projectToDelete));
                 toast.success("Project Removed from Pool");
                 setIsEditModalOpen(false);
+                setProjectToDelete(null);
             } else {
                 toast.error("Deletion Failed");
             }
         } catch (err) {
             console.error(err);
             toast.error("Network Error");
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -309,6 +313,12 @@ export default function AdminProjectsPage() {
         }
     };
 
+    const filteredAvailable = available.filter(item => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return (item.title || '').toLowerCase().includes(q) || (item.track || '').toLowerCase().includes(q);
+    });
+
     return (
         <div className="animate-in fade-in duration-500">
             {/* Standardized Tactical Header */}
@@ -373,20 +383,38 @@ export default function AdminProjectsPage() {
                                 <table className="w-full text-left">
                                     <thead className="bg-gray-50/50 text-gray-400 uppercase font-black text-[8px] tracking-[0.3em]"><tr className="px-8"><th className="px-8 py-4">Descriptor</th><th className="px-4 py-4">Domain</th><th className="px-4 py-4">Interns</th><th className="px-4 py-4">Status</th><th className="px-8 py-4 text-right">Settings</th></tr></thead>
                                     <tbody className="divide-y divide-gray-50">
-                                        {available.filter(item => { if (!searchQuery.trim()) return true; const q = searchQuery.toLowerCase(); return (item.title || '').toLowerCase().includes(q) || (item.track || '').toLowerCase().includes(q); }).map(item => (
-                                            <tr key={item._id || item.id} onClick={() => handleEditProjectOpen(item)} className="hover:bg-gray-50/30 transition-all cursor-pointer group">
-                                                <td className="px-8 py-5">
-                                                    <div className="flex items-center gap-3.5">
-                                                        <div className="p-2.5 bg-gray-50 rounded-lg group-hover:bg-white border border-transparent transition-all"><Briefcase className="w-4 h-4 text-gray-900" /></div>
-                                                        <div><p className="text-[12px] font-black text-gray-900 uppercase tracking-tight">{item.title}</p><p className="text-[8px] text-gray-300 font-black uppercase mt-0.5">TTL: {item.deadline}</p></div>
-                                                    </div>
+                                        {available.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="py-20 text-center">
+                                                    <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">
+                                                        projects are yet to add
+                                                    </p>
                                                 </td>
-                                                <td className="px-4 py-5"><span className="px-3 py-1 bg-gray-50 text-[8px] font-black uppercase rounded-full border border-gray-100 text-gray-500">{item.track}</span></td>
-                                                <td className="px-4 py-5 font-black text-[11px] text-gray-800">{item.enrolled}</td>
-                                                <td className="px-4 py-5"><div className="flex items-center gap-1.5"><div className="w-1 h-1 rounded-full bg-emerald-500" /><span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Active</span></div></td>
-                                                <td className="px-8 py-5 text-right"><div className="flex justify-end gap-2"><button onClick={(e) => { e.stopPropagation(); handleEditProjectOpen(item); }} className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-gray-50"><Edit3 className="w-4 h-4 text-gray-400 hover:text-black" /></button><button onClick={(e) => { e.stopPropagation(); handleDeleteProject(item._id || item.id); }} className="p-2 hover:bg-rose-50 rounded-lg"><Trash2 className="w-4 h-4 text-gray-400 hover:text-rose-600" /></button></div></td>
                                             </tr>
-                                        ))}
+                                        ) : filteredAvailable.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={5} className="py-20 text-center">
+                                                    <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">
+                                                        No matching projects found
+                                                    </p>
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            filteredAvailable.map(item => (
+                                                <tr key={item._id || item.id} onClick={() => handleEditProjectOpen(item)} className="hover:bg-gray-50/30 transition-all cursor-pointer group">
+                                                    <td className="px-8 py-5">
+                                                        <div className="flex items-center gap-3.5">
+                                                            <div className="p-2.5 bg-gray-50 rounded-lg group-hover:bg-white border border-transparent transition-all"><Briefcase className="w-4 h-4 text-gray-900" /></div>
+                                                            <div><p className="text-[12px] font-black text-gray-900 uppercase tracking-tight">{item.title}</p><p className="text-[8px] text-gray-300 font-black uppercase mt-0.5">TTL: {item.deadline}</p></div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-5"><span className="px-3 py-1 bg-gray-50 text-[8px] font-black uppercase rounded-full border border-gray-100 text-gray-500">{item.track}</span></td>
+                                                    <td className="px-4 py-5 font-black text-[11px] text-gray-800">{item.enrolled}</td>
+                                                    <td className="px-4 py-5"><div className="flex items-center gap-1.5"><div className="w-1 h-1 rounded-full bg-emerald-500" /><span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Active</span></div></td>
+                                                    <td className="px-8 py-5 text-right"><div className="flex justify-end gap-2"><button onClick={(e) => { e.stopPropagation(); handleEditProjectOpen(item); }} className="p-2 hover:bg-white rounded-lg border border-transparent hover:border-gray-50"><Edit3 className="w-4 h-4 text-gray-400 hover:text-black" /></button><button onClick={(e) => { e.stopPropagation(); setProjectToDelete(item._id || item.id); }} className="p-2 hover:bg-rose-50 rounded-lg"><Trash2 className="w-4 h-4 text-gray-400 hover:text-rose-600" /></button></div></td>
+                                                </tr>
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -564,7 +592,7 @@ export default function AdminProjectsPage() {
                                     </div>
                                     <div className="flex gap-3 pt-4 border-t border-gray-100">
                                         <button type="button" onClick={() => setFormStep(1)} className="flex-1 py-4 bg-gray-100 text-gray-700 rounded-xl text-[9px] font-black transition-all">← Back</button>
-                                        <button type="submit" className="flex-[2] py-4 bg-black text-white rounded-xl text-[9px] font-black uppercase shadow-xl hover:scale-[1.01] transition-all flex items-center justify-center gap-3">Deploy Mission <ArrowRight className="w-3.5 h-3.5" /></button>
+                                        <button type="submit" className="flex-[2] py-4 bg-black text-white rounded-xl text-[9px] font-black uppercase shadow-xl hover:scale-[1.01] transition-all flex items-center justify-center gap-3">Deploy project <ArrowRight className="w-3.5 h-3.5" /></button>
                                     </div>
                                 </div>
                             </form>
@@ -649,7 +677,7 @@ export default function AdminProjectsPage() {
                                     </div>
                                 </div>
                                 <div className="pt-6 flex gap-4 border-t border-gray-100">
-                                    <button type="button" onClick={() => handleDeleteProject(editingProject._id || editingProject.id)} className="px-6 py-4 bg-rose-50 text-rose-600 rounded-2xl text-[9px] font-black uppercase transition-all flex items-center justify-center gap-2 border border-rose-100"><Trash2 className="w-4 h-4" /> Remove Asset</button>
+                                    <button type="button" onClick={() => setProjectToDelete(editingProject._id || editingProject.id)} className="px-6 py-4 bg-rose-50 text-rose-600 rounded-2xl text-[9px] font-black uppercase transition-all flex items-center justify-center gap-2 border border-rose-100"><Trash2 className="w-4 h-4" /> Remove Asset</button>
                                     <button type="submit" className="flex-1 py-4 bg-black text-white rounded-2xl text-[9px] font-black uppercase shadow-xl hover:scale-[1.01] transition-all flex items-center justify-center gap-2">Sync Protocol Changes <ArrowRight className="w-3.5 h-3.5" /></button>
                                 </div>
                             </form>
@@ -727,6 +755,28 @@ export default function AdminProjectsPage() {
                             <div className="p-5 border-t border-gray-50 bg-gray-50/30 flex gap-3">
                                 <button onClick={() => handleAction(selectedRequest._id || selectedRequest.id, 'reject')} className="px-4 py-3 bg-white hover:bg-rose-50 hover:text-rose-600 rounded-lg text-[8px] font-black uppercase transition-all border border-gray-200">Dismiss</button>
                                 <button onClick={() => handleAction(selectedRequest._id || selectedRequest.id, 'approve')} className="flex-1 py-3 bg-black hover:bg-emerald-600 text-white rounded-lg text-[8px] font-black uppercase transition-all flex items-center justify-center gap-2 shadow-xl hover:scale-[1.02]"><CheckCircle2 className="w-3.5 h-3.5" /> Confirm Deployment</button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>, document.body)}
+
+            {mounted && createPortal(
+            <AnimatePresence>
+                {projectToDelete && (
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => !isDeleting && setProjectToDelete(null)} className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="relative bg-white rounded-[2rem] max-w-sm w-full shadow-2xl p-8 border border-gray-100 text-center">
+                            <div className="w-16 h-16 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Trash2 className="w-8 h-8 text-rose-500" />
+                            </div>
+                            <h3 className="text-xl font-black text-gray-900 uppercase tracking-tighter mb-2">Delete Project</h3>
+                            <p className="text-xs font-bold text-gray-500 mb-8 px-4">Are you absolutely sure you want to permanently remove this project from the available pool? This action cannot be undone.</p>
+                            <div className="flex gap-3">
+                                <button onClick={() => setProjectToDelete(null)} disabled={isDeleting} className="flex-1 py-3.5 bg-gray-50 hover:bg-gray-100 text-gray-900 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Cancel</button>
+                                <button onClick={handleDeleteProject} disabled={isDeleting} className="flex-1 py-3.5 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg hover:shadow-rose-500/25 flex items-center justify-center gap-2">
+                                    {isDeleting ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : 'Delete Project'}
+                                </button>
                             </div>
                         </motion.div>
                     </div>

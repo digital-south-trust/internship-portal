@@ -68,12 +68,17 @@ export const UserService = {
    * @param {Object} options.query
    * @returns {Promise<{users: Array, total: number, pages: number}>}
    */
-  async getUsersPaginated({ page = 1, limit = 10, query = {} }) {
+  async getUsersPaginated({ page = 1, limit = 10, query = {}, sort = { createdAt: -1 } }) {
     await dbConnect();
     const skip = (page - 1) * limit;
     
     const [users, total] = await Promise.all([
-      User.find(query).select('-password').sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
+      User.find(query)
+          .select('_id fullName email role track status selectionStatus profilePicture passportPhoto avatarSeed assessmentScore createdAt')
+          .sort(sort)
+          .skip(skip)
+          .limit(limit)
+          .lean(),
       User.countDocuments(query)
     ]);
 

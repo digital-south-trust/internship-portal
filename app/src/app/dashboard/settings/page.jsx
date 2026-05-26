@@ -546,48 +546,72 @@ export default function StudentSettingsPage() {
             )}
             <AnimatePresence>
                 {showCancelModal && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                        <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => setShowCancelModal(false)} />
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden p-4">
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                            className="relative bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+                            onClick={() => setShowCancelModal(false)}
+                        />
+                        <motion.div
+                            initial={{ x: "100vw", opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            exit={{ x: "100vw", opacity: 0 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                            className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl p-10 flex flex-col justify-between border border-gray-100 z-10"
                         >
-                            <div className="space-y-6">
-                                <div className="text-center space-y-2">
-                                    <div className="w-16 h-16 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-red-100">
-                                        <XCircle className="w-8 h-8 text-red-500" />
+                            <div className="space-y-8 flex-1 flex flex-col justify-start">
+                                {/* Top Header */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-1.5 h-6 bg-red-500 rounded-full" />
+                                        <h3 className="text-xl font-black text-gray-900 tracking-tighter uppercase leading-none">
+                                            exiting from program
+                                        </h3>
                                     </div>
-                                    <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Contract Termination</h3>
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest text-balance">Warning: This action is irreversible.</p>
+                                    <button 
+                                        onClick={() => setShowCancelModal(false)} 
+                                        className="p-3 bg-gray-50 hover:bg-red-50 hover:text-red-500 rounded-2xl transition-all border border-gray-100"
+                                    >
+                                        <X className="w-5 h-5" />
+                                    </button>
                                 </div>
 
-                                <div className="space-y-6">
-                                    <div className="space-y-2">
-                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Cancellation Reason</label>
-                                        <textarea
-                                            rows={4}
-                                            required
-                                            placeholder="Define reason for leaving..."
-                                            className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-black/5 resize-none"
-                                            value={cancelReason}
-                                            onChange={e => setCancelReason(e.target.value)}
-                                        />
-                                    </div>
-                                    <button
-                                        onClick={handleCancelInternship}
-                                        disabled={isCancelling}
-                                        className="w-full py-5 bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-red-600 transition-all flex items-center justify-center gap-3"
-                                    >
-                                        {isCancelling ? <RefreshCw className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
-                                        Confirm Termination
-                                    </button>
-                                    <button
-                                        onClick={() => setShowCancelModal(false)}
-                                        className="w-full py-4 bg-gray-50 text-gray-400 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all"
-                                    >
-                                        Abort Process
-                                    </button>
+                                {/* Warning text */}
+                                <div className="p-5 bg-red-50/50 rounded-2xl border border-red-100/50 space-y-2">
+                                    <p className="text-[11px] font-black text-red-600 uppercase tracking-widest">Crucial Warning</p>
+                                    <p className="text-[11px] text-red-600/80 font-bold leading-relaxed">
+                                        Terminating your contract is permanent and irreversible. Once committed, your access to all learning tracks, livebooks, submitted projects, and certification credentials will be permanently revoked.
+                                    </p>
                                 </div>
+
+                                {/* Middle Form Field */}
+                                <div className="space-y-3 flex-1 flex flex-col">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                                        Description for leaving the program
+                                    </label>
+                                    <textarea
+                                        rows={4}
+                                        required
+                                        placeholder="Please elaborate on your decision..."
+                                        className="w-full flex-1 p-5 bg-gray-50 border border-gray-100 rounded-2xl text-sm font-bold focus:outline-none focus:ring-4 focus:ring-black/5 resize-none leading-relaxed"
+                                        value={cancelReason}
+                                        onChange={e => setCancelReason(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Bottom Exit Button */}
+                            <div className="pt-6 mt-6 border-t border-gray-50">
+                                <button
+                                    onClick={handleCancelInternship}
+                                    disabled={isCancelling}
+                                    className="w-full py-4 bg-red-500 hover:bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-red-500/10 transition-all flex items-center justify-center gap-3 active:scale-98"
+                                >
+                                    {isCancelling ? <RefreshCw className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                                    Exit Program
+                                </button>
                             </div>
                         </motion.div>
                     </div>

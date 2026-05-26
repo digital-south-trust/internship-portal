@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import {
     Plus,
     Trash2,
@@ -36,13 +37,12 @@ import { toast } from "react-hot-toast";
 
 const dicebear = (seed) => `https://api.dicebear.com/7.x/micah/svg?seed=${encodeURIComponent(seed)}&backgroundColor=transparent`;
 
-export default function UnifiedAssessmentsPage() {
-    const [activeTab, setActiveTab] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return sessionStorage.getItem('as_activeTab') || 'submissions';
-        }
-        return 'submissions';
-    }); // 'build', 'submissions'
+function UnifiedAssessmentsContent() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const pathname = usePathname();
+
+    const [activeTab, setActiveTab] = useState('submissions'); // 'build', 'submissions'
 
     // --- Dynamic Tracks State ---
     const [tracks, setTracks] = useState([]);
@@ -109,46 +109,90 @@ export default function UnifiedAssessmentsPage() {
         };
     }, [isAnyModalOpen]);
 
-    // --- Initialization ---
+    // Helper to update search params
+    const updateUrlParams = (updates) => {
+        const params = new URLSearchParams(window.location.search);
+        Object.entries(updates).forEach(([key, val]) => {
+            if (val === null || val === undefined || val === '') {
+                params.delete(key);
+            } else {
+                params.set(key, val);
+            }
+        });
+        router.push(`${pathname}?${params.toString()}`);
+    };
+
+    // Initial load: restore from sessionStorage if URL is empty
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            const savedTab = sessionStorage.getItem('as_activeTab');
-            const savedTrack = sessionStorage.getItem('as_selectedTrack');
+        const urlTab = searchParams.get('tab');
+        const urlTrack = searchParams.get('track');
+        const urlExamId = searchParams.get('examId');
+
+        if (!urlTab && !urlTrack && !urlExamId) {
+            const savedTab = sessionStorage.getItem('as_activeTab') || 'submissions';
+            const savedTrack = sessionStorage.getItem('as_selectedTrack') || '';
             const savedExam = sessionStorage.getItem('as_selectedExam');
-            
-            if (savedTab) setActiveTab(savedTab);
-            if (savedTrack) setSelectedTrack(savedTrack);
+            let savedExamId = '';
             if (savedExam) {
                 try {
-                    setSelectedExam(JSON.parse(savedExam));
-                } catch (e) {
-                    console.error("Session parse error", e);
-                }
+                    savedExamId = JSON.parse(savedExam)._id || '';
+                } catch {}
             }
+            
+            const params = new URLSearchParams();
+            params.set('tab', savedTab);
+            if (savedTrack) params.set('track', savedTrack);
+            if (savedExamId) params.set('examId', savedExamId);
+            
+            router.replace(`${pathname}?${params.toString()}`);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Sync URL search params to State
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            sessionStorage.setItem('as_activeTab', activeTab);
+        const urlTab = searchParams.get('tab');
+        if (urlTab && urlTab !== activeTab) {
+            setActiveTab(urlTab);
         }
+        
+        const urlTrack = searchParams.get('track') || "";
+        if (urlTrack !== selectedTrack) {
+            setSelectedTrack(urlTrack);
+            setSelectedExam(null);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams]);
+
+    // Sync selectedExam from urlExamId when exams list changes or urlExamId changes
+    useEffect(() => {
+        const urlExamId = searchParams.get('examId');
+        if (urlExamId) {
+            const match = exams.find(e => e._id === urlExamId);
+            if (match) {
+                setSelectedExam(match);
+                sessionStorage.setItem('as_selectedExam', JSON.stringify(match));
+            } else if (selectedExam && selectedExam._id !== urlExamId) {
+                setSelectedExam(null);
+            }
+        } else {
+            setSelectedExam(null);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [searchParams, exams]);
+
+    // Session storage backup syncs on state changes
+    useEffect(() => {
+        sessionStorage.setItem('as_activeTab', activeTab);
     }, [activeTab]);
 
     useEffect(() => {
-        if (typeof window !== 'undefined') {
+        if (selectedTrack) {
             sessionStorage.setItem('as_selectedTrack', selectedTrack);
+        } else {
+            sessionStorage.removeItem('as_selectedTrack');
         }
     }, [selectedTrack]);
-
-    useEffect(() => {
-        if (typeof window !== 'undefined') {
-            if (selectedExam) {
-                sessionStorage.setItem('as_selectedExam', JSON.stringify(selectedExam));
-            } else {
-                sessionStorage.removeItem('as_selectedExam');
-            }
-        }
-    }, [selectedExam]);
 
     useEffect(() => {
         fetchTracks();
@@ -174,6 +218,7 @@ export default function UnifiedAssessmentsPage() {
         if (selectedTrack && activeTab === 'build') {
             fetchExams();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedTrack, activeTab]);
 
     const fetchExams = async () => {
@@ -194,6 +239,7 @@ export default function UnifiedAssessmentsPage() {
 
     useEffect(() => {
         if (selectedExam && activeTab === 'build') fetchData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedExam, activeTab]);
 
     const fetchData = async () => {
@@ -245,12 +291,12 @@ export default function UnifiedAssessmentsPage() {
             let currentQuestion = null;
 
             for (let line of lines) {
-                const ansMatch = line.match(/^(?:ans(?:wer)?|correct|solution)[\s]*[:\-]?[\s]*(.+)$/i);
+                const ansMatch = line.match(/^(?:correct\s+answer|correct\s+ans|correct|answer|ans|solution)[\s]*[:\-]?[\s]*(.+)$/i);
                 if (ansMatch) {
                     if (currentQuestion) {
                         const rawAns = ansMatch[1].trim();
                         let correctIdx = -1;
-                        const letterMatch = rawAns.match(/^([a-eA-E])(?:\s*[\).\]:]?|\s+)/i);
+                        const letterMatch = rawAns.match(/^([a-eA-E])\s*[\).\]:]?\s*$/i);
                         if (letterMatch) {
                             correctIdx = letterMatch[1].toUpperCase().charCodeAt(0) - 65;
                         } else if (/^\d+$/.test(rawAns)) {
@@ -266,6 +312,7 @@ export default function UnifiedAssessmentsPage() {
                             currentQuestion.options[correctIdx].isCorrect = true;
                         }
                         if (currentQuestion.options.length > 0) {
+                            if (!currentQuestion.options.find(o => o.isCorrect)) currentQuestion.options[0].isCorrect = true;
                             while (currentQuestion.options.length < 4) {
                                 currentQuestion.options.push({ text: `Option ${currentQuestion.options.length + 1}`, isCorrect: false });
                             }
@@ -281,6 +328,7 @@ export default function UnifiedAssessmentsPage() {
 
                 if (isQuestionLine) {
                     if (currentQuestion && currentQuestion.options.length > 0) {
+                        if (!currentQuestion.options.find(o => o.isCorrect)) currentQuestion.options[0].isCorrect = true;
                         while (currentQuestion.options.length < 4) currentQuestion.options.push({ text: `Option ${currentQuestion.options.length + 1}`, isCorrect: false });
                         importedQuestions.push(currentQuestion);
                     }
@@ -515,7 +563,7 @@ export default function UnifiedAssessmentsPage() {
                             {['submissions', 'build'].map(t => (
                                 <button
                                     key={t}
-                                    onClick={() => setActiveTab(t)}
+                                    onClick={() => updateUrlParams({ tab: t })}
                                     className={`px-5 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === t ? 'bg-black text-white shadow-xl' : 'text-gray-400 hover:text-black'}`}
                                 >
                                     {t === 'submissions' ? 'Intelligence' : 'Repository'}
@@ -547,7 +595,7 @@ export default function UnifiedAssessmentsPage() {
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8 w-full">
                                     {tracks.filter(t => selectedCategoryFilter === 'ALL' || t.category === selectedCategoryFilter).map(track => (
-                                        <div key={track._id} onClick={() => setSelectedTrack(track.name)} className="group bg-white p-12 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-2xl transition-all cursor-pointer flex flex-col items-start justify-start gap-6 text-left">
+                                        <div key={track._id} onClick={() => updateUrlParams({ track: track.name, examId: null })} className="group bg-white p-12 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-2xl transition-all cursor-pointer flex flex-col items-start justify-start gap-6 text-left">
                                             <div className="space-y-1">
                                                 <h3 className="text-base font-black text-black uppercase tracking-tighter leading-tight">{track.name}</h3>
                                                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{track.category || "General Category"}</p>
@@ -562,10 +610,14 @@ export default function UnifiedAssessmentsPage() {
                                 {!selectedExam ? (
                                     <div className="space-y-8">
                                         <div className="flex items-center justify-between">
-                                            <button onClick={() => setSelectedTrack("")} className="w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center hover:bg-black hover:text-white transition-all"><ArrowLeft className="w-4 h-4" /></button>
+                                            <button onClick={() => updateUrlParams({ track: null, examId: null })} className="w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center hover:bg-black hover:text-white transition-all"><ArrowLeft className="w-4 h-4" /></button>
                                             <button onClick={async () => {
                                                 const res = await fetch("/api/admin/assessment/exams", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ track: selectedTrack, title: `SET ${exams.length + 1}`, durationMinutes: 60 }) });
-                                                if (res.ok) fetchExams();
+                                                if (res.ok) {
+                                                    const newEx = await res.json();
+                                                    await fetchExams();
+                                                    updateUrlParams({ examId: newEx._id });
+                                                }
                                             }} className="px-5 py-2.5 bg-black text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><Plus className="w-4 h-4" /> Create Unique Paper</button>
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12 w-full">
@@ -573,7 +625,7 @@ export default function UnifiedAssessmentsPage() {
                                                 <div key={ex._id} className="relative bg-white p-12 rounded-[3rem] border border-gray-100 shadow-sm hover:shadow-2xl hover:shadow-black/5 transition-all flex flex-col gap-8 min-h-[350px]">
                                                     <button onClick={(e) => { e.stopPropagation(); if(confirm("Purge?")) fetch(`/api/admin/assessment/exams?id=${ex._id}`, { method: "DELETE" }).then(() => fetchExams()); }} className="absolute top-10 right-10 p-2.5 text-gray-200 hover:text-rose-500 transition-colors z-20"><Trash2 className="w-5 h-5" /></button>
                                                     
-                                                    <div onClick={() => setSelectedExam(ex)} className="cursor-pointer space-y-4 flex-1 relative z-10">
+                                                    <div onClick={() => updateUrlParams({ examId: ex._id })} className="cursor-pointer space-y-4 flex-1 relative z-10">
                                                         <div className="space-y-2">
                                                             <h3 className="text-xl font-black text-black uppercase tracking-tight leading-none">{ex.title}</h3>
                                                             <span className="inline-block text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">ID-{ex._id.slice(-6).toUpperCase()}</span>
@@ -584,7 +636,7 @@ export default function UnifiedAssessmentsPage() {
                                                         </div>
                                                     </div>
                                                     <div className="flex gap-3 pt-2 border-t border-gray-50">
-                                                        <button onClick={() => setSelectedExam(ex)} className="flex-1 py-3.5 bg-gray-50 hover:bg-black hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Modify</button>
+                                                        <button onClick={() => updateUrlParams({ examId: ex._id })} className="flex-1 py-3.5 bg-gray-50 hover:bg-black hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Modify</button>
                                                         <button onClick={() => handleToggleStatus(ex._id, ex.status)} className={`flex-1 py-3.5 border rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${ex.status === 'active' ? 'border-amber-200 text-amber-600 hover:bg-amber-50' : 'border-emerald-200 text-emerald-600 hover:bg-emerald-50'}`}>{ex.status === 'active' ? 'Freeze' : 'Release'}</button>
                                                     </div>
                                                 </div>
@@ -594,7 +646,7 @@ export default function UnifiedAssessmentsPage() {
                                 ) : (
                                     <div className="space-y-6">
                                         <div className="flex items-center justify-between">
-                                            <button onClick={() => setSelectedExam(null)} className="w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center hover:bg-black hover:text-white transition-all"><ArrowLeft className="w-4 h-4" /></button>
+                                            <button onClick={() => updateUrlParams({ examId: null })} className="w-10 h-10 bg-white border border-gray-100 rounded-xl flex items-center justify-center hover:bg-black hover:text-white transition-all"><ArrowLeft className="w-4 h-4" /></button>
                                             <div className="flex items-center gap-3">
                                                 <button onClick={() => setIsBulkMode(!isBulkMode)} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${isBulkMode ? 'bg-black text-white' : 'bg-white border-gray-200'}`}><Upload className="w-4 h-4 mr-2 inline" /> Bulk Add</button>
                                                 <button onClick={() => setIsAddingMode(!isAddingMode)} className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase transition-all ${isAddingMode ? 'bg-black text-white' : 'bg-white border-gray-200'}`}><Plus className="w-4 h-4 mr-2 inline" /> Single</button>
@@ -602,11 +654,35 @@ export default function UnifiedAssessmentsPage() {
                                         </div>
 
                                         {isBulkMode && (
-                                            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm animate-in zoom-in-95">
-                                                <textarea className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-6 text-[10px] font-mono h-64 outline-none" placeholder="Paste questions..." value={bulkImportText} onChange={e => setBulkImportText(e.target.value)} />
-                                                <div className="flex justify-start">
-                                                    <button onClick={handleBulkImport} className="w-max px-20 py-4 bg-black text-white rounded-2xl font-black uppercase tracking-widest mt-6 hover:scale-[1.02] active:scale-95 transition-all">
-                                                        Upload
+                                            <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm animate-in zoom-in-95 grid grid-cols-1 lg:grid-cols-3 gap-8">
+                                                <div className="lg:col-span-2 space-y-4">
+                                                    <div className="flex justify-between items-center">
+                                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Questions Input</label>
+                                                    </div>
+                                                    <textarea 
+                                                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-6 text-[10px] font-mono h-80 outline-none focus:border-black focus:bg-white transition-all resize-none" 
+                                                        value={bulkImportText} 
+                                                        onChange={e => setBulkImportText(e.target.value)} 
+                                                    />
+                                                </div>
+                                                <div className="bg-gray-50/50 p-6 rounded-2xl border border-gray-100 space-y-4 flex flex-col justify-between">
+                                                    <div>
+                                                        <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-3 py-1 rounded-lg uppercase tracking-widest">Upload Format Guide</span>
+                                                        <h4 className="text-xs font-black uppercase tracking-tight text-neutral-800 mt-3">Expected Structure</h4>
+                                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mt-1 leading-relaxed">
+                                                            Ensure each question follows this format. Separate questions by a blank line.
+                                                        </p>
+                                                        <pre className="mt-4 p-4 bg-white border border-gray-100 rounded-xl text-[9px] font-mono text-gray-600 leading-relaxed overflow-x-auto whitespace-pre">
+{`Q1. What is a blockchain?
+A) Option A
+B) Option B
+C) Option C
+D) Option D
+Correct Answer: B`}
+                                                        </pre>
+                                                    </div>
+                                                    <button onClick={handleBulkImport} className="w-full py-4 bg-black hover:bg-neutral-800 text-white rounded-xl font-black uppercase text-[10px] tracking-widest hover:scale-[1.02] active:scale-95 transition-all">
+                                                        Process & Upload
                                                     </button>
                                                 </div>
                                             </div>
@@ -656,7 +732,7 @@ export default function UnifiedAssessmentsPage() {
                                                         </>
                                                      )}
                                                 </div>
-                                                <button onClick={() => setShowSaveModal(true)} className="px-6 py-2 bg-black text-white rounded-lg text-[9px] font-black uppercase tracking-widest">Save Settings</button>
+                                                <button onClick={() => setShowSaveModal(true)} className="px-6 py-2 bg-black text-white rounded-lg text-[9px] font-black uppercase tracking-widest">Save </button>
                                             </div>
                                             <div className="divide-y divide-gray-50">
                                                 {questions.map((q, idx) => (
@@ -1050,4 +1126,17 @@ function ScoreMetric({ label, value, color = "text-white" }) {
 function SelectionBadge({ status, label }) {
     const s = { 'SELECTED': 'bg-black text-white', 'REJECTED': 'bg-white text-gray-200 border-gray-100', 'NEW': 'bg-gray-50 text-gray-400' };
     return <span className={`text-[8px] font-black uppercase tracking-widest px-3 py-1 rounded-lg border ${s[status] || s.NEW}`}>{label || status}</span>;
+}
+
+export default function UnifiedAssessmentsPage() {
+    return (
+        <Suspense fallback={
+            <div className="py-32 flex flex-col items-center justify-center gap-6">
+                <RefreshCw className="w-12 h-12 animate-spin text-black" />
+                <p className="text-[10px] font-black uppercase tracking-[0.5em] text-gray-300">Loading Dashboard...</p>
+            </div>
+        }>
+            <UnifiedAssessmentsContent />
+        </Suspense>
+    );
 }

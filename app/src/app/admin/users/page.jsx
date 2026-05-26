@@ -3,6 +3,9 @@
 import { useState, useEffect, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 import {
     UserPlus,
     Shield,
@@ -52,10 +55,26 @@ const dicebear = (seed) => `https://api.dicebear.com/7.x/micah/svg?seed=${encode
 export default function UnifiedUsersPage() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState('database'); 
-    const { users: allUsersFromApi, isLoading: usersLoading, mutate: mutateUsers } = useUsers(1, 100);
-    const [admins, setAdmins] = useState([]);
-    const [interns, setInterns] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // --- Search & Filter State ---
+    const [searchQuery, setSearchQuery] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [sortBy, setSortBy] = useState('newest');
+    const [userFilter, setUserFilter] = useState('all'); // 'intern', 'admin', 'ambassador', 'all'
+
+    // Debounce search input
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+        }, 300);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
+
+    const { users: allUsersFromApi, isLoading: usersLoading, mutate: mutateUsers } = useUsers(1, 100, debouncedSearch, userFilter, sortBy);
+
+    const interns = useMemo(() => allUsersFromApi?.filter(u => u.role === 'intern') || [], [allUsersFromApi]);
+    const admins = useMemo(() => allUsersFromApi?.filter(u => ['admin', 'administrative', 'superadmin'].includes(u.role?.toLowerCase())) || [], [allUsersFromApi]);
 
     // --- State Persistence ---
     useEffect(() => {
@@ -70,9 +89,7 @@ export default function UnifiedUsersPage() {
             sessionStorage.setItem('us_activeTab', activeTab);
         }
     }, [activeTab]);
-    const [searchQuery, setSearchQuery] = useState("");
-    const [sortBy, setSortBy] = useState('newest');
-    const [userFilter, setUserFilter] = useState('all'); // 'intern', 'admin', 'ambassador', 'all'
+    
     const [tracks, setTracks] = useState([]);
     const [ambassadors, setAmbassadors] = useState([]);
 
@@ -117,6 +134,7 @@ export default function UnifiedUsersPage() {
         phone: "",
         password: generateRandomPassword(),
         role: "intern",
+        category: "",
         track: "",
         aadhaarNumber: "",
         discountPercentage: 10,
@@ -125,12 +143,8 @@ export default function UnifiedUsersPage() {
     });
 
     useEffect(() => {
-        if (allUsersFromApi) {
-            setAdmins(allUsersFromApi.filter(u => u.role?.toLowerCase() === 'admin'));
-            setInterns(allUsersFromApi.filter(u => u.role?.toLowerCase() === 'intern'));
-            setLoading(usersLoading);
-        }
-    }, [allUsersFromApi, usersLoading]);
+        setLoading(usersLoading);
+    }, [usersLoading]);
 
     useEffect(() => {
         fetchTracks();
@@ -152,10 +166,12 @@ export default function UnifiedUsersPage() {
             const res = await fetch('/api/admin/tracks');
             if (res.ok) {
                 const data = await res.json();
-                const allTracks = [...(data.CODING || []), ...(data.RESEARCH || [])];
-                setTracks(allTracks);
-                if (allTracks.length > 0) {
-                    setAdminForm(prev => ({ ...prev, track: allTracks[0].name }));
+                // data is an array of track objects
+                setTracks(data);
+                if (data.length > 0) {
+                    const firstCategory = data[0].category;
+                    const firstTrack = data[0].name;
+                    setAdminForm(prev => ({ ...prev, category: firstCategory, track: firstTrack }));
                 }
             }
         } catch (error) { console.error("Network Failure connecting to Track Central", error); }
@@ -185,8 +201,8 @@ export default function UnifiedUsersPage() {
         setLoadingDetail(true);
         setSelectedUserData(null);
         try {
-            // Find base user info first
-            const user = interns.find(i => i._id === userId) || admins.find(a => a._id === userId);
+            // Base user info
+            const user = allUsersFromApi?.find(u => u._id === userId) || ambassadors.find(a => a._id === userId);
             
             const res = await fetch(`/api/admin/users/result?userId=${userId}`);
             if (res.ok) {
@@ -284,18 +300,19 @@ export default function UnifiedUsersPage() {
     const allUsers = useMemo(() => {
         const merged = new Map();
 
-        // 1. Add interns/admins
-        const userRecords = [...interns, ...admins];
-        userRecords.forEach(u => {
-            const emailKey = u.email?.toLowerCase();
-            if (emailKey) {
-                merged.set(emailKey, {
-                    ...u,
-                    isAmbassador: false,
-                    roles: [u.role?.toLowerCase()]
-                });
-            }
-        });
+        // 1. Add API Users
+        if (allUsersFromApi) {
+            allUsersFromApi.forEach(u => {
+                const emailKey = u.email?.toLowerCase();
+                if (emailKey) {
+                    merged.set(emailKey, {
+                        ...u,
+                        isAmbassador: false,
+                        roles: [u.role?.toLowerCase()]
+                    });
+                }
+            });
+        }
 
         // 2. Merge ambassadors
         ambassadors.forEach(a => {
@@ -314,41 +331,25 @@ export default function UnifiedUsersPage() {
                         ambassadorId: a._id,
                         roles: [...existing.roles, 'ambassador']
                     });
-                } else {
-                    merged.set(emailKey, {
-                        ...a,
-                        role: 'ambassador',
-                        isAmbassador: true,
-                        roles: ['ambassador']
-                    });
+                } else if (userFilter === 'all' || userFilter === 'ambassador') {
+                    // Include if filtering for all or ambassadors specifically
+                    // and apply search filter client-side for these fallback ones
+                    if (!debouncedSearch || a.fullName?.toLowerCase().includes(debouncedSearch.toLowerCase()) || a.email?.toLowerCase().includes(debouncedSearch.toLowerCase())) {
+                        merged.set(emailKey, {
+                            ...a,
+                            role: 'ambassador',
+                            isAmbassador: true,
+                            roles: ['ambassador']
+                        });
+                    }
                 }
             }
         });
 
         return Array.from(merged.values());
-    }, [interns, admins, ambassadors]);
+    }, [allUsersFromApi, ambassadors, userFilter, debouncedSearch]);
 
-    const filteredUsers = useMemo(() => {
-        return allUsers
-            .filter(u => {
-                if (userFilter === 'all') return true;
-                if (u.roles) {
-                    return u.roles.includes(userFilter.toLowerCase());
-                }
-                return u.role?.toLowerCase() === userFilter.toLowerCase();
-            })
-            .filter(u =>
-                u.fullName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                u.track?.toLowerCase().includes(searchQuery.toLowerCase())
-            )
-            .sort((a, b) => {
-                if (sortBy === 'score') return (b.assessmentScore || 0) - (a.assessmentScore || 0);
-                if (sortBy === 'name') return (a.fullName || '').localeCompare(b.fullName || '');
-                if (sortBy === 'role') return (a.role || '').localeCompare(b.role || '');
-                return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
-            });
-    }, [allUsers, userFilter, searchQuery, sortBy]);
+    const filteredUsers = allUsers; // Filters and search are now handled server-side
 
     return (
         <div className="animate-in fade-in duration-500">
@@ -477,9 +478,9 @@ export default function UnifiedUsersPage() {
                                             <tr key={user._id} className="group hover:bg-gray-50/50 transition-all cursor-pointer" onClick={() => router.push(`/admin/users/${user._id}`)}>
                                                 <td className="p-6">
                                                     <div className="flex items-center gap-4">
-                                                        <div className={`w-12 h-12 rounded-2xl overflow-hidden border-2 shadow-sm transition-transform group-hover:scale-105 flex items-center justify-center bg-gray-50 
+                                                        <div className={`w-12 h-12 relative rounded-2xl overflow-hidden border-2 shadow-sm transition-transform group-hover:scale-105 flex items-center justify-center bg-gray-50 
                                                             ${user.role?.toLowerCase() === 'admin' ? 'border-purple-100' : user.role?.toLowerCase() === 'ambassador' ? 'border-amber-100' : 'border-gray-100'}`}>
-                                                            <img 
+                                                            <Image 
                                                                 src={
                                                                     (user.profilePicture && user.profilePicture !== "null") 
                                                                     ? user.profilePicture 
@@ -488,8 +489,11 @@ export default function UnifiedUsersPage() {
                                                                     : dicebear(user.avatarSeed || user.fullName?.split(' ')[0] || "User")
                                                                 } 
                                                                 alt="U" 
-                                                                className="w-full h-full object-cover"
+                                                                fill
+                                                                sizes="48px"
+                                                                className="object-cover"
                                                                 onError={(e) => { e.target.src = dicebear("User"); }}
+                                                                unoptimized
                                                             />
                                                         </div>
                                                         <div className="space-y-0.5">
@@ -625,12 +629,13 @@ export default function UnifiedUsersPage() {
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Phone Number</label>
-                                        <input
-                                            className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] shadow-inner"
+                                        <PhoneInput
+                                            defaultCountry="IN"
                                             placeholder="Phone Number"
                                             value={adminForm.phone}
-                                            onChange={e => setAdminForm({ ...adminForm, phone: e.target.value })}
-                                            required
+                                            onChange={(value) => setAdminForm({ ...adminForm, phone: value })}
+                                            className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus-within:ring-8 focus-within:ring-black/5 text-black font-bold text-[11px] shadow-inner transition-all"
+                                            style={{ '--PhoneInput-color--focus': 'black' }}
                                         />
                                     </div>
 
@@ -686,18 +691,42 @@ export default function UnifiedUsersPage() {
                                     )}
 
                                     {adminForm.role === 'intern' && (
-                                        <div className="space-y-2 animate-in slide-in-from-top-2">
-                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Track</label>
-                                            <div className="relative">
-                                                <select
-                                                    className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] uppercase appearance-none cursor-pointer"
-                                                    value={adminForm.track}
-                                                    onChange={e => setAdminForm({ ...adminForm, track: e.target.value })}
-                                                    required
-                                                >
-                                                    {tracks.map(t => <option key={t._id} value={t.name}>{t.name}</option>)}
-                                                </select>
-                                                <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                        <div className="space-y-4 animate-in slide-in-from-top-2">
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Category</label>
+                                                <div className="relative">
+                                                    <select
+                                                        className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] uppercase appearance-none cursor-pointer"
+                                                        value={adminForm.category}
+                                                        onChange={e => {
+                                                            const newCat = e.target.value;
+                                                            const firstTrack = tracks.find(t => t.category === newCat)?.name || "";
+                                                            setAdminForm({ ...adminForm, category: newCat, track: firstTrack });
+                                                        }}
+                                                        required
+                                                    >
+                                                        {[...new Set(tracks.map(t => t.category))].map(cat => (
+                                                            <option key={cat} value={cat}>{cat}</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-2">Track</label>
+                                                <div className="relative">
+                                                    <select
+                                                        className="w-full px-6 py-4 bg-gray-50/50 border border-gray-100 rounded-xl focus:ring-8 focus:ring-black/5 text-black font-bold text-[11px] uppercase appearance-none cursor-pointer"
+                                                        value={adminForm.track}
+                                                        onChange={e => setAdminForm({ ...adminForm, track: e.target.value })}
+                                                        required
+                                                    >
+                                                        {tracks.filter(t => t.category === adminForm.category).map(t => (
+                                                            <option key={t._id} value={t.name}>{t.name}</option>
+                                                        ))}
+                                                    </select>
+                                                    <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                                </div>
                                             </div>
                                         </div>
                                     )}

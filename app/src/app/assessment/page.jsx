@@ -381,7 +381,7 @@ function AssessmentContent() {
  
     if (isSubmitted) {
         const isRejected = user?.status === 'REJECTED' || user?.selectionStatus === 'Rejected';
-        const isSelected = user?.selectionStatus === 'Selected';
+        const isSelected = user?.status === 'SELECTED' || user?.selectionStatus === 'Selected';
         
         // Calculations
         const finalScore = assessmentResult?.score ?? user?.assessmentResult?.score ?? 0;
@@ -394,8 +394,10 @@ function AssessmentContent() {
         const formattedTime = timeTaken !== undefined ? `${minutes}M ${seconds}S` : 'N/A';
         
         const performance = scorePct >= 90 ? 'EXCELLENT' : scorePct >= 75 ? 'GOOD' : 'AVERAGE';
-        const enrollmentStatus = isSelected ? 'SELECTED' : isRejected ? 'REJECTED' : 'PENDING REVIEW';
-        const hasPassed = isSelected || scorePct >= 75;
+        
+        const isResultsPending = user?.status === 'ASSESSMENT_COMPLETED' || (!isSelected && !isRejected);
+        const enrollmentStatus = isSelected ? 'SELECTED' : isRejected ? 'REJECTED' : 'REVIEW PENDING';
+        const hasPassed = isSelected || (!isResultsPending && scorePct >= 75);
 
         return (
             <div 
@@ -444,7 +446,7 @@ function AssessmentContent() {
                             </>
                         ) : (
                             <>
-                                <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.4em]">EVALUATION COMPLETED</p>
+                                <p className="text-[10px] font-black text-neutral-400 uppercase tracking-[0.4em]">REVIEW PENDING</p>
                                 <h1 className="text-5xl font-black text-black uppercase tracking-tighter">YOUR EXAM PAPER IS UNDER REVIEW</h1>
                             </>
                         )}
@@ -482,27 +484,43 @@ function AssessmentContent() {
                             <div className="space-y-5">
                                 <p className="text-[10px] font-black text-neutral-400 uppercase tracking-widest">PERFORMANCE SUMMARY</p>
                                 
-                                <div>
-                                    <p className="text-[9px] font-black text-neutral-400 uppercase tracking-wider mb-1">Final Score</p>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-4xl font-black text-black">{finalScore}</span>
-                                        <span className="text-xl font-bold text-neutral-300">/ {totalQuestions}</span>
-                                        <span className="text-sm font-black text-neutral-400 ml-2">({Math.round(scorePct)}%)</span>
+                                {isResultsPending ? (
+                                    <div className="space-y-6 py-4 flex-1 flex flex-col justify-center">
+                                        <p className="text-xs font-semibold text-neutral-500 leading-relaxed">
+                                            Your exam review is pending. Your final score and performance metrics will be displayed here once the review process is completed by the administration.
+                                        </p>
+                                        <div className="pt-2">
+                                            <p className="text-[9px] font-black text-neutral-400 uppercase tracking-wider mb-1.5">Enrollment Status</p>
+                                            <span className="inline-block bg-black text-white text-[9px] font-black rounded-lg tracking-widest uppercase px-3 py-1 rounded">
+                                                {enrollmentStatus}
+                                            </span>
+                                        </div>
                                     </div>
-                                </div>
+                                ) : (
+                                    <>
+                                        <div>
+                                            <p className="text-[9px] font-black text-neutral-400 uppercase tracking-wider mb-1">Final Score</p>
+                                            <div className="flex items-baseline gap-2">
+                                                <span className="text-4xl font-black text-black">{finalScore}</span>
+                                                <span className="text-xl font-bold text-neutral-300">/ {totalQuestions}</span>
+                                                <span className="text-sm font-black text-neutral-400 ml-2">({Math.round(scorePct)}%)</span>
+                                            </div>
+                                        </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <p className="text-[9px] font-black text-neutral-400 uppercase tracking-wider mb-1">Performance</p>
-                                        <p className="text-sm font-black text-black uppercase">{performance}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[9px] font-black text-neutral-400 uppercase tracking-wider mb-1">Enrollment Status</p>
-                                        <span className="inline-block bg-black text-white text-[9px] font-black rounded-lg  tracking-widest uppercase px-3 py-1 rounded">
-                                            {enrollmentStatus}
-                                        </span>
-                                    </div>
-                                </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <p className="text-[9px] font-black text-neutral-400 uppercase tracking-wider mb-1">Performance</p>
+                                                <p className="text-sm font-black text-black uppercase">{performance}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[9px] font-black text-neutral-400 uppercase tracking-wider mb-1">Enrollment Status</p>
+                                                <span className="inline-block bg-black text-white text-[9px] font-black rounded-lg  tracking-widest uppercase px-3 py-1 rounded">
+                                                    {enrollmentStatus}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             {isSelected && (
@@ -872,7 +890,7 @@ function AssessmentContent() {
                                         />
                                     </div>
                                     <label htmlFor="modalAgreeCheck" className="text-[12px] font-bold text-black leading-relaxed cursor-pointer select-none">
-                                        "I understand this assessment is mandatory for evaluation and I agree to abide by all the exam rules and guidelines."
+                                        &ldquo;I understand this assessment is mandatory for evaluation and I agree to abide by all the exam rules and guidelines.&rdquo;
                                     </label>
                                 </div>
                             </div>

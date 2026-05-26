@@ -5,10 +5,21 @@ import { fetcher } from '../utils/fetcher.js';
  * Custom hook for fetching users with pagination and error handling.
  * @param {number} page - The current page.
  * @param {number} limit - Items per page.
+ * @param {string} search - Search query.
+ * @param {string} roleFilter - Role filter.
+ * @param {string} sort - Sort order.
  */
-export function useUsers(page = 1, limit = 10) {
+export function useUsers(page = 1, limit = 100, search = '', roleFilter = 'all', sort = 'newest') {
+    const queryParams = new URLSearchParams({
+        page,
+        limit,
+        ...(search && { search }),
+        ...(roleFilter && roleFilter !== 'all' && { roleFilter }),
+        ...(sort && sort !== 'newest' && { sort })
+    }).toString();
+
     const { data, error, isLoading, mutate } = useSWR(
-        `/api/admin/users?page=${page}&limit=${limit}`,
+        `/api/admin/users?${queryParams}`,
         fetcher,
         {
             revalidateOnFocus: false, // Prevents unnecessary refetches when switching tabs

@@ -235,6 +235,13 @@ export default function LiveBookDashboard() {
     const [courses, setCourses] = useState([]);
     const [topics, setTopics] = useState([]);
     const [userTrack, setUserTrack] = useState("");
+    const [searchQuery, setSearchQuery] = useState("");
+
+    const filteredCourses = courses.filter(course => {
+        if (!searchQuery.trim()) return true;
+        const q = searchQuery.toLowerCase();
+        return (course.title || '').toLowerCase().includes(q) || (course.desc || '').toLowerCase().includes(q);
+    });
 
     useEffect(() => {
         const fetchContent = async () => {
@@ -307,95 +314,111 @@ export default function LiveBookDashboard() {
                                     <div className="relative w-80 group">
                                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 group-focus-within:text-black transition-colors" />
                                         <input 
+                                            value={searchQuery}
+                                            onChange={e => setSearchQuery(e.target.value)}
                                             placeholder="SEARCH LIVEBOOKS..."
                                             className="w-full bg-gray-50 border-0 rounded-xl pl-10 pr-4 py-3 text-[10px] font-black uppercase tracking-widest outline-none focus:ring-8 focus:ring-black/5 transition-all text-gray-900 placeholder:text-gray-300"
                                         />
                                     </div>
                                 </div>
-                            </header>
-
-                            <div className="px-4 pb-20">
+                            </header>                             <div className="px-4 pb-20">
                                 {/* Simple Course Grid */}
                                 <main className="w-full">
                                     <div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
-                                            {courses.map((course, idx) => {
-                                                const Icon = CARD_ICONS[idx % CARD_ICONS.length];
-                                                const moduleCount = course.modules?.length || 0;
-                                                const topicCount = topics.filter(t => t.course === course.title).length;
-                                                const unitCount = topics.filter(t => t.course === course.title).reduce((acc, b) => acc + (b.blocks?.length || 0), 0);
-                                                
-                                                return (
-                                                    <div
-                                                        key={course._id}
-                                                        onClick={() => { setSelectedCourse(course); setView("overview"); }}
-                                                        className="bg-white border border-gray-100 rounded-[1.5rem] p-8 shadow-sm hover:shadow-xl hover:shadow-black/5 hover:border-gray-300 transition-all duration-500 cursor-pointer group relative flex flex-col justify-between h-[360px]"
-                                                    >
-                                                        <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.1] transition-opacity">
-                                                            {(() => {
-                                                                    const Icon = {
-                                                                        'Brain': Brain,
-                                                                        'Monitor': Monitor,
-                                                                        'Database': Database,
-                                                                        'Blocks': Blocks,
-                                                                        'Zap': Zap,
-                                                                        'Layers': Layers,
-                                                                        'Cpu': Cpu,
-                                                                        'Sparkles': Sparkles,
-                                                                        'BookOpen': BookOpen
-                                                                    }[course.icon] || BookOpen;
-                                                                    return <Icon className="w-32 h-32" />;
-                                                                })()}
-                                                        </div>
-                                                        <div className="space-y-6">
-                                                            <div className="w-14 h-14 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center mb-6 shadow-sm transition-all group-hover:scale-110 group-hover:border-black group-hover:bg-white">
+                                        {courses.length === 0 ? (
+                                            <div className="py-20 text-center flex flex-col items-center justify-center">
+                                                <BookOpen className="w-16 h-16 text-gray-200 mb-6" />
+                                                <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">
+                                                    livebooks are yet to add
+                                                </p>
+                                            </div>
+                                        ) : filteredCourses.length === 0 ? (
+                                            <div className="py-20 text-center flex flex-col items-center justify-center">
+                                                <Search className="w-16 h-16 text-gray-200 mb-6" />
+                                                <p className="text-gray-400 font-black uppercase tracking-widest text-[10px]">
+                                                    No matching livebooks found
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+                                                {filteredCourses.map((course, idx) => {
+                                                    const Icon = CARD_ICONS[idx % CARD_ICONS.length];
+                                                    const moduleCount = course.modules?.length || 0;
+                                                    const topicCount = topics.filter(t => t.course === course.title).length;
+                                                    const unitCount = topics.filter(t => t.course === course.title).reduce((acc, b) => acc + (b.blocks?.length || 0), 0);
+                                                    
+                                                    return (
+                                                        <div
+                                                            key={course._id}
+                                                            onClick={() => { setSelectedCourse(course); setView("overview"); }}
+                                                            className="bg-white border border-gray-100 rounded-[1.5rem] p-8 shadow-sm hover:shadow-xl hover:shadow-black/5 hover:border-gray-300 transition-all duration-500 cursor-pointer group relative flex flex-col justify-between h-[360px]"
+                                                        >
+                                                            <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.1] transition-opacity">
                                                                 {(() => {
-                                                                    const Icon = {
-                                                                        'Brain': Brain,
-                                                                        'Monitor': Monitor,
-                                                                        'Database': Database,
-                                                                        'Blocks': Blocks,
-                                                                        'Zap': Zap,
-                                                                        'Layers': Layers,
-                                                                        'Cpu': Cpu,
-                                                                        'Sparkles': Sparkles,
-                                                                        'BookOpen': BookOpen
-                                                                    }[course.icon] || BookOpen;
-                                                                    return <Icon className="w-7 h-7 text-black" />;
-                                                                })()}
+                                                                        const Icon = {
+                                                                            'Brain': Brain,
+                                                                            'Monitor': Monitor,
+                                                                            'Database': Database,
+                                                                            'Blocks': Blocks,
+                                                                            'Zap': Zap,
+                                                                            'Layers': Layers,
+                                                                            'Cpu': Cpu,
+                                                                            'Sparkles': Sparkles,
+                                                                            'BookOpen': BookOpen
+                                                                        }[course.icon] || BookOpen;
+                                                                        return <Icon className="w-32 h-32" />;
+                                                                    })()}
                                                             </div>
-                                                            <div className="space-y-3">
-                                                                <h3 className="text-lg md:text-xl font-bold text-gray-900 leading-tight tracking-tight group-hover:text-black">{course.title}</h3>
-                                                                <p className="text-sm text-gray-400 font-medium leading-relaxed line-clamp-3">
-                                                                    {course.desc || 'Comprehensive knowledge base covering high-impact concepts and practical industry implementations.'}
-                                                                </p>
+                                                            <div className="space-y-6">
+                                                                <div className="w-14 h-14 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-center mb-6 shadow-sm transition-all group-hover:scale-110 group-hover:border-black group-hover:bg-white">
+                                                                    {(() => {
+                                                                        const Icon = {
+                                                                            'Brain': Brain,
+                                                                            'Monitor': Monitor,
+                                                                            'Database': Database,
+                                                                            'Blocks': Blocks,
+                                                                            'Zap': Zap,
+                                                                            'Layers': Layers,
+                                                                            'Cpu': Cpu,
+                                                                            'Sparkles': Sparkles,
+                                                                            'BookOpen': BookOpen
+                                                                        }[course.icon] || BookOpen;
+                                                                        return <Icon className="w-7 h-7 text-black" />;
+                                                                    })()}
+                                                                </div>
+                                                                <div className="space-y-3">
+                                                                    <h3 className="text-lg md:text-xl font-bold text-gray-900 leading-tight tracking-tight group-hover:text-black">{course.title}</h3>
+                                                                    <p className="text-sm text-gray-400 font-medium leading-relaxed line-clamp-3">
+                                                                        {course.desc || 'Comprehensive knowledge base covering high-impact concepts and practical industry implementations.'}
+                                                                    </p>
+                                                                </div>
                                                             </div>
-                                                        </div>
 
-                                                        <div className="flex flex-col gap-4">
-                                                            <div className="flex items-center gap-6 pt-6 opacity-60">
-                                                                <div className="flex items-center gap-2">
-                                                                    <Diamond className="w-3.5 h-3.5 text-gray-400" />
-                                                                    <span className="text-[12px] font-bold text-gray-500">{unitCount}</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <Layers className="w-3.5 h-3.5 text-gray-400" />
-                                                                    <span className="text-[12px] font-bold text-gray-500">{moduleCount}</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-2">
-                                                                    <BookOpen className="w-3.5 h-3.5 text-gray-400" />
-                                                                    <span className="text-[12px] font-bold text-gray-500">{topicCount}</span>
-                                                                </div>
-                                                                <div className="ml-auto flex items-center gap-2">
-                                                                    <div className="w-3 h-3 rounded-full bg-white border-2 border-black" />
-                                                                    <span className="text-[12px] font-black text-gray-900">0%</span>
+                                                            <div className="flex flex-col gap-4">
+                                                                <div className="flex items-center gap-6 pt-6 opacity-60">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Diamond className="w-3.5 h-3.5 text-gray-400" />
+                                                                        <span className="text-[12px] font-bold text-gray-500">{unitCount}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Layers className="w-3.5 h-3.5 text-gray-400" />
+                                                                        <span className="text-[12px] font-bold text-gray-500">{moduleCount}</span>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-2">
+                                                                        <BookOpen className="w-3.5 h-3.5 text-gray-400" />
+                                                                        <span className="text-[12px] font-bold text-gray-500">{topicCount}</span>
+                                                                    </div>
+                                                                    <div className="ml-auto flex items-center gap-2">
+                                                                        <div className="w-3 h-3 rounded-full bg-white border-2 border-black" />
+                                                                        <span className="text-[12px] font-black text-gray-900">0%</span>
+                                                                    </div>
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 </main>
                             </div>

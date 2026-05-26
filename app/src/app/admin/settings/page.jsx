@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import { Save, Lock, Fingerprint,Users ,Clock, Shield, RefreshCw, XCircle, Mail, Phone, Calendar, Smile, Upload, Camera, Image as ImageIcon, FileText } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 
 const AVATAR_SEEDS = ["Felix", "Casper", "Sasha", "Bear", "Tigger", "Oliver", "Zephyr", "Nova", "Cosmo", "Pixel", "Cipher", "Echo", "Vega", "Blaze", "Orion", "Lyra", "Atlas", "Iris", "Luna", "Kai", "Milo", "Jade", "Remy", "Scout"];
 const dicebear = (seed) => `https://api.dicebear.com/7.x/micah/svg?seed=${encodeURIComponent(seed)}&backgroundColor=transparent`;
@@ -416,11 +418,13 @@ export default function AdminSettingsPage() {
                                     </div>
                                     <div className="space-y-1.5 min-w-0">
                                         <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Phone Number</label>
-                                        <input 
-                                            type="text" 
-                                            value={tempDetails.phone || ''} 
-                                            onChange={e => setTempDetails({...tempDetails, phone: e.target.value})}
-                                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-black/5" 
+                                        <PhoneInput
+                                            defaultCountry="IN"
+                                            placeholder="Phone Number"
+                                            value={tempDetails.phone || ''}
+                                            onChange={(value) => setTempDetails({...tempDetails, phone: value})}
+                                            className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 text-sm font-bold focus-within:ring-4 focus-within:ring-black/5 transition-all outline-none"
+                                            style={{ '--PhoneInput-color--focus': 'black' }}
                                         />
                                     </div>
                                     <div className="space-y-1.5 min-w-0">

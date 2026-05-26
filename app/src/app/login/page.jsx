@@ -149,7 +149,7 @@ export default function LoginPage() {
 
                     {terminatedInfo && (
                         <div className="bg-red-50 border border-red-200 rounded-2xl p-4 space-y-1">
-                            <p className="text-sm font-black text-red-700">⛔ Account Terminated</p>
+                            <p className="text-sm font-black text-red-700"> Account Terminated</p>
                             <p className="text-xs text-red-500 font-medium">Your internship account has been terminated and access has been revoked.</p>
                             <p className="text-xs font-bold text-red-600 mt-1">
                                 For queries, contact:{" "}

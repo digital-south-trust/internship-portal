@@ -45,7 +45,7 @@ const UserSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['NEW', 'OTP_VERIFIED', 'ASSESSMENT_COMPLETED', 'SELECTED', 'REJECTED', 'PROFILE_PENDING', 'VERIFIED', 'ACTIVE', 'Terminated'],
+        enum: ['NEW', 'OTP_VERIFIED', 'ASSESSMENT_COMPLETED', 'SELECTED', 'REJECTED', 'PROFILE_PENDING', 'VERIFIED', 'ACTIVE', 'Terminated', 'Cancelled'],
         default: 'NEW',
     },
     otp: {
@@ -124,7 +124,7 @@ const UserSchema = new mongoose.Schema({
     },
     selectionStatus: {
         type: String,
-        enum: ['Pending Selection (24h Buffer)', 'Selected', 'Rejected'],
+        enum: ['Pending Selection (24h Buffer)', 'Selected', 'Rejected', 'Access given by admin'],
         default: 'Pending Selection (24h Buffer)',
     },
     aadharVerificationTries: {
@@ -135,6 +135,23 @@ const UserSchema = new mongoose.Schema({
         type: String,
         default: null,
     },
+    cancelReason: {
+        type: String,
+        default: null,
+    },
 }, { timestamps: true });
 
+// Performance Indexes
+UserSchema.index({ status: 1 });
+UserSchema.index({ role: 1 });
+UserSchema.index({ track: 1 });
+UserSchema.index({ selectionStatus: 1 });
+UserSchema.index({ assignedAdmin: 1 });
+UserSchema.index({ role: 1, createdAt: -1 });
+
+if (mongoose.models.User) {
+    delete mongoose.models.User;
+}
 export default mongoose.models.User || mongoose.model('User', UserSchema);
+
+// Trigger HMR
