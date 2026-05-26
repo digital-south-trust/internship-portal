@@ -67,6 +67,11 @@ const ExamSchema = new Schema({
     },
 });
 
+// Performance Indexes
+ExamSchema.index({ status: 1 });
+ExamSchema.index({ track: 1 });
+ExamSchema.index({ scheduledAt: 1 });
+
 // Prevent Mongoose overwrite warning or stale model in dev
 if (process.env.NODE_ENV !== 'production') {
     delete models.Exam;

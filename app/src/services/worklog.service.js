@@ -60,7 +60,7 @@ export const WorklogService = {
         const presentLogs = logs.filter(l => l.status === 'Present').length;
         const attendancePercentage = totalLogs > 0 
             ? Math.round((presentLogs / totalLogs) * 100) 
-            : 100;
+            : 0;
 
         return {
             logs,

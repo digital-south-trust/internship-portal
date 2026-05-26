@@ -33,6 +33,9 @@ import { ParticleTextEffect } from '@/components/ui/particle-text-effect';
 import { AuroraBackground } from '@/components/ui/aurora-background';
 import { motion } from 'framer-motion';
 
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
+
 function ProfileSkeleton() {
     return (
         <div className="min-h-screen bg-white flex items-center justify-center p-4 relative overflow-hidden font-sans">
@@ -438,21 +441,20 @@ export default function CompleteProfilePage() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-black uppercase tracking-widest flex items-center gap-2"><Phone className="w-2.5 h-2.5" /> Phone Number</label>
-                                        <input
-                                            type="tel"
-                                            name="phone"
+                                        <PhoneInput
+                                            defaultCountry="IN"
+                                            placeholder="Enter phone number"
                                             value={formData.phone}
-                                            onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value.replace(/\D/g, '').slice(0, 10) }))}
-                                            required
-                                            placeholder="10-digit mobile number"
-                                            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-black outline-none transition-all"
+                                            onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
+                                            className="w-full px-4 py-3 rounded-xl transition-all bg-white"
+                                            style={{ '--PhoneInput-color--focus': 'black' }}
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[10px] font-black text-black uppercase tracking-widest flex items-center gap-2"><CalendarIcon className="w-2.5 h-2.5" /> Date of Birth</label>
                                         <Popover>
                                             <PopoverTrigger asChild>
-                                                <button type="button" className="w-full px-4 py-3 rounded-xl border border-gray-200 text-left text-sm font-bold bg-white hover:border-black transition-all flex items-center justify-between">
+                                                <button type="button" className="w-full px-4 py-3 rounded-xl border border-gray-200 text-left text-sm font-bold bg-white Initialize Deployment transition-all flex items-center justify-between">
                                                     {formData.dob ? format(new Date(formData.dob), 'PPP') : <span className="text-gray-400 font-normal">Pick a date</span>}
                                                     <CalendarIcon className="w-3 h-3 text-gray-400" />
                                                 </button>

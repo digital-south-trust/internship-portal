@@ -446,7 +446,7 @@ export default function ProjectsPage() {
                             }}
                             className="inline-flex items-center gap-2 bg-black text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/10 group"
                         >
-                            <Plus className="w-4 h-4" /> Initialize Deployment
+                            <Plus className="w-4 h-4" /> Create
                         </button>
                     </div>
                 </div>
@@ -489,7 +489,7 @@ export default function ProjectsPage() {
                                     )}
                                     <div>
                                         <h3 className="text-3xl font-black text-gray-900 tracking-tighter uppercase leading-none">
-                                            {formData.id ? "System Asset Control" : (modalStep === 1 ? "Mission Select" : projType === 'custom' ? "Custom Intel" : (modalStep === 2 ? "Mission Command" : "Assigned Scope"))}
+                                            {formData.id ? "System Asset Control" : (modalStep === 1 ? "Projects" : projType === 'custom' ? "Custom Intel" : (modalStep === 2 ? "Mission Command" : "Assigned Scope"))}
                                         </h3>
                                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.5em] mt-3 ml-1">Stage {modalStep} of {formData.id ? 2 : (projType === 'preset' ? 3 : 2)}</p>
                                     </div>
@@ -836,7 +836,7 @@ export default function ProjectsPage() {
                                             </div>
                                         )}
                                         <div className="pt-8 flex gap-6 sticky bottom-0 bg-white py-6 border-t border-gray-50 z-20">
-                                            <button type="button" onClick={resetModal} className="flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-black transition-colors">Terminate</button>
+                                            <button type="button" onClick={resetModal} className="flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-black transition-colors">Cancel</button>
                                             {!(projType === 'preset' && modalStep === 2) && (
                                                 <button 
                                                     type="submit" 
@@ -846,7 +846,7 @@ export default function ProjectsPage() {
                                                     {formData.id ? (
                                                         <><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Sync Intelligence</>
                                                     ) : (
-                                                        <><Zap className="w-4 h-4 text-emerald-500 animate-pulse" /> Initiate Deployment</>
+                                                        <><Zap className="w-4 h-4 text-emerald-500 " /> Submit for Review</>
                                                     )}
                                                 </button>
                                             )}

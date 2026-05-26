@@ -250,3 +250,38 @@ export async function sendMeetingCancellation({ to, internName, date, time, desc
 
   return sendEmail(to, subject, html);
 }
+
+export async function sendManualCredentialEmail({ to, recipientName, password, role }) {
+  const subject = `🔐 Your Account Credentials - Internship Portal`;
+  const roleName = role === 'admin' ? 'Administrator' : 'Intern Candidate';
+
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; color: #1e293b;">
+      <div style="text-align: center; margin-bottom: 24px;">
+        <span style="background: #f1f5f9; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; color: #64748b; text-transform: uppercase;">Portal Access Credentials</span>
+      </div>
+      <h2 style="color: #000; margin-bottom: 16px; font-size: 24px; font-weight: 800; text-align: center;">Account Created Successfully</h2>
+      <p>Hi <strong>${recipientName}</strong>,</p>
+      <p>An administrator has manually created your account as an <strong>${roleName}</strong> on the Internship Portal.</p>
+      <p>Here are your access credentials to login:</p>
+      
+      <div style="background-color: #f8fafc; padding: 20px; border-radius: 12px; margin: 24px 0; border: 1px solid #f1f5f9;">
+        <p style="margin: 8px 0; font-size: 14px;"><strong>📧 Login Email:</strong> ${to}</p>
+        <p style="margin: 8px 0; font-size: 14px;"><strong>🔑 Temporary Password:</strong> <code style="background: #e2e8f0; padding: 2px 6px; border-radius: 4px; font-family: monospace;">${password}</code></p>
+      </div>
+      
+      <p style="text-align: center; margin-top: 32px; margin-bottom: 24px;">
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login" style="display: inline-block; padding: 14px 32px; background-color: #000; color: #fff; text-decoration: none; font-weight: bold; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">Log In Now</a>
+      </p>
+      
+      <p style="font-size: 13px; color: #64748b; text-align: center; line-height: 1.6;">
+        For security purposes, we recommend changing your password immediately after logging in.
+      </p>
+      <div style="margin-top: 32px; padding-top: 24px; border-top: 1px solid #f1f5f9; text-align: center;">
+        <p style="font-size: 12px; color: #94a3b8;">This is an automated notification from the Digital South Internship Program.</p>
+      </div>
+    </div>
+  `;
+
+  return sendEmail(to, subject, html);
+}

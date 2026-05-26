@@ -25,10 +25,11 @@ export default function AdminTracksPage() {
     const [isTrackEditModalOpen, setIsTrackEditModalOpen] = useState(false);
     const [editingTrack, setEditingTrack] = useState(null);
     const [deleteTrackTarget, setDeleteTrackTarget] = useState(null);
+    const [deleteCategoryTarget, setDeleteCategoryTarget] = useState(null);
     const [newTrackCategory, setNewTrackCategory] = useState("");
     const [isChoiceModalOpen, setIsChoiceModalOpen] = useState(false);
     const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-    const [categorySource, setCategorySource] = useState("CHOICE"); // CHOICE or MANAGE
+    const [categorySource, setCategorySource] = useState("CHOICE");
     const [newCategoryName, setNewCategoryName] = useState("");
     const [apiCategories, setApiCategories] = useState([]);
     const [isRefreshing, setIsRefreshing] = useState(false);
@@ -229,7 +230,6 @@ export default function AdminTracksPage() {
     };
 
     const handleDeleteCategory = async (id) => {
-        if (!confirm("Warning: Deleting a Title will NOT delete the tracks inside it, but they will become uncategorized. Proceed?")) return;
         const tid = toast.loading("Removing Title...");
         try {
             const res = await fetch(`/api/admin/tracks/categories?id=${id}`, { method: "DELETE" });
@@ -405,53 +405,68 @@ export default function AdminTracksPage() {
                 {isCategoryManageModalOpen && (
                     <div key="manage-titles-overlay" className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsCategoryManageModalOpen(false)} />
-                        <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden">
+                        <motion.div initial={{ opacity: 0, scale: 0.9, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9, y: 20 }} className="bg-white w-full max-w-4xl rounded-[3rem] shadow-2xl relative z-10 overflow-hidden border border-gray-100 animate-in zoom-in-95 duration-250">
                             <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-gray-50/30">
                                 <div className="flex items-center gap-4">
                                     <div className="w-10 h-10 bg-black text-white rounded-xl flex items-center justify-center shadow-lg shadow-black/10">
                                         <Layout className="w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h2 className="text-lg font-black uppercase tracking-tighter text-black">Manage Titles</h2>
-                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">Edit or remove parent categories</p>
+                                        <h2 className="text-xl font-black uppercase tracking-tighter text-black">Manage Titles (Main Track)</h2>
+                                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">Manage main track categories and view linked sub-tracks</p>
                                     </div>
                                 </div>
-                                <button onClick={() => setIsCategoryManageModalOpen(false)} className="w-10 h-10 bg-white border border-gray-100 text-gray-400 hover:text-black rounded-xl flex items-center justify-center transition-all hover:bg-gray-50"><X className="w-4 h-4" /></button>
+                                <div className="flex items-center gap-3">
+                                    <button 
+                                        onClick={() => { setIsCategoryManageModalOpen(false); setIsCategoryModalOpen(true); setCategorySource("MANAGE"); }} 
+                                        className="px-5 py-2.5 bg-black hover:bg-neutral-800 text-white rounded-xl text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all shadow-lg shadow-black/10 active:scale-95 animate-in fade-in"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" /> Add Title
+                                    </button>
+                                    <button onClick={() => setIsCategoryManageModalOpen(false)} className="w-10 h-10 bg-white border border-gray-100 text-gray-400 hover:text-black rounded-xl flex items-center justify-center transition-all hover:bg-gray-50"><X className="w-4 h-4" /></button>
+                                </div>
                             </div>
-                            <div className="p-8 max-h-[400px] overflow-y-auto space-y-3">
-                                {apiCategories.map((cat, idx) => (
-                                    <div key={cat._id || `cat-${idx}`} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border border-gray-100 group">
-                                        {editingCategory?._id === cat._id ? (
-                                            <form onSubmit={handleEditCategory} className="flex items-center gap-3 w-full">
-                                                <input 
-                                                    value={editCategoryName} 
-                                                    onChange={(e) => setEditCategoryName(e.target.value)}
-                                                    className="flex-1 bg-white border border-gray-200 rounded-xl px-4 py-2 text-xs font-bold outline-none uppercase"
-                                                    autoFocus
-                                                />
-                                                <button type="submit" className="px-4 py-2 bg-black text-white rounded-xl text-[9px] font-black uppercase">Save</button>
-                                                <button type="button" onClick={() => setEditingCategory(null)} className="text-[9px] font-black text-gray-400 uppercase">Cancel</button>
-                                            </form>
-                                        ) : (
-                                            <>
-                                                <span className="text-xs font-black text-black uppercase tracking-wide">{cat.name}</span>
-                                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                                    <button onClick={() => { setEditingCategory(cat); setEditCategoryName(cat.name); }} className="p-2 text-gray-400 hover:text-black transition-colors">
-                                                        <Edit3 className="w-3.5 h-3.5" />
-                                                    </button>
-                                                    <button onClick={() => handleDeleteCategory(cat._id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors">
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
+                            <div className="p-8 max-h-[520px] overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50/10">
+                                {apiCategories.map((cat, idx) => {
+                                    const tracksInCat = allTracksList.filter(t => t.category === cat.name);
+                                    return (
+                                        <div key={cat._id || `cat-${idx}`} className="p-6 bg-white rounded-3xl border border-gray-100 flex flex-col justify-between gap-4 hover:shadow-lg transition-all group relative">
+                                            <div className="space-y-4">
+                                                <div className="flex items-start justify-between gap-4">
+                                                    <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+                                                        {editingCategory?._id === cat._id ? (
+                                                            <form onSubmit={handleEditCategory} className="flex items-center gap-2 w-full">
+                                                                <input 
+                                                                    value={editCategoryName} 
+                                                                    onChange={(e) => setEditCategoryName(e.target.value)}
+                                                                    className="flex-1 bg-gray-50 border border-gray-200 rounded-lg px-3 py-1 text-xs font-bold outline-none uppercase"
+                                                                    autoFocus
+                                                                />
+                                                                <button type="submit" className="px-2.5 py-1.5 bg-black text-white rounded-lg text-[8px] font-black uppercase">Save</button>
+                                                                <button type="button" onClick={() => setEditingCategory(null)} className="text-[8px] font-black text-gray-400 uppercase">Cancel</button>
+                                                            </form>
+                                                        ) : (
+                                                            <span className="text-xs font-black text-black uppercase tracking-wide truncate">{cat.name}</span>
+                                                        )}
+                                                    </div>
+                                                    {editingCategory?._id !== cat._id && (
+                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity absolute top-6 right-6">
+                                                            <button onClick={() => { setEditingCategory(cat); setEditCategoryName(cat.name); }} className="p-1.5 text-gray-400 hover:text-black transition-colors" title="Rename Title">
+                                                                <Edit3 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                            <button onClick={() => setDeleteCategoryTarget(cat)} className="p-1.5 text-gray-400 hover:text-red-500 transition-colors" title="Delete Title">
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            </>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                            <div className="p-8 bg-gray-50/50 border-t border-gray-100">
-                                <button onClick={() => { setIsCategoryManageModalOpen(false); setIsCategoryModalOpen(true); setCategorySource("MANAGE"); }} className="w-full py-4 bg-white border border-gray-200 text-black rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-gray-50 transition-all flex items-center justify-center gap-2">
-                                    <Plus className="w-4 h-4" /> Add New Title
-                                </button>
+                                                
+                                               
+                                            </div>
+
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </motion.div>
                     </div>
@@ -599,6 +614,35 @@ export default function AdminTracksPage() {
                             <div className="flex gap-4">
                                 <button onClick={() => setDeleteTrackTarget(null)} className="flex-1 py-4 bg-gray-50 text-black rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all">Cancel</button>
                                 <button onClick={() => handleDeleteTrack(deleteTrackTarget._id || deleteTrackTarget.id)} className="flex-1 py-4 bg-red-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-lg shadow-red-500/20">Remove</button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+
+                {/* Delete Category Confirm */}
+                {deleteCategoryTarget && (
+                    <div key="delete-category-confirm-overlay" className="fixed inset-0 z-[120] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={() => setDeleteCategoryTarget(null)} />
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white w-full max-w-md rounded-[2.5rem] p-10 text-center relative z-10 border border-gray-50 shadow-2xl animate-in zoom-in-95">
+                            <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <Trash2 className="w-10 h-10" />
+                            </div>
+                            <h3 className="text-xl font-black uppercase tracking-tighter">Remove Academic Title</h3>
+                            <p className="text-xs font-bold text-gray-400 mt-2 mb-8 leading-relaxed uppercase tracking-widest">
+                                Warning: Deleting the Title <span className="text-black font-black">&ldquo;{deleteCategoryTarget.name}&rdquo;</span> will NOT delete the sub-tracks inside it, but they will become uncategorized. Proceed?
+                            </p>
+                            <div className="flex gap-4">
+                                <button onClick={() => setDeleteCategoryTarget(null)} className="flex-1 py-4 bg-gray-50 text-black rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all">Cancel</button>
+                                <button 
+                                    onClick={() => {
+                                        const catId = deleteCategoryTarget._id;
+                                        setDeleteCategoryTarget(null);
+                                        handleDeleteCategory(catId);
+                                    }} 
+                                    className="flex-1 py-4 bg-rose-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-600 transition-all shadow-xl shadow-rose-500/20"
+                                >
+                                    Remove
+                                </button>
                             </div>
                         </motion.div>
                     </div>

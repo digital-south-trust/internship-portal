@@ -98,7 +98,7 @@ export default function InternSchedulePage() {
                     <div className="flex items-center gap-3">
                         <div className="flex bg-gray-50/50 p-1 rounded-xl border border-gray-100 shadow-sm">
                             {[
-                                { id: 'calendar', label: 'Calendar Grid', icon: CalendarDays },
+                                { id: 'calendar', label: 'Calendar ', icon: CalendarDays },
                                 { id: 'intelligence', label: 'Schedule Hub', icon: LayoutList }
                             ].map(item => (
                                 <button

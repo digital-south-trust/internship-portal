@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import CertificateIssuer from "@/components/CertificateIssuer";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import PhoneInput from 'react-phone-number-input';
+import 'react-phone-number-input/style.css';
 
 const dicebear = (seed) => `https://api.dicebear.com/7.x/micah/svg?seed=${encodeURIComponent(seed)}&backgroundColor=transparent`;
 
@@ -46,6 +48,9 @@ export default function InternDetailsPage() {
     // Certificate modal
     const [showCertsListModal, setShowCertsListModal] = useState(false);
     const [certificates, setCertificates] = useState([]);
+
+    // Cancellation report modal state
+    const [showCancellationReportModal, setShowCancellationReportModal] = useState(false);
 
     // Password reset state
     const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -223,6 +228,7 @@ export default function InternDetailsPage() {
     };
 
     const isTerminated = user?.status === 'Terminated';
+    const isCancelled = user?.status === 'Cancelled' || user?.selectionStatus === 'Cancelled';
 
     if (loading) return (
         <div className="flex justify-center items-center min-h-[50vh]">
@@ -306,12 +312,12 @@ export default function InternDetailsPage() {
                                     'bg-blue-50 text-blue-700 border-blue-100'}`}>
                                     {user.role}
                                 </span>
-                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${isTerminated ? 'text-red-700 bg-red-50 border border-red-100' :
+                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${isTerminated || isCancelled ? 'text-red-700 bg-red-50 border border-red-100' :
                                     user.status === 'Active' ? 'text-green-700 bg-green-50 border border-green-100' :
                                         'text-gray-500 bg-gray-100 border border-gray-200'
                                     }`}>
-                                    <div className={`w-1.5 h-1.5 rounded-full ${isTerminated ? 'bg-red-500' : user.status === 'Active' ? 'bg-green-500' : 'bg-gray-400'}`} />
-                                    {user.status || 'Active'}
+                                    <div className={`w-1.5 h-1.5 rounded-full ${isTerminated || isCancelled ? 'bg-red-500' : user.status === 'Active' ? 'bg-green-500' : 'bg-gray-400'}`} />
+                                    {isCancelled ? 'Cancelled' : user.status || 'Active'}
                                 </span>
                             </div>
                             <p className="text-sm font-bold text-gray-400 flex items-center gap-2">
@@ -428,6 +434,14 @@ export default function InternDetailsPage() {
 
                     {/* Right Vertical Action Stack */}
                     <div className="flex flex-col gap-2 w-full md:w-48 pt-2">
+                        {/* Cancellation Report Button - Shown above Certificates for Cancelled users */}
+                        {profileTab !== 'ambassador' && isCancelled && (
+                            <button onClick={() => setShowCancellationReportModal(true)}
+                                className="bg-red-50 text-red-600 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all flex items-center gap-2 border border-red-100 shadow-sm">
+                                <AlertTriangle className="w-4 h-4" /> View Reason
+                            </button>
+                        )}
+
                         {/* Unified Certificates Button - Hidden for Ambassadors */}
                         {profileTab !== 'ambassador' && (
                             <button onClick={() => setShowCertsListModal(true)}
@@ -446,7 +460,7 @@ export default function InternDetailsPage() {
                         </button>
 
                         {/* Terminate / Reactivate */}
-                        {isTerminated ? (
+                        {(isTerminated || isCancelled) ? (
                             <button onClick={handleReactivate}
                                 className="bg-blue-50 text-blue-600 px-4 py-3 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all flex items-center gap-2 border border-blue-100">
                                 <ShieldCheck className="w-4 h-4" /> Reactivate
@@ -531,7 +545,7 @@ export default function InternDetailsPage() {
                     </h2>
                     {projects.length === 0 ? (
                         <div className="bg-white border border-gray-100 p-8 rounded-3xl text-center text-gray-500 font-medium">
-                            This intern hasn't submitted any projects yet.
+                            This intern hasn&apos;t submitted any projects yet.
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -859,7 +873,7 @@ export default function InternDetailsPage() {
                                     <>
                                         <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100">
                                             <p className="text-xs font-bold text-amber-700 leading-relaxed">
-                                                This will generate a new random password and send it to {user.fullName}'s email address.
+                                                This will generate a new random password and send it to {user.fullName}&apos;s email address.
                                             </p>
                                         </div>
                                         <button onClick={handleResetPassword} disabled={resettingPassword}
@@ -924,9 +938,14 @@ export default function InternDetailsPage() {
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Phone Number</label>
-                                        <input type="text" value={editData.phone || ""} 
-                                            onChange={e => setEditData({...editData, phone: e.target.value})}
-                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none" />
+                                        <PhoneInput
+                                            defaultCountry="IN"
+                                            placeholder="Phone Number"
+                                            value={editData.phone || ""}
+                                            onChange={(value) => setEditData({...editData, phone: value})}
+                                            className="w-full bg-gray-50 border border-transparent focus-within:border-black/5 focus-within:bg-white rounded-2xl px-5 py-4 text-sm font-bold transition-all outline-none"
+                                            style={{ '--PhoneInput-color--focus': 'black' }}
+                                        />
                                     </div>
                                     <div className="space-y-1.5">
                                         <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Aadhaar Number</label>
@@ -1039,6 +1058,67 @@ export default function InternDetailsPage() {
                             </div>
                         </motion.div>
                     </motion.div>
+                )}
+
+                {/* ── Cancellation Report Modal ── */}
+                {showCancellationReportModal && (
+                    <div className="fixed inset-0 z-[100] flex justify-end overflow-hidden">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-md"
+                            onClick={() => setShowCancellationReportModal(false)}
+                        />
+                        <motion.div
+                            initial={{ x: "100%" }}
+                            animate={{ x: 0 }}
+                            exit={{ x: "100%" }}
+                            transition={{ type: "spring", damping: 30, stiffness: 220 }}
+                            className="relative w-full max-w-xl h-full bg-white shadow-2xl p-12 flex flex-col justify-between border-l border-gray-100 z-10"
+                        >
+                            <div className="space-y-10 flex-1 flex flex-col justify-start">
+                                {/* Top Header */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-1.5 h-6 bg-red-500 rounded-full" />
+                                        <h3 className="text-xl font-black text-gray-900 tracking-tighter uppercase leading-none">
+                                            cancellation report
+                                        </h3>
+                                    </div>
+                           
+                                </div>
+
+                                {/* Warning text */}
+                                <div className="p-6 bg-red-50/50 rounded-3xl border border-red-100/50 space-y-2">
+                                    <p className="text-[11px] font-black text-red-600 uppercase tracking-widest">Crucial Notice</p>
+                                    <p className="text-[12px] text-red-600/80 font-bold leading-relaxed">
+                                        This intern has voluntarily exited the program. Their portal access is revoked.
+                                    </p>
+                                </div>
+
+                                {/* Middle Content */}
+                                <div className="space-y-3 flex-1 flex flex-col">
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                                        Reason for leaving the program
+                                    </label>
+                                    <div className="w-full flex-1 p-6 bg-gray-50 border border-gray-100 rounded-[2rem] text-sm font-bold leading-relaxed overflow-y-auto max-h-[400px]">
+                                        {user.cancelReason || "No explanation reason was submitted."}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Bottom Exit Button */}
+                            <div className="pt-8 border-t border-gray-50">
+                                <button
+                                    onClick={() => setShowCancellationReportModal(false)}
+                                    className="w-full py-5 bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-3 active:scale-98"
+                                >
+                                    Close Report
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </div>

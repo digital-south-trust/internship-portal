@@ -64,7 +64,7 @@ const getISTDateString = (date = new Date()) => {
 
 export default function InternWorklogsPage() {
     const [logs, setLogs] = useState([]);
-    const [attendancePercentage, setAttendancePercentage] = useState(100);
+    const [attendancePercentage, setAttendancePercentage] = useState(0);
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -86,7 +86,7 @@ export default function InternWorklogsPage() {
             if (res.ok) {
                 const data = await res.json();
                 setLogs(data.logs || []);
-                setAttendancePercentage(data.attendancePercentage ?? 100);
+                setAttendancePercentage(data.attendancePercentage ?? 0);
             } else {
                 toast.error("Failed to load worklog history.");
             }
@@ -376,7 +376,7 @@ export default function InternWorklogsPage() {
                                             </>
                                         ) : (
                                             <>
-                                                <Plus className="w-4 h-4 text-[#ccff00]" /> Submit Worklog
+                                                 Submit Worklog
                                             </>
                                         )}
                                     </button>

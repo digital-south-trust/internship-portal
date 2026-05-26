@@ -8,14 +8,13 @@ import { toast } from "react-hot-toast";
 export default function AdminLayout({ children }) {
     const router = useRouter();
     const [authorized, setAuthorized] = useState(false);
-    const [isCollapsed, setIsCollapsed] = useState(false);
-
-    useEffect(() => {
+    const [isCollapsed, setIsCollapsed] = useState(() => {
         if (typeof window !== 'undefined') {
             const savedState = localStorage.getItem('adminSidebarCollapsed');
-            if (savedState) setIsCollapsed(JSON.parse(savedState));
+            return savedState ? JSON.parse(savedState) : false;
         }
-    }, []);
+        return false;
+    });
 
     const toggleSidebar = (state) => {
         setIsCollapsed(state);
@@ -115,7 +114,7 @@ export default function AdminLayout({ children }) {
             <AdminSidebar isCollapsed={isCollapsed} setIsCollapsed={toggleSidebar} />
 
             {/* Main Content Area */}
-            <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-64'} min-h-screen relative z-10 flex flex-col`}>
+            <main className={`flex-1 transition-all duration-300 ${isCollapsed ? 'ml-20' : 'ml-64'} min-h-screen relative flex flex-col`}>
                 <div className="animate-fade-in flex-1 p-8">
                     {children}
                 </div>
