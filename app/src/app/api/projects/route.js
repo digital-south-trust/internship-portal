@@ -35,7 +35,7 @@ export async function POST(req) {
 
         const { 
             internEmail, title, description, colorHex, techStack, repoLink, deployLink, documentFile, documentLink, 
-            solution, progress, track, category, isPreset,
+            solution, progress, track, category, isPreset, status, projectType, difficulty, duration,
             realWorld, matters, existingSolutions, objectives, features, apis, dataset, blockchainNetwork,
             smartContractLang, targetPlatform, researchBackground, hypothesis, innovation, relevance,
             researchOutput, startDate, endDate, milestones,
@@ -77,9 +77,11 @@ export async function POST(req) {
             modelUsed, aiTools, vectorDatabase, deploymentPlatform, mlTaskType, algorithms,
             mlFramework, trainingEnvironment, appCategory,
             formPhases, dynamicFields,
-            progress: progress || 10,
-            status: isPreset ? 'Approved' : 'Pending',
-            projectType: isPreset ? 'preset' : 'custom'
+            difficulty: difficulty || 'Medium',
+            duration,
+            progress: progress || 0,
+            status: status || (isPreset ? 'Approved' : 'Pending'),
+            projectType: projectType || (isPreset ? 'preset' : 'custom')
         });
 
         return NextResponse.json({ message: "Project created successfully", project: newProject }, { status: 201 });
@@ -95,7 +97,7 @@ export async function PUT(req) {
         const body = await req.json();
         const { 
             id, title, description, colorHex, techStack, repoLink, deployLink, documentFile, documentLink, 
-            solution, progress, status, adminFeedback, category,
+            solution, progress, status, adminFeedback, category, difficulty, duration, track,
             realWorld, matters, existingSolutions, objectives, features, apis, dataset, blockchainNetwork,
             smartContractLang, targetPlatform, researchBackground, hypothesis, innovation, relevance,
             researchOutput, startDate, endDate, milestones,
@@ -121,8 +123,11 @@ export async function PUT(req) {
             mlFramework, trainingEnvironment, appCategory,
             formPhases, dynamicFields
         };
-        if (category) updateData.category = category;
-        if (status) updateData.status = status;
+        if (category !== undefined) updateData.category = category;
+        if (track !== undefined) updateData.track = track;
+        if (status !== undefined) updateData.status = status;
+        if (difficulty !== undefined) updateData.difficulty = difficulty;
+        if (duration !== undefined) updateData.duration = duration;
         if (adminFeedback !== undefined) updateData.adminFeedback = adminFeedback;
 
         const project = await ProjectRequest.findByIdAndUpdate(
@@ -139,5 +144,27 @@ export async function PUT(req) {
     } catch (error) {
         console.error("Error updating project:", error);
         return NextResponse.json({ message: "Error updating project" }, { status: 500 });
+    }
+}
+
+export async function DELETE(req) {
+    try {
+        await dbConnect();
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get('id');
+
+        if (!id) {
+            return NextResponse.json({ message: "Project ID required" }, { status: 400 });
+        }
+
+        const project = await ProjectRequest.findByIdAndDelete(id);
+        if (!project) {
+            return NextResponse.json({ message: "Project not found" }, { status: 404 });
+        }
+
+        return NextResponse.json({ message: "Project deleted successfully" }, { status: 200 });
+    } catch (error) {
+        console.error("Error deleting project:", error);
+        return NextResponse.json({ message: "Error deleting project", error: error.message }, { status: 500 });
     }
 }

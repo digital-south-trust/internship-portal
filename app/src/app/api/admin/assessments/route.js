@@ -7,10 +7,11 @@ export async function GET(req) {
     try {
         await dbConnect();
 
-        // Get all users who have completed assessment
+        // Get all users who have completed assessment (excluding manual additions by admin)
         const users = await User.find({
             isAssessmentDone: true,
-            role: 'intern'
+            role: 'intern',
+            selectionStatus: { $ne: 'Access given by admin' }
         }).select('_id fullName email track assessmentScore assessmentDate selectionStatus isAssessmentDone status aadhaarCard aadhaarNumber passportPhoto');
 
         // Get results data

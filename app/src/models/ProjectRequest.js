@@ -82,10 +82,15 @@ const ProjectRequestSchema = new mongoose.Schema({
     dynamicFields: { type: Object, default: {} },
     progress: { type: Number, default: 0 },
     adminFeedback: String,
+    difficulty: { type: String, default: 'Medium' },
+    duration: String,
     requestedAt: {
         type: Date,
         default: Date.now
     }
 }, { timestamps: true });
 
+if (mongoose.models.ProjectRequest) {
+    delete mongoose.models.ProjectRequest;
+}
 export default mongoose.models.ProjectRequest || mongoose.model('ProjectRequest', ProjectRequestSchema);
