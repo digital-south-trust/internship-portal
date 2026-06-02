@@ -838,8 +838,8 @@ export default function InternDetailsPage() {
 
                                                 {/* Links */}
                                                 <div className="flex gap-3 flex-wrap">
-                                                    {selectedProject.githubLink ? (
-                                                        <a href={selectedProject.githubLink} target="_blank" rel="noopener noreferrer"
+                                                    {selectedProject.repoLink ? (
+                                                        <a href={selectedProject.repoLink} target="_blank" rel="noopener noreferrer"
                                                             className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-black hover:scale-105 transition-all">
                                                             <Github className="w-3.5 h-3.5" /> GitHub
                                                         </a>
@@ -848,8 +848,8 @@ export default function InternDetailsPage() {
                                                             <Github className="w-3.5 h-3.5" /> No GitHub link
                                                         </span>
                                                     )}
-                                                    {selectedProject.liveLink ? (
-                                                        <a href={selectedProject.liveLink} target="_blank" rel="noopener noreferrer"
+                                                    {selectedProject.deployLink ? (
+                                                        <a href={selectedProject.deployLink} target="_blank" rel="noopener noreferrer"
                                                             className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black hover:scale-105 transition-all">
                                                             <ExternalLink className="w-3.5 h-3.5" /> Live Demo
                                                         </a>
@@ -1010,7 +1010,7 @@ export default function InternDetailsPage() {
                                             )}
                                         </div>
 
-                                        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                        <div className="space-y-4">
                                             {!isEditingProject ? (
                                                 /* VIEW MODE - RIGHT COLUMN */
                                                 editFormPhases.length === 0 ? (
@@ -1025,9 +1025,32 @@ export default function InternDetailsPage() {
                                                             <div className="space-y-1.5 pl-2 pt-1">
                                                                 {phase.fields && phase.fields.length > 0 ? (
                                                                     phase.fields.map((field, fIdx) => (
-                                                                        <div key={fIdx} className="flex justify-between items-center text-[10px] font-bold text-gray-600 bg-white px-3 py-2 rounded-xl border border-gray-50 shadow-sm">
-                                                                            <span>{field.label}</span>
-                                                                            <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-50/50 px-2 py-0.5 rounded">[{field.type}]</span>
+                                                                        <div key={fIdx} className="space-y-2 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                                                            <div className="flex justify-between items-center text-[10px] font-bold text-gray-600">
+                                                                                <span>{field.label}</span>
+                                                                                <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-50/50 px-2 py-0.5 rounded">[{field.type}]</span>
+                                                                            </div>
+                                                                            {selectedProject?.dynamicFields?.[field.label] ? (
+                                                                                <div className="pt-2 border-t border-gray-50">
+                                                                                    {field.type === 'link' ? (
+                                                                                        <a href={selectedProject.dynamicFields[field.label]} target="_blank" rel="noopener noreferrer"
+                                                                                            className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1 break-all">
+                                                                                            <ExternalLink className="w-3.5 h-3.5 shrink-0" /> {selectedProject.dynamicFields[field.label]}
+                                                                                        </a>
+                                                                                    ) : field.type === 'file' ? (
+                                                                                        <a href={selectedProject.dynamicFields[field.label]} target="_blank" rel="noopener noreferrer"
+                                                                                            className="text-xs font-bold text-emerald-600 hover:underline flex items-center gap-1 break-all">
+                                                                                            <FileText className="w-3.5 h-3.5 shrink-0" /> {selectedProject.dynamicFields[field.label]}
+                                                                                        </a>
+                                                                                    ) : (
+                                                                                        <p className="text-xs font-semibold text-gray-800 whitespace-pre-wrap break-all bg-gray-50/50 p-2.5 rounded-lg border border-gray-100/50">
+                                                                                            {selectedProject.dynamicFields[field.label]}
+                                                                                        </p>
+                                                                                    )}
+                                                                                </div>
+                                                                            ) : (
+                                                                                <p className="text-[9px] text-gray-400 italic pt-1 pl-1">Not submitted yet</p>
+                                                                            )}
                                                                         </div>
                                                                     ))
                                                                 ) : (
@@ -1710,7 +1733,7 @@ export default function InternDetailsPage() {
                             </div>
 
                             {/* Scrollable Form */}
-                            <form onSubmit={handleAddProjectSubmit} className="flex-1 overflow-hidden p-8 space-y-8">
+                            <form onSubmit={handleAddProjectSubmit} className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     {/* Left Column: Project Identity */}
                                     <div className="space-y-6">
@@ -1804,7 +1827,7 @@ export default function InternDetailsPage() {
                                             </button>
                                         </div>
 
-                                        <div className="space-y-4 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
+                                        <div className="space-y-4">
                                             {newProjectFormPhases.length === 0 ? (
                                                 <div className="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
                                                     <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">No requirements configured yet</p>
