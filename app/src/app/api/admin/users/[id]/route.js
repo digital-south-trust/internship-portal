@@ -40,6 +40,9 @@ export async function GET(req, { params }) {
         let projects = [];
         let referredUsers = [];
 
+        // Always query projects for the user in case they have custom projects assigned or are merged profiles
+        projects = await ProjectRequest.find({ internId: id }).sort({ createdAt: -1 });
+
         if (isAmbassador) {
             // Find users who joined with this ambassador's code (Search both collections)
             const query = { 
@@ -56,9 +59,6 @@ export async function GET(req, { params }) {
                 ...refUsers,
                 ...refAmbassadors.map(a => ({ ...a, status: 'Active', track: 'Ambassador' }))
             ].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-        } else {
-            projects = await ProjectRequest.find({ internId: id }).sort({ createdAt: -1 });
         }
         
         return NextResponse.json({ user, projects, referredUsers }, { status: 200 });

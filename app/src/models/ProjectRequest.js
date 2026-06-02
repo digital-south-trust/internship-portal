@@ -74,8 +74,12 @@ const ProjectRequestSchema = new mongoose.Schema({
     formPhases: [
         {
             name: String,
+            description: String,
             fields: [
-                { label: String, type: String }
+                { 
+                    label: String, 
+                    type: { type: String } 
+                }
             ]
         }
     ],
