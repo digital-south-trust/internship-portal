@@ -5,7 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import {
     ArrowLeft, Mail, Calendar, Phone, Award, Activity, User,
     CheckCircle, RefreshCw, UserCog, ChevronDown, ShieldOff, ShieldCheck, X, AlertTriangle,
-    Github, ExternalLink, KeyRound, Copy, Eye, EyeOff, Edit, CreditCard
+    Github, ExternalLink, KeyRound, Copy, Eye, EyeOff, Edit, CreditCard,
+    Plus, Trash2, Type, AlignLeft, Link as LinkIcon, FileText
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
@@ -33,7 +34,22 @@ export default function InternDetailsPage() {
     // Progress control
     const [editProgress, setEditProgress] = useState(0);
     const [adminNote, setAdminNote] = useState('');
+    const [editDuration, setEditDuration] = useState('');
+    const [editDifficulty, setEditDifficulty] = useState('');
     const [savingProgress, setSavingProgress] = useState(false);
+
+    // Edit Project Modal states
+    const [isEditingProject, setIsEditingProject] = useState(false);
+    const [editTitle, setEditTitle] = useState("");
+    const [editDescription, setEditDescription] = useState("");
+    const [editCategory, setEditCategory] = useState("");
+    const [editTrack, setEditTrack] = useState("");
+    const [editFormPhases, setEditFormPhases] = useState([]);
+    const [editStatus, setEditStatus] = useState("");
+
+    // Delete Confirmation state
+    const [showDeleteProjectConfirmModal, setShowDeleteProjectConfirmModal] = useState(false);
+    const [deletingProject, setDeletingProject] = useState(false);
 
     // Assigned admin state
     const [assignedAdmin, setAssignedAdmin] = useState('');
@@ -63,6 +79,16 @@ export default function InternDetailsPage() {
     const [editData, setEditData] = useState({});
     const [savingEdit, setSavingEdit] = useState(false);
 
+    // Add Project Modal State
+    const [showAddProjectModal, setShowAddProjectModal] = useState(false);
+    const [newProjectName, setNewProjectName] = useState("");
+    const [newProjectDescription, setNewProjectDescription] = useState("");
+    const [newProjectDifficulty, setNewProjectDifficulty] = useState("Medium");
+    const [newProjectDuration, setNewProjectDuration] = useState("1 Month");
+    const [newProjectFormPhases, setNewProjectFormPhases] = useState([]);
+    const [tracksList, setTracksList] = useState([]);
+    const [savingNewProject, setSavingNewProject] = useState(false);
+
     // Tab switching logic for dual-role users
     const [profileTab, setProfileTab] = useState("");
     const isMergedUser = user && (user.role?.toLowerCase() === 'admin' || user.role?.toLowerCase() === 'intern') && (user.isAmbassador || user.referralCode);
@@ -77,15 +103,25 @@ export default function InternDetailsPage() {
         setSelectedProject(project);
         setEditProgress(project.progress || 0);
         setAdminNote(project.adminFeedback || '');
+        setEditDuration(project.duration || '');
+        setEditDifficulty(project.difficulty || 'Medium');
+        setEditTitle(project.projectName || '');
+        setEditDescription(project.description || '');
+        setEditCategory(project.category || '');
+        setEditTrack(project.track || '');
+        setEditFormPhases(project.formPhases || []);
+        setEditStatus(project.status || 'Pending');
+        setIsEditingProject(false);
     };
 
     useEffect(() => {
         if (!id) return;
         const fetchDetails = async () => {
             try {
-                const [userRes, adminsRes] = await Promise.all([
+                const [userRes, adminsRes, tracksRes] = await Promise.all([
                     fetch(`/api/admin/users/${id}`),
-                    fetch('/api/admin/users')
+                    fetch('/api/admin/users'),
+                    fetch('/api/admin/tracks')
                 ]);
                 if (userRes.ok) {
                     const data = await userRes.json();
@@ -99,6 +135,10 @@ export default function InternDetailsPage() {
                 if (adminsRes.ok) {
                     const data = await adminsRes.json();
                     setAdmins((data.users || []).filter(u => u.role === 'admin'));
+                }
+                if (tracksRes.ok) {
+                    const data = await tracksRes.json();
+                    setTracksList(data || []);
                 }
             } catch (err) {
                 console.error(err);
@@ -211,6 +251,130 @@ export default function InternDetailsPage() {
                 toast.error('Failed to reactivate');
             }
         } catch { toast.error('Error'); }
+    };
+
+    const handleAddPhase = () => setNewProjectFormPhases([...newProjectFormPhases, { name: "New Phase", description: "", fields: [] }]);
+    const handleRemovePhase = (pi) => setNewProjectFormPhases(newProjectFormPhases.filter((_, i) => i !== pi));
+    
+    const handlePhaseNameChange = (pi, name) => {
+        const newList = [...newProjectFormPhases];
+        newList[pi] = { ...newList[pi], name };
+        setNewProjectFormPhases(newList);
+    };
+
+    const handlePhaseDescriptionChange = (pi, description) => {
+        const newList = [...newProjectFormPhases];
+        newList[pi] = { ...newList[pi], description };
+        setNewProjectFormPhases(newList);
+    };
+
+    const handleAddFieldToPhase = (pi, type = 'text') => {
+        const newList = [...newProjectFormPhases];
+        newList[pi] = { ...newList[pi] };
+        newList[pi].fields = [...(newList[pi].fields || []), { label: "", type }];
+        setNewProjectFormPhases(newList);
+    };
+
+    const handleRemoveFieldFromPhase = (pi, fi) => {
+        const newList = [...newProjectFormPhases];
+        newList[pi] = { ...newList[pi] };
+        newList[pi].fields = newList[pi].fields.filter((_, i) => i !== fi);
+        setNewProjectFormPhases(newList);
+    };
+
+    const handleFieldChange = (pi, fi, key, val) => {
+        const newList = [...newProjectFormPhases];
+        newList[pi] = { ...newList[pi] };
+        newList[pi].fields = [...newList[pi].fields];
+        newList[pi].fields[fi] = { ...newList[pi].fields[fi], [key]: val };
+        setNewProjectFormPhases(newList);
+    };
+
+    const handleEditAddPhase = () => setEditFormPhases([...editFormPhases, { name: "New Phase", description: "", fields: [] }]);
+    const handleEditRemovePhase = (pi) => setEditFormPhases(editFormPhases.filter((_, i) => i !== pi));
+    
+    const handleEditPhaseNameChange = (pi, name) => {
+        const newList = [...editFormPhases];
+        newList[pi] = { ...newList[pi], name };
+        setEditFormPhases(newList);
+    };
+
+    const handleEditPhaseDescriptionChange = (pi, description) => {
+        const newList = [...editFormPhases];
+        newList[pi] = { ...newList[pi], description };
+        setEditFormPhases(newList);
+    };
+
+    const handleEditAddFieldToPhase = (pi, type = 'text') => {
+        const newList = [...editFormPhases];
+        newList[pi] = { ...newList[pi] };
+        newList[pi].fields = [...(newList[pi].fields || []), { label: "", type }];
+        setEditFormPhases(newList);
+    };
+
+    const handleEditRemoveFieldFromPhase = (pi, fi) => {
+        const newList = [...editFormPhases];
+        newList[pi] = { ...newList[pi] };
+        newList[pi].fields = newList[pi].fields.filter((_, i) => i !== fi);
+        setEditFormPhases(newList);
+    };
+
+    const handleEditFieldChange = (pi, fi, key, val) => {
+        const newList = [...editFormPhases];
+        newList[pi] = { ...newList[pi] };
+        newList[pi].fields = [...newList[pi].fields];
+        newList[pi].fields[fi] = { ...newList[pi].fields[fi], [key]: val };
+        setEditFormPhases(newList);
+    };
+
+    const handleAddProjectSubmit = async (e) => {
+        e.preventDefault();
+        if (!newProjectName.trim() || !newProjectDescription.trim()) {
+            toast.error("Please fill in project name and description.");
+            return;
+        }
+
+        const internTrack = tracksList.find(t => t.name.toLowerCase() === user.track?.toLowerCase());
+        const category = internTrack ? internTrack.category : 'CODING';
+
+        setSavingNewProject(true);
+        try {
+            const payload = {
+                internEmail: user.email,
+                title: newProjectName,
+                description: newProjectDescription,
+                colorHex: '#8b5cf6',
+                track: user.track,
+                category: category,
+                difficulty: newProjectDifficulty,
+                duration: newProjectDuration,
+                formPhases: newProjectFormPhases,
+                status: 'Approved',
+                projectType: 'custom',
+                progress: 0
+            };
+
+            const res = await fetch('/api/projects', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                setProjects(prev => [data.project || data, ...prev]);
+                toast.success('Project added successfully!');
+                setShowAddProjectModal(false);
+            } else {
+                const err = await res.json();
+                toast.error(err.message || 'Failed to add project');
+            }
+        } catch (error) {
+            console.error(error);
+            toast.error('Error adding project');
+        } finally {
+            setSavingNewProject(false);
+        }
     };
 
     const calculateEndDate = (joinDate, duration) => {
@@ -540,9 +704,29 @@ export default function InternDetailsPage() {
             {/* ── Projects - Hidden for Ambassadors ── */}
             {profileTab !== 'ambassador' && (
                 <div className="p-8 space-y-6">
-                    <h2 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-                        <Activity className="w-5 h-5" /> Submitted Projects
-                    </h2>
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-xl font-bold text-gray-900 tracking-tight flex items-center gap-2 bg-white p-3 rounded-lg">
+                             Submitted Projects
+                        </h2>
+                        <button
+                            onClick={() => {
+                                setNewProjectName("");
+                                setNewProjectDescription("");
+                                setNewProjectDuration("1 Month");
+                                setNewProjectDifficulty("Medium");
+                                const internTrack = tracksList.find(t => t.name.toLowerCase() === user?.track?.toLowerCase());
+                                if (internTrack) {
+                                    setNewProjectFormPhases(internTrack.formPhases || []);
+                                } else {
+                                    setNewProjectFormPhases([]);
+                                }
+                                setShowAddProjectModal(true);
+                            }}
+                            className="bg-black text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-neutral-800 transition-all flex items-center gap-2 shadow-lg shadow-black/10"
+                        >
+                            <Plus className="w-4 h-4 text-[#ccff00]" /> Add Project
+                        </button>
+                    </div>
                     {projects.length === 0 ? (
                         <div className="bg-white border border-gray-100 p-8 rounded-3xl text-center text-gray-500 font-medium">
                             This intern hasn&apos;t submitted any projects yet.
@@ -586,143 +770,450 @@ export default function InternDetailsPage() {
                             onClick={() => setSelectedProject(null)}
                             className="absolute inset-0 bg-black/60 backdrop-blur-md" />
                         <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
-                            className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+                            className="relative w-full max-w-5xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
                             {/* Header */}
-                            <div className="px-7 pt-7 pb-5 border-b border-gray-50 flex items-start justify-between gap-4 bg-gray-50/40">
-                                <div>
-                                    <h3 className="text-lg font-black text-gray-900 tracking-tight">{selectedProject.projectName}</h3>
-                                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                                        <span className={`text-[9px] font-black uppercase px-2.5 py-1 rounded-full border ${selectedProject.status === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : selectedProject.status === 'Rejected' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
-                                            {selectedProject.status}
-                                        </span>
-                                        <span className="text-[10px] font-bold text-gray-400">{new Date(selectedProject.createdAt).toLocaleDateString()}</span>
+                            <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/50 shrink-0">
+                                <div className="flex items-center gap-4">
+                                    <div>
+                                        <h3 className="text-lg font-black uppercase tracking-tight border-l-7 border-black pl-3">
+                                            {isEditingProject ? "Edit Project Details" : editTitle}
+                                        </h3>
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
+                                            {isEditingProject ? `Exclusively for ${user?.fullName}` : `Submitted on ${new Date(selectedProject.createdAt).toLocaleDateString()}`}
+                                        </p>
                                     </div>
                                 </div>
-                                <button onClick={() => setSelectedProject(null)}
-                                    className="w-8 h-8 bg-white border border-gray-100 rounded-xl flex items-center justify-center text-gray-400 hover:text-red-500 transition-all shrink-0">
-                                    <X className="w-4 h-4" />
+                                <button onClick={() => setSelectedProject(null)} className="p-3 hover:bg-black/5 rounded-2xl transition-all">
+                                    <X className="w-6 h-6 text-gray-400" />
                                 </button>
                             </div>
 
-                            {/* Body */}
-                            <div className="p-7 space-y-6">
+                            {/* Scrollable Body */}
+                            <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    
+                                    {/* Left Column: Project Identity & Metadata */}
+                                    <div className="space-y-6">
+                                        <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em] border-l-4 border-black pl-3 mb-4">Project Identity</h4>
+                                        
+                                        {!isEditingProject ? (
+                                            /* VIEW MODE - LEFT COLUMN */
+                                            <div className="space-y-6">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-1 bg-gray-50 rounded-2xl p-4">
+                                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Project Title</span>
+                                                        <p className="text-sm font-black text-gray-900">{editTitle}</p>
+                                                    </div>
+                                                    <div className="space-y-1 bg-gray-50 rounded-2xl p-4">
+                                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Status</span>
+                                                        <div>
+                                                            <span className={`inline-block text-[9px] font-black uppercase px-2.5 py-1 rounded-full border ${editStatus === 'Approved' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : editStatus === 'Rejected' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-amber-50 text-amber-700 border-amber-100'}`}>
+                                                                {editStatus}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1 bg-gray-50 rounded-2xl p-4">
+                                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400"> Category</span>
+                                                        <p className="text-sm font-bold text-gray-700 uppercase">{editCategory || "CODING"}</p>
+                                                    </div>
+                                                    <div className="space-y-1 bg-gray-50 rounded-2xl p-4">
+                                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Specific Track</span>
+                                                        <p className="text-sm font-bold text-gray-700">{editTrack || "Unassigned"}</p>
+                                                    </div>
+                                                    <div className="space-y-1 bg-gray-50 rounded-2xl p-4">
+                                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Difficulty</span>
+                                                        <p className="text-xs font-black text-gray-700 uppercase">{editDifficulty}</p>
+                                                    </div>
+                                                    <div className="space-y-1 bg-gray-50 rounded-2xl p-4">
+                                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Duration</span>
+                                                        <p className="text-xs font-bold text-gray-700">{editDuration || "N/A"}</p>
+                                                    </div>
+                                                </div>
 
-                                {/* Description */}
-                                {selectedProject.description && (
-                                    <div>
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Description</p>
-                                        <p className="text-sm text-gray-600 font-medium leading-relaxed bg-gray-50 rounded-2xl p-4">{selectedProject.description}</p>
+                                                <div className="space-y-1">
+                                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Detailed Description</span>
+                                                    <p className="text-sm text-gray-600 font-medium leading-relaxed bg-gray-50 rounded-2xl p-5 border border-gray-50 whitespace-pre-line">{editDescription}</p>
+                                                </div>
+
+                                                {/* Links */}
+                                                <div className="flex gap-3 flex-wrap">
+                                                    {selectedProject.githubLink ? (
+                                                        <a href={selectedProject.githubLink} target="_blank" rel="noopener noreferrer"
+                                                            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-black hover:scale-105 transition-all">
+                                                            <Github className="w-3.5 h-3.5" /> GitHub
+                                                        </a>
+                                                    ) : (
+                                                        <span className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-300 rounded-xl text-xs font-black border border-gray-100">
+                                                            <Github className="w-3.5 h-3.5" /> No GitHub link
+                                                        </span>
+                                                    )}
+                                                    {selectedProject.liveLink ? (
+                                                        <a href={selectedProject.liveLink} target="_blank" rel="noopener noreferrer"
+                                                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black hover:scale-105 transition-all">
+                                                            <ExternalLink className="w-3.5 h-3.5" /> Live Demo
+                                                        </a>
+                                                    ) : (
+                                                        <span className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-300 rounded-xl text-xs font-black border border-gray-100">
+                                                            <ExternalLink className="w-3.5 h-3.5" /> No live link
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                {/* Progress Display */}
+                                                <div className="bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                                                    <div className="flex items-center justify-between mb-2">
+                                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Progress</span>
+                                                        <span className="text-xs font-black text-gray-900 bg-gray-100 px-2.5 py-1 rounded-lg">{editProgress}%</span>
+                                                    </div>
+                                                    <div className="h-3 bg-gray-100 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-black rounded-full transition-all" style={{ width: `${editProgress}%` }} />
+                                                    </div>
+                                                </div>
+
+                                                {/* Admin Feedback */}
+                                                {adminNote && (
+                                                    <div className="space-y-1.5">
+                                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Admin Feedback</span>
+                                                        <p className="text-sm text-gray-600 font-medium leading-relaxed bg-amber-50/30 border border-amber-100/50 rounded-2xl p-4">{adminNote}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ) : (
+                                            /* EDIT MODE - LEFT COLUMN */
+                                            <div className="space-y-6">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-1.5 col-span-2">
+                                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Project Title</label>
+                                                        <input 
+                                                            type="text" 
+                                                            required
+                                                            value={editTitle} 
+                                                            onChange={e => setEditTitle(e.target.value)}
+                                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-semibold transition-all outline-none" 
+                                                        />
+                                                    </div>
+
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Category</label>
+                                                        <input 
+                                                            type="text" 
+                                                            value={editCategory} 
+                                                            onChange={e => setEditCategory(e.target.value)}
+                                                            placeholder="CODING or RESEARCH"
+                                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-semibold transition-all outline-none uppercase" 
+                                                        />
+                                                    </div>
+
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Specific Track</label>
+                                                        <input 
+                                                            type="text" 
+                                                            value={editTrack} 
+                                                            onChange={e => setEditTrack(e.target.value)}
+                                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm font-semibold transition-all outline-none" 
+                                                        />
+                                                    </div>
+
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Difficulty</label>
+                                                        <select 
+                                                            value={editDifficulty} 
+                                                            onChange={e => setEditDifficulty(e.target.value)}
+                                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm transition-all outline-none cursor-pointer"
+                                                        >
+                                                            <option value="Beginner">Beginner</option>
+                                                            <option value="Intermediate">Intermediate</option>
+                                                            <option value="Advanced">Advanced</option>
+                                                            <option value="Easy">Easy</option>
+                                                            <option value="Medium">Medium</option>
+                                                            <option value="Hard">Hard</option>
+                                                        </select>
+                                                    </div>
+
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Duration</label>
+                                                        <input 
+                                                            type="text" 
+                                                            required
+                                                            value={editDuration} 
+                                                            onChange={e => setEditDuration(e.target.value)}
+                                                            placeholder="e.g. 1 Month"
+                                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm transition-all outline-none" 
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Detailed Description</label>
+                                                    <textarea 
+                                                        required
+                                                        rows={5}
+                                                        value={editDescription} 
+                                                        onChange={e => setEditDescription(e.target.value)}
+                                                        className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-[2rem] px-6 py-5 text-sm font-semibold transition-all outline-none resize-none font-medium" 
+                                                    />
+                                                </div>
+
+                                                {/* Progress slider */}
+                                                <div className="space-y-1.5">
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Progress</label>
+                                                        <span className="text-xs font-black text-gray-900 bg-gray-100 px-2.5 py-1 rounded-lg">{editProgress}%</span>
+                                                    </div>
+                                                    <input type="range" min="0" max="100" value={editProgress}
+                                                        onChange={e => setEditProgress(Number(e.target.value))}
+                                                        className="w-full accent-black cursor-pointer" />
+                                                </div>
+
+                                                {/* Status Selector */}
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Update Status</label>
+                                                    <div className="flex gap-2">
+                                                        {['Pending', 'Approved', 'Rejected'].map(s => (
+                                                            <button key={s} type="button" onClick={() => setEditStatus(s)}
+                                                                className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${editStatus === s
+                                                                    ? s === 'Approved' ? 'bg-emerald-600 text-white border-emerald-600'
+                                                                        : s === 'Rejected' ? 'bg-red-600 text-white border-red-600'
+                                                                            : 'bg-black text-white border-black'
+                                                                    : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-gray-300'}`}>
+                                                                {s}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Admin Feedback */}
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Admin Feedback</label>
+                                                    <textarea rows={3} value={adminNote} onChange={e => setAdminNote(e.target.value)}
+                                                        className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-4 py-3 text-sm font-semibold transition-all outline-none resize-none"
+                                                        placeholder="Add feedback for this project..." />
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
+
+                                    {/* Right Column: Requirement Architecture */}
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em] border-l-4 border-black pl-3">Requirement Architecture</h4>
+                                            
+                                            {isEditingProject && (
+                                                <button 
+                                                    type="button" 
+                                                    onClick={handleEditAddPhase} 
+                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md"
+                                                >
+                                                    <Plus className="w-3 h-3 text-[#ccff00]" /> Add Phase
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                                            {!isEditingProject ? (
+                                                /* VIEW MODE - RIGHT COLUMN */
+                                                editFormPhases.length === 0 ? (
+                                                    <div className="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                                        <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">No Requirement Architecture defined</p>
+                                                    </div>
+                                                ) : (
+                                                    editFormPhases.map((phase, pIdx) => (
+                                                        <div key={pIdx} className="space-y-2 pb-3 border-b border-gray-100 last:border-0 last:pb-0 bg-gray-50/50 p-4 rounded-2xl">
+                                                            <p className="text-xs font-black text-indigo-600 uppercase tracking-wide">{phase.name}</p>
+                                                            {phase.description && <p className="text-[10px] font-medium text-gray-400">{phase.description}</p>}
+                                                            <div className="space-y-1.5 pl-2 pt-1">
+                                                                {phase.fields && phase.fields.length > 0 ? (
+                                                                    phase.fields.map((field, fIdx) => (
+                                                                        <div key={fIdx} className="flex justify-between items-center text-[10px] font-bold text-gray-600 bg-white px-3 py-2 rounded-xl border border-gray-50 shadow-sm">
+                                                                            <span>{field.label}</span>
+                                                                            <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-50/50 px-2 py-0.5 rounded">[{field.type}]</span>
+                                                                        </div>
+                                                                    ))
+                                                                ) : (
+                                                                    <p className="text-[9px] text-gray-400 italic">No requirement fields in this phase</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )
+                                            ) : (
+                                                /* EDIT MODE - RIGHT COLUMN */
+                                                editFormPhases.length === 0 ? (
+                                                    <div className="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                                        <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">No requirements configured yet</p>
+                                                        <p className="text-[10px] text-gray-400 mt-1">Configure phases for student deliverables.</p>
+                                                    </div>
+                                                ) : (
+                                                    editFormPhases.map((phase, pi) => (
+                                                        <div key={pi} className="bg-gray-50/80 rounded-2xl p-4 border border-gray-100 space-y-3">
+                                                            <div className="flex justify-between items-center">
+                                                                <div className="flex-1">
+                                                                    <input 
+                                                                        value={phase.name} 
+                                                                        onChange={(e) => handleEditPhaseNameChange(pi, e.target.value)} 
+                                                                        placeholder="Topic / Area Title" 
+                                                                        className="bg-transparent text-[11px] font-black text-indigo-500 uppercase tracking-widest outline-none w-full mb-1 border-b border-dashed border-gray-200/50 focus:border-indigo-400" 
+                                                                    />
+                                                                    <input 
+                                                                        value={phase.description || ""} 
+                                                                        onChange={(e) => handleEditPhaseDescriptionChange(pi, e.target.value)} 
+                                                                        placeholder="Instructions..." 
+                                                                        className="bg-transparent text-[8px] font-medium text-gray-400 outline-none w-full border-b border-dashed border-gray-200/50 focus:border-indigo-400" 
+                                                                    />
+                                                                </div>
+                                                                <button 
+                                                                    type="button" 
+                                                                    onClick={() => handleEditRemovePhase(pi)} 
+                                                                    className="text-rose-400 hover:text-rose-600 transition-all p-1 ml-2"
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </button>
+                                                            </div>
+                                                            
+                                                            <div className="space-y-3 pt-2">
+                                                                {phase.fields && phase.fields.map((field, fi) => (
+                                                                    <div key={fi} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
+                                                                        <div className="flex justify-between items-center pb-2 border-b border-gray-50">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <div className="p-1.5 bg-indigo-50 rounded-lg">
+                                                                                    {field.type === 'text' && <Type className="w-3 h-3 text-indigo-600" />}
+                                                                                    {field.type === 'textarea' && <AlignLeft className="w-3 h-3 text-indigo-600" />}
+                                                                                    {field.type === 'link' && <LinkIcon className="w-3 h-3 text-indigo-600" />}
+                                                                                    {field.type === 'file' && <FileText className="w-3 h-3 text-indigo-600" />}
+                                                                                </div>
+                                                                                <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Requirement #{fi + 1}</span>
+                                                                            </div>
+                                                                            <button 
+                                                                                type="button" 
+                                                                                onClick={() => handleEditRemoveFieldFromPhase(pi, fi)} 
+                                                                                className="text-gray-300 hover:text-rose-500 transition-all"
+                                                                            >
+                                                                                <X className="w-4 h-4" />
+                                                                            </button>
+                                                                        </div>
+                                                                        
+                                                                        <div className="grid grid-cols-2 gap-4">
+                                                                            <div className="space-y-1">
+                                                                                <label className="text-[8px] text-gray-400 uppercase tracking-widest">Label / Prompt</label>
+                                                                                <input 
+                                                                                    value={field.label} 
+                                                                                    onChange={(e) => handleEditFieldChange(pi, fi, 'label', e.target.value)} 
+                                                                                    placeholder="E.g. GitHub URL" 
+                                                                                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[10px] font-semibold outline-none shadow-sm" 
+                                                                                />
+                                                                            </div>
+                                                                            
+                                                                            <div className="space-y-1">
+                                                                                <label className="text-[8px] text-gray-400 uppercase tracking-widest">Input Format</label>
+                                                                                <select 
+                                                                                    value={field.type} 
+                                                                                    onChange={(e) => handleEditFieldChange(pi, fi, 'type', e.target.value)} 
+                                                                                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[8px] font-semibold uppercase outline-none shadow-sm cursor-pointer"
+                                                                                >
+                                                                                    <option value="text">Single Line</option>
+                                                                                    <option value="textarea">Deep Block</option>
+                                                                                    <option value="link">Hyperlink</option>
+                                                                                    <option value="file">Asset/Doc</option>
+                                                                                </select>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                                
+                                                                <div className="grid grid-cols-3 gap-2">
+                                                                    <button type="button" onClick={() => handleEditAddFieldToPhase(pi, 'text')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-indigo-500 transition-all flex items-center justify-center gap-1.5"><Type className="w-2.5 h-2.5" /> Text</button>
+                                                                    <button type="button" onClick={() => handleEditAddFieldToPhase(pi, 'link')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-indigo-500 transition-all flex items-center justify-center gap-1.5"><LinkIcon className="w-2.5 h-2.5" /> Link</button>
+                                                                    <button type="button" onClick={() => handleEditAddFieldToPhase(pi, 'file')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-indigo-500 transition-all flex items-center justify-center gap-1.5"><FileText className="w-2.5 h-2.5" /> File</button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Footer */}
+                            <div className="p-8 border-t border-gray-50 flex gap-4 bg-gray-50/50 shrink-0">
+                                {!isEditingProject ? (
+                                    /* VIEW MODE - FOOTER */
+                                    <>
+                                        <button onClick={() => setShowDeleteProjectConfirmModal(true)}
+                                            className="w-12 h-12 flex items-center justify-center bg-rose-50 text-rose-600 rounded-2xl hover:bg-rose-100 active:scale-95 transition-all shrink-0"
+                                            title="Delete Project">
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                        <button onClick={() => setSelectedProject(null)}
+                                            className="flex-1 py-3 bg-white border border-gray-200 text-gray-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-all font-medium">
+                                            Close
+                                        </button>
+                                        <button onClick={() => setIsEditingProject(true)}
+                                            className="flex-[2] py-3 bg-black text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-lg">
+                                            Edit Project
+                                        </button>
+                                    </>
+                                ) : (
+                                    /* EDIT MODE - FOOTER */
+                                    <>
+                                        <button onClick={() => {
+                                            // Cancel: Revert to selectedProject values
+                                            setEditTitle(selectedProject.projectName || '');
+                                            setEditDescription(selectedProject.description || '');
+                                            setEditCategory(selectedProject.category || '');
+                                            setEditTrack(selectedProject.track || '');
+                                            setEditDifficulty(selectedProject.difficulty || 'Medium');
+                                            setEditDuration(selectedProject.duration || '');
+                                            setEditFormPhases(selectedProject.formPhases || []);
+                                            setEditProgress(selectedProject.progress || 0);
+                                            setEditStatus(selectedProject.status || 'Pending');
+                                            setAdminNote(selectedProject.adminFeedback || '');
+                                            setIsEditingProject(false);
+                                        }}
+                                            className="flex-1 py-3 bg-white border border-gray-200 text-gray-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-all font-medium">
+                                            Cancel
+                                        </button>
+                                        <button onClick={async () => {
+                                            if (!editTitle.trim() || !editDescription.trim()) {
+                                                toast.error('Project title and description are required.');
+                                                return;
+                                            }
+                                            setSavingProgress(true);
+                                            try {
+                                                const res = await fetch(`/api/projects`, {
+                                                    method: 'PUT',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ 
+                                                        id: selectedProject._id, 
+                                                        title: editTitle,
+                                                        description: editDescription,
+                                                        category: editCategory,
+                                                        track: editTrack,
+                                                        progress: editProgress, 
+                                                        status: editStatus, 
+                                                        adminFeedback: adminNote, 
+                                                        duration: editDuration, 
+                                                        difficulty: editDifficulty,
+                                                        formPhases: editFormPhases
+                                                    })
+                                                });
+                                                if (res.ok) {
+                                                    const updated = await res.json();
+                                                    setProjects(prev => prev.map(p => p._id === updated._id ? updated : p));
+                                                    toast.success('Project updated!');
+                                                    setSelectedProject(null);
+                                                    setIsEditingProject(false);
+                                                } else { toast.error('Failed to save'); }
+                                            } catch { toast.error('Error saving'); }
+                                            finally { setSavingProgress(false); }
+                                        }} disabled={savingProgress}
+                                            className="flex-[2] py-3 bg-black text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 shadow-lg">
+                                            {savingProgress ? 'Saving...' : 'Save Changes'}
+                                        </button>
+                                    </>
                                 )}
-
-                                {/* Links */}
-                                <div className="flex gap-3 flex-wrap">
-                                    {selectedProject.githubLink ? (
-                                        <a href={selectedProject.githubLink} target="_blank" rel="noopener noreferrer"
-                                            className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-xl text-xs font-black hover:scale-105 transition-all">
-                                            <Github className="w-3.5 h-3.5" /> GitHub
-                                        </a>
-                                    ) : (
-                                        <span className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-300 rounded-xl text-xs font-black border border-gray-100">
-                                            <Github className="w-3.5 h-3.5" /> No GitHub link
-                                        </span>
-                                    )}
-                                    {selectedProject.liveLink ? (
-                                        <a href={selectedProject.liveLink} target="_blank" rel="noopener noreferrer"
-                                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black hover:scale-105 transition-all">
-                                            <ExternalLink className="w-3.5 h-3.5" /> Live Demo
-                                        </a>
-                                    ) : (
-                                        <span className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-300 rounded-xl text-xs font-black border border-gray-100">
-                                            <ExternalLink className="w-3.5 h-3.5" /> No live link
-                                        </span>
-                                    )}
-                                </div>
-
-                                {/* Extra details grid */}
-                                <div className="grid grid-cols-2 gap-3">
-                                    {selectedProject.techStack && (
-                                        <div className="bg-gray-50 rounded-2xl p-3">
-                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Tech Stack</p>
-                                            <p className="text-xs font-bold text-gray-700">{Array.isArray(selectedProject.techStack) ? selectedProject.techStack.join(', ') : selectedProject.techStack}</p>
-                                        </div>
-                                    )}
-                                    <div className="bg-gray-50 rounded-2xl p-3">
-                                        <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Submitted</p>
-                                        <p className="text-xs font-bold text-gray-700">{new Date(selectedProject.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
-                                    </div>
-                                    {selectedProject.internId && (
-                                        <div className="bg-gray-50 rounded-2xl p-3">
-                                            <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Intern ID</p>
-                                            <p className="text-xs font-bold text-gray-500 truncate">{selectedProject.internId}</p>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Progress control — slider only, no duplicate bar */}
-                                <div>
-                                    <div className="flex items-center justify-between mb-3">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Progress</p>
-                                        <span className="text-sm font-black text-gray-900 bg-gray-100 px-3 py-1 rounded-xl">{editProgress}%</span>
-                                    </div>
-                                    <input type="range" min="0" max="100" value={editProgress}
-                                        onChange={e => setEditProgress(Number(e.target.value))}
-                                        className="w-full accent-black cursor-pointer" />
-                                </div>
-
-                                {/* Status update */}
-                                <div>
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Update Status</p>
-                                    <div className="flex gap-2 flex-wrap">
-                                        {['Pending', 'Approved', 'Rejected'].map(s => (
-                                            <button key={s} onClick={() => setSelectedProject(p => ({ ...p, status: s }))}
-                                                className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${selectedProject.status === s
-                                                    ? s === 'Approved' ? 'bg-emerald-600 text-white border-emerald-600'
-                                                        : s === 'Rejected' ? 'bg-red-600 text-white border-red-600'
-                                                            : 'bg-black text-white border-black'
-                                                    : 'bg-gray-50 text-gray-500 border-gray-100 hover:border-gray-300'}`}>
-                                                {s}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* Admin feedback */}
-                                <div>
-                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Admin Feedback</p>
-                                    <textarea rows={3} value={adminNote} onChange={e => setAdminNote(e.target.value)}
-                                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl px-4 py-3 text-sm font-medium text-gray-700 focus:outline-none focus:ring-4 focus:ring-black/5 resize-none"
-                                        placeholder="Add feedback or observations for this project..." />
-                                </div>
-
-                                {/* Save */}
-                                <div className="flex gap-3">
-                                    <button onClick={() => setSelectedProject(null)}
-                                        className="flex-1 py-3 bg-gray-50 text-gray-500 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-all">
-                                        Close
-                                    </button>
-                                    <button onClick={async () => {
-                                        setSavingProgress(true);
-                                        try {
-                                            const res = await fetch(`/api/projects`, {
-                                                method: 'PUT',
-                                                headers: { 'Content-Type': 'application/json' },
-                                                body: JSON.stringify({ id: selectedProject._id, progress: editProgress, status: selectedProject.status, adminFeedback: adminNote })
-                                            });
-                                            if (res.ok) {
-                                                const updated = await res.json();
-                                                setProjects(prev => prev.map(p => p._id === updated._id ? updated : p));
-                                                toast.success('Project updated!');
-                                                setSelectedProject(null);
-                                            } else { toast.error('Failed to save'); }
-                                        } catch { toast.error('Error saving'); }
-                                        finally { setSavingProgress(false); }
-                                    }} disabled={savingProgress}
-                                        className="flex-[2] py-3 bg-black text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 shadow-lg">
-                                        {savingProgress ? 'Saving...' : 'Save Changes'}
-                                    </button>
-                                </div>
                             </div>
                         </motion.div>
                     </motion.div>
@@ -827,6 +1318,70 @@ export default function InternDetailsPage() {
                                     <button onClick={handleTerminate} disabled={terminating}
                                         className="flex-1 py-3 bg-red-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-red-700 transition-all disabled:opacity-50 shadow-lg">
                                         {terminating ? 'Terminating...' : 'Yes, Terminate'}
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+
+                {/* ── Delete Project Confirmation Modal ── */}
+                {showDeleteProjectConfirmModal && (
+                    <motion.div key="delete-project-confirm-modal" className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setShowDeleteProjectConfirmModal(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+                            className="relative w-full max-w-md bg-white rounded-[2.5rem] shadow-2xl overflow-hidden">
+                            <div className="p-6 bg-rose-50/60 border-b border-rose-100 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    
+                                    <div>
+                                        <h3 className="text-sm font-black text-gray-900 uppercase tracking-widest">Delete Project</h3>
+                                        <p className="text-[10px] text-rose-500 font-medium">This action cannot be undone</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowDeleteProjectConfirmModal(false)} className="w-8 h-8 bg-white border border-gray-100 rounded-xl flex items-center justify-center text-gray-400 hover:text-red-500 transition-all font-medium">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                            <div className="p-6 space-y-4">
+                                <p className="text-sm text-gray-700 font-medium leading-relaxed">
+                                    Are you sure you want to delete the project <strong>{selectedProject?.projectName}</strong>?
+                                </p>
+                                <div className="bg-rose-50 border border-rose-100 rounded-2xl p-4 space-y-1">
+                                    <p className="text-xs font-black text-rose-700">Warning:</p>
+                                    <p className="text-xs text-rose-600 font-medium leading-relaxed">
+                                        The project and all its deliverable requirements will be permanently deleted from the database. This action is irreversible.
+                                    </p>
+                                </div>
+                                <div className="flex gap-3 pt-2">
+                                    <button onClick={() => setShowDeleteProjectConfirmModal(false)}
+                                        className="flex-1 py-3 bg-gray-50 text-gray-600 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-all font-medium">
+                                        Cancel
+                                    </button>
+                                    <button onClick={async () => {
+                                        setDeletingProject(true);
+                                        try {
+                                            const res = await fetch(`/api/projects?id=${selectedProject._id}`, {
+                                                method: 'DELETE'
+                                            });
+                                            if (res.ok) {
+                                                setProjects(prev => prev.filter(p => p._id !== selectedProject._id));
+                                                toast.success('Project deleted successfully');
+                                                setSelectedProject(null);
+                                                setShowDeleteProjectConfirmModal(false);
+                                            } else {
+                                                toast.error('Failed to delete project');
+                                            }
+                                        } catch (err) {
+                                            toast.error('Error deleting project');
+                                        } finally {
+                                            setDeletingProject(false);
+                                        }
+                                    }} disabled={deletingProject}
+                                        className="flex-1 py-3 bg-red-600 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-red-700 transition-all disabled:opacity-50 shadow-lg">
+                                        {deletingProject ? 'Deleting...' : 'Yes, Delete'}
                                     </button>
                                 </div>
                             </div>
@@ -1130,6 +1685,238 @@ export default function InternDetailsPage() {
                             </div>
                         </motion.div>
                     </div>
+                )}
+
+                {/* ── Add Project Modal ── */}
+                {showAddProjectModal && (
+                    <motion.div key="add-project-modal" className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                            onClick={() => setShowAddProjectModal(false)}
+                            className="absolute inset-0 bg-black/60 backdrop-blur-md" />
+                        <motion.div initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95 }}
+                            className="relative w-full max-w-5xl bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                            
+                            {/* Header */}
+                            <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
+                                <div className="flex items-center gap-4">
+                                    <div>
+                                        <h3 className="text-lg font-black uppercase tracking-tight  border-l-7 border-black pl-3">Assign Project</h3>
+                                        <p className="text-[10px] font-black font-medium text-gray-400 uppercase tracking-widest">Exclusively for {user.fullName}</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowAddProjectModal(false)} className="p-3 hover:bg-black/5 rounded-2xl transition-all">
+                                    <X className="w-6 h-6 text-gray-400" />
+                                </button>
+                            </div>
+
+                            {/* Scrollable Form */}
+                            <form onSubmit={handleAddProjectSubmit} className="flex-1 overflow-hidden p-8 space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    {/* Left Column: Project Identity */}
+                                    <div className="space-y-6">
+                                        <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em] border-l-4 border-black pl-3 mb-4">Project Identity</h4>
+                                        
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1.5 col-span-2">
+                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Project Title</label>
+                                                <input 
+                                                    type="text" 
+                                                    required
+                                                    value={newProjectName} 
+                                                    onChange={e => setNewProjectName(e.target.value)}
+                                                    placeholder="Project Name..."
+                                                    className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm  transition-all outline-none" 
+                                                />
+                                            </div>
+                                            
+                                            <div className="space-y-1.5">
+                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1"> Category</label>
+                                                <input 
+                                                    type="text" 
+                                                    disabled
+                                                    value={tracksList.find(t => t.name.toLowerCase() === user?.track?.toLowerCase())?.category || "CODING"} 
+                                                    className="w-full bg-gray-100 font-medium border border-transparent rounded-2xl px-5 py-4 text-sm font-black text-gray-400 outline-none cursor-not-allowed uppercase" 
+                                                />
+                                            </div>
+                                            
+                                            <div className="space-y-1.5">
+                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Specific Track</label>
+                                                <input 
+                                                    type="text" 
+                                                    disabled
+                                                    value={user?.track || "Unassigned"} 
+                                                    className="w-full bg-gray-100 border border-transparent rounded-2xl px-5 py-4 text-sm font-black text-gray-400 outline-none cursor-not-allowed font-medium" 
+                                                />
+                                            </div>
+                                            
+                                            <div className="space-y-1.5">
+                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Difficulty</label>
+                                                <select 
+                                                    value={newProjectDifficulty} 
+                                                    onChange={e => setNewProjectDifficulty(e.target.value)}
+                                                    className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm transition-all outline-none cursor-pointer"
+                                                >
+                                                    <option value="Beginner">Beginner</option>
+                                                    <option value="Intermediate">Intermediate</option>
+                                                    <option value="Advanced">Advanced</option>
+                                                    <option value="Easy">Easy</option>
+                                                    <option value="Medium">Medium</option>
+                                                    <option value="Hard">Hard</option>
+                                                </select>
+                                            </div>
+                                            
+                                            <div className="space-y-1.5">
+                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Duration</label>
+                                                <input 
+                                                    type="text" 
+                                                    required
+                                                    value={newProjectDuration} 
+                                                    onChange={e => setNewProjectDuration(e.target.value)}
+                                                    placeholder="e.g. 1 Month, 3 Weeks"
+                                                    className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm transition-all outline-none" 
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Detailed Description</label>
+                                            <textarea 
+                                                required
+                                                rows={5}
+                                                value={newProjectDescription} 
+                                                onChange={e => setNewProjectDescription(e.target.value)}
+                                                placeholder="Detailed mission briefing..."
+                                                className="w-full bg-gray-50 border  font-medium border-transparent focus:border-black/5 focus:bg-white rounded-[2rem] px-6 py-5 text-sm  transition-all outline-none resize-none" 
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Right Column: Requirement Architecture */}
+                                    <div className="space-y-6">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em] border-l-4 border-black pl-3">Requirement Architecture</h4>
+                                            <button 
+                                                type="button" 
+                                                onClick={handleAddPhase} 
+                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md"
+                                            >
+                                                <Plus className="w-3 h-3 text-[#ccff00]" /> Add Phase
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-4 max-h-[480px] overflow-y-auto pr-2 custom-scrollbar">
+                                            {newProjectFormPhases.length === 0 ? (
+                                                <div className="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">No requirements configured yet</p>
+                                                    <p className="text-[10px] text-gray-400 mt-1">Configure phases for student deliverables.</p>
+                                                </div>
+                                            ) : (
+                                                newProjectFormPhases.map((phase, pi) => (
+                                                    <div key={pi} className="bg-gray-50/80 rounded-2xl p-4 border border-gray-100 space-y-3">
+                                                        <div className="flex justify-between items-center">
+                                                            <div className="flex-1">
+                                                                <input 
+                                                                    value={phase.name} 
+                                                                    onChange={(e) => handlePhaseNameChange(pi, e.target.value)} 
+                                                                    placeholder="Topic / Area Title" 
+                                                                    className="bg-transparent text-[11px] font-black text-indigo-500 uppercase tracking-widest outline-none w-full mb-1" 
+                                                                />
+                                                                <input 
+                                                                    value={phase.description || ""} 
+                                                                    onChange={(e) => handlePhaseDescriptionChange(pi, e.target.value)} 
+                                                                    placeholder="Instructions..." 
+                                                                    className="bg-transparent text-[8px] font-medium text-gray-400 outline-none w-full" 
+                                                                />
+                                                            </div>
+                                                            <button 
+                                                                type="button" 
+                                                                onClick={() => handleRemovePhase(pi)} 
+                                                                className="text-rose-400 hover:text-rose-600 transition-all p-1"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                        
+                                                        <div className="space-y-3 pt-2">
+                                                            {phase.fields && phase.fields.map((field, fi) => (
+                                                                <div key={fi} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
+                                                                    <div className="flex justify-between items-center pb-2 border-b border-gray-50">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <div className="p-1.5 bg-indigo-50 rounded-lg">
+                                                                                {field.type === 'text' && <Type className="w-3 h-3 text-indigo-600" />}
+                                                                                {field.type === 'textarea' && <AlignLeft className="w-3 h-3 text-indigo-600" />}
+                                                                                {field.type === 'link' && <LinkIcon className="w-3 h-3 text-indigo-600" />}
+                                                                                {field.type === 'file' && <FileText className="w-3 h-3 text-indigo-600" />}
+                                                                            </div>
+                                                                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Requirement #{fi + 1}</span>
+                                                                        </div>
+                                                                        <button 
+                                                                            type="button" 
+                                                                            onClick={() => handleRemoveFieldFromPhase(pi, fi)} 
+                                                                            className="text-gray-300 hover:text-rose-500 transition-all"
+                                                                        >
+                                                                            <X className="w-4 h-4" />
+                                                                        </button>
+                                                                    </div>
+                                                                    
+                                                                    <div className="grid grid-cols-2 gap-4">
+                                                                        <div className="space-y-1">
+                                                                            <label className="text-[8px]  text-gray-400 uppercase tracking-widest">Label / Prompt</label>
+                                                                            <input 
+                                                                                value={field.label} 
+                                                                                onChange={(e) => handleFieldChange(pi, fi, 'label', e.target.value)} 
+                                                                                placeholder="E.g. GitHub URL" 
+                                                                                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[10px] font-semibold outline-none shadow-sm" 
+                                                                            />
+                                                                        </div>
+                                                                        
+                                                                        <div className="space-y-1">
+                                                                            <label className="text-[8px]  text-gray-400 uppercase tracking-widest">Input Format</label>
+                                                                            <select 
+                                                                                value={field.type} 
+                                                                                onChange={(e) => handleFieldChange(pi, fi, 'type', e.target.value)} 
+                                                                                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[8px] font-semibold uppercase outline-none shadow-sm cursor-pointer"
+                                                                            >
+                                                                                <option value="text">Single Line</option>
+                                                                                <option value="textarea">Deep Block</option>
+                                                                                <option value="link">Hyperlink</option>
+                                                                                <option value="file">Asset/Doc</option>
+                                                                            </select>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            
+                                                            <div className="grid grid-cols-3 gap-2">
+                                                                <button type="button" onClick={() => handleAddFieldToPhase(pi, 'text')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-indigo-500 transition-all flex items-center justify-center gap-1.5"><Type className="w-2.5 h-2.5" /> Text</button>
+                                                                <button type="button" onClick={() => handleAddFieldToPhase(pi, 'link')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-indigo-500 transition-all flex items-center justify-center gap-1.5"><LinkIcon className="w-2.5 h-2.5" /> Link</button>
+                                                                <button type="button" onClick={() => handleAddFieldToPhase(pi, 'file')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-indigo-500 transition-all flex items-center justify-center gap-1.5"><FileText className="w-2.5 h-2.5" /> File</button>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </form>
+
+                            {/* Footer */}
+                            <div className="p-8 border-t border-gray-50 flex gap-4 bg-gray-50/50">
+                                <button type="button" onClick={() => setShowAddProjectModal(false)}
+                                    className="flex-1 py-4 bg-white border border-gray-200 text-gray-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all">
+                                    Cancel
+                                </button>
+                                <button 
+                                    onClick={handleAddProjectSubmit}
+                                    disabled={savingNewProject}
+                                    className="flex-1 py-4 bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10 disabled:opacity-50"
+                                >
+                                    {savingNewProject ? 'Adding...' : 'Save Project'}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>
