@@ -38,6 +38,20 @@ export function AdminSidebar({ isCollapsed, setIsCollapsed }) {
     const pathname = usePathname();
     const router = useRouter();
     const [adminName, setAdminName] = useState("Admin Profile");
+    const [unresolvedCount, setUnresolvedCount] = useState(0);
+
+    const fetchTicketsCount = async () => {
+        try {
+            const res = await fetch("/api/tickets");
+            if (res.ok) {
+                const data = await res.json();
+                const unresolved = data.filter(t => t.status !== 'Resolved').length;
+                setUnresolvedCount(unresolved);
+            }
+        } catch (err) {
+            console.error("Error fetching unresolved tickets:", err);
+        }
+    };
 
     useEffect(() => {
         const fetchName = () => {
@@ -47,7 +61,16 @@ export function AdminSidebar({ isCollapsed, setIsCollapsed }) {
 
         fetchName();
         window.addEventListener('storage', fetchName);
-        return () => window.removeEventListener('storage', fetchName);
+        
+        fetchTicketsCount();
+        window.addEventListener('ticketStatusChanged', fetchTicketsCount);
+        const interval = setInterval(fetchTicketsCount, 30000);
+
+        return () => {
+            window.removeEventListener('storage', fetchName);
+            window.removeEventListener('ticketStatusChanged', fetchTicketsCount);
+            clearInterval(interval);
+        };
     }, []);
 
     const handleLogout = () => {
@@ -94,18 +117,35 @@ export function AdminSidebar({ isCollapsed, setIsCollapsed }) {
                             className={`group relative flex items-center ${isCollapsed ? 'justify-center' : 'gap-3 px-3.5'} py-3 rounded-xl transition-all duration-300 z-10 ${isActive ? 'text-white' : 'text-gray-400 hover:text-black hover:bg-gray-50'}`}
                             title={isCollapsed ? item.label : ""}
                         >
-                            <div className="relative z-20 flex items-center gap-3">
-                                <item.icon className="w-5 h-5 shrink-0" strokeWidth={isActive ? 2.5 : 2} />
+                            <div className={`relative z-20 flex items-center gap-3 ${isCollapsed ? '' : 'w-full'}`}>
+                                <div className="relative">
+                                    <item.icon className="w-5 h-5 shrink-0" strokeWidth={isActive ? 2.5 : 2} />
+                                    {item.label === "Tickets" && unresolvedCount > 0 && isCollapsed && (
+                                        <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white animate-pulse" />
+                                    )}
+                                </div>
                                 <AnimatePresence mode="wait">
                                     {!isCollapsed && (
-                                        <motion.span 
-                                            initial={{ opacity: 0, x: -10 }} 
-                                            animate={{ opacity: 1, x: 0 }} 
-                                            exit={{ opacity: 0, x: -10 }}
-                                            className="text-[11px] font-black uppercase tracking-widest whitespace-nowrap overflow-hidden"
-                                        >
-                                            {item.label}
-                                        </motion.span>
+                                        <div className="flex items-center justify-between w-full">
+                                            <motion.span 
+                                                initial={{ opacity: 0, x: -10 }} 
+                                                animate={{ opacity: 1, x: 0 }} 
+                                                exit={{ opacity: 0, x: -10 }}
+                                                className="text-[11px] font-black uppercase tracking-widest whitespace-nowrap overflow-hidden"
+                                            >
+                                                {item.label}
+                                            </motion.span>
+                                            {item.label === "Tickets" && unresolvedCount > 0 && (
+                                                <motion.span
+                                                    initial={{ scale: 0 }}
+                                                    animate={{ scale: 1 }}
+                                                    exit={{ scale: 0 }}
+                                                    className="ml-auto bg-rose-500 text-white text-[8px] font-black px-2 py-0.5 rounded-full shrink-0"
+                                                >
+                                                    {unresolvedCount}
+                                                </motion.span>
+                                            )}
+                                        </div>
                                     )}
                                 </AnimatePresence>
                             </div>

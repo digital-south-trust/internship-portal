@@ -103,6 +103,9 @@ export default function AdminTicketsPage() {
                     setReplyText("");
                     setConfirmingResolve(false);
                 }
+                if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new Event('ticketStatusChanged'));
+                }
             } else toast.error("Update failed", { id: tid });
         } catch { toast.error("Error", { id: tid }); }
     };
