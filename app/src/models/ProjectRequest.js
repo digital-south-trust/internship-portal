@@ -71,6 +71,18 @@ const ProjectRequestSchema = new mongoose.Schema({
     mlFramework: String,
     trainingEnvironment: String,
     appCategory: String,
+    topics: [
+        {
+            title: String,
+            subtopics: [
+                {
+                    title: String,
+                    contentType: { type: String, enum: ['text', 'link', 'image'], default: 'text' },
+                    contentValue: String
+                }
+            ]
+        }
+    ],
     formPhases: [
         {
             name: String,
@@ -88,6 +100,8 @@ const ProjectRequestSchema = new mongoose.Schema({
     adminFeedback: String,
     difficulty: { type: String, default: 'Medium' },
     duration: String,
+    lastSubmittedAt: Date,
+    submissionHistory: { type: Array, default: [] },
     requestedAt: {
         type: Date,
         default: Date.now

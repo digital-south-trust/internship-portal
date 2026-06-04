@@ -452,7 +452,21 @@ export default function StudentDashboard() {
                                             </span>
                                         </div>
                                     </div>
-                                    <p className="text-lg text-gray-500 font-medium mb-12">{mainProject.description}</p>
+                                    {mainProject.description && mainProject.description.length > 250 ? (
+                                        <div className="mb-10 space-y-4">
+                                            <p className="text-sm text-gray-500 font-medium leading-relaxed">
+                                                {mainProject.description.substring(0, 250)}...
+                                            </p>
+                                            <Link 
+                                                href={`/dashboard/projects/${mainProject._id || mainProject.id}`}
+                                                className="inline-flex items-center gap-1.5 px-4 py-2 bg-black text-white hover:bg-gray-800 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+                                            >
+                                                See More &rarr;
+                                            </Link>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500 font-medium leading-relaxed mb-10">{mainProject.description}</p>
+                                    )}
 
                                     <div className="flex justify-between items-end mb-4">
                                         <div className="space-y-1">

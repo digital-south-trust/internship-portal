@@ -443,76 +443,26 @@ export default function AdminWorklogsPage() {
                                                         </div>
 
                                                         <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
-                                                            <div>
-                                                                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Attendance</span>
-                                                                <span className="text-lg font-black text-black">{historyPercentage}%</span>
-                                                            </div>
-                                                            <div className="w-20 bg-gray-100 rounded-lg h-2 overflow-hidden">
-                                                                <div 
-                                                                    className={`h-full rounded-lg ${
-                                                                        historyPercentage >= 90 ? "bg-emerald-500" :
-                                                                        historyPercentage >= 75 ? "bg-blue-500" : "bg-amber-500"
-                                                                    }`}
-                                                                    style={{ width: `${historyPercentage}%` }}
-                                                                />
-                                                            </div>
-                                                        </div>
+                                                             <div>
+                                                                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block">Attendance</span>
+                                                                 <span className="text-lg font-black text-black">
+                                                                     {historyPercentage}%
+                                                                     <span className="text-[10px] text-gray-400 font-medium block mt-0.5">
+                                                                         ({internHistory.filter(l => l.status === 'Present').length} of {internHistory.length} sessions filled)
+                                                                     </span>
+                                                                 </span>
+                                                             </div>
+                                                             <div className="w-20 bg-gray-100 rounded-lg h-2 overflow-hidden">
+                                                                 <div 
+                                                                     className={`h-full rounded-lg ${
+                                                                         historyPercentage >= 90 ? "bg-emerald-500" :
+                                                                         historyPercentage >= 75 ? "bg-blue-500" : "bg-amber-500"
+                                                                     }`}
+                                                                     style={{ width: `${historyPercentage}%` }}
+                                                                 />
+                                                             </div>
+                                                         </div>
                                                     </div>
-                                                </div>
-
-                                                {/* Top 3 latest project list */}
-                                                <div className="bg-white rounded-lg border border-gray-100 p-6 shadow-sm">
-                                                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Latest Projects (Top 3)</p>
-                                                    
-                                                    {internProjects.length === 0 ? (
-                                                        <p className="text-xs text-gray-400 font-medium italic">No projects assigned or requested.</p>
-                                                    ) : (
-                                                        <div className="space-y-3">
-                                                            {(() => {
-                                                                // Sort: approved and progress < 100 first (active), then others
-                                                                const sortedProjects = [...internProjects].sort((a, b) => {
-                                                                    const aIsCurrent = a.status === 'Approved' && (a.progress || 0) < 100;
-                                                                    const bIsCurrent = b.status === 'Approved' && (b.progress || 0) < 100;
-                                                                    if (aIsCurrent && !bIsCurrent) return -1;
-                                                                    if (!aIsCurrent && bIsCurrent) return 1;
-                                                                    return new Date(b.requestedAt || b.createdAt || 0) - new Date(a.requestedAt || a.createdAt || 0);
-                                                                });
-
-                                                                return sortedProjects.slice(0, 3).map((proj, idx) => {
-                                                                    const isCurrent = proj.status === 'Approved' && (proj.progress || 0) < 100;
-                                                                    return (
-                                                                        <div key={proj._id || idx} className={`p-4 rounded-lg border transition-all ${
-                                                                            isCurrent 
-                                                                            ? "bg-black text-white border-black" 
-                                                                            : "bg-gray-50/50 text-gray-900 border-gray-100 hover:border-gray-300"
-                                                                        }`}>
-                                                                            <div className="flex justify-between items-start gap-2 mb-1">
-                                                                                <h5 className={`text-xs font-black uppercase tracking-tight line-clamp-1 ${isCurrent ? 'text-white' : 'text-gray-900'}`}>
-                                                                                    {proj.projectName}
-                                                                                </h5>
-                                                                                {isCurrent && (
-                                                                                    <span className="text-[8px] font-black uppercase tracking-widest bg-[#ccff00] text-black px-1.5 py-0.5 rounded-lg shrink-0">
-                                                                                        Active
-                                                                                    </span>
-                                                                                )}
-                                                                            </div>
-                                                                            <p className={`text-[10px] font-medium line-clamp-2 ${isCurrent ? 'text-gray-300' : 'text-gray-400'}`}>
-                                                                                {proj.description}
-                                                                            </p>
-                                                                            <div className="mt-3 pt-2 border-t border-gray-100/10 flex justify-between items-center text-[9px] font-bold">
-                                                                                <span className={`uppercase tracking-widest ${isCurrent ? 'text-[#ccff00]' : 'text-gray-500'}`}>
-                                                                                    {proj.status}
-                                                                                </span>
-                                                                                <span className={isCurrent ? 'text-white' : 'text-gray-600'}>
-                                                                                    Progress: {proj.progress || 0}%
-                                                                                </span>
-                                                                            </div>
-                                                                        </div>
-                                                                    );
-                                                                });
-                                                            })()}
-                                                        </div>
-                                                    )}
                                                 </div>
                                             </div>
 
@@ -626,7 +576,7 @@ export default function AdminWorklogsPage() {
                                     <div className="px-8 py-6 border-b border-neutral-100 flex items-center justify-between bg-gray-50/50">
                                         <div>
                                             <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Worklog Detail</h3>
-                                            <p className="text-xs text-gray-400 font-medium mt-1">Submitted: ${selectedHistoryLog.date}</p>
+                                            <p className="text-xs text-gray-400 font-medium mt-1">Submitted: {selectedHistoryLog.date}</p>
                                         </div>
                                         <button 
                                             onClick={() => {
@@ -644,7 +594,7 @@ export default function AdminWorklogsPage() {
                                         <div>
                                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Work Description</p>
                                             <div className="bg-gray-50 rounded-lg p-5 border border-gray-100/50">
-                                                <p className="text-sm text-gray-700 font-medium leading-relaxed whitespace-pre-wrap">${selectedHistoryLog.content}</p>
+                                                <p className="text-sm text-gray-700 font-medium leading-relaxed whitespace-pre-wrap">{selectedHistoryLog.content}</p>
                                             </div>
                                         </div>
 
@@ -702,7 +652,7 @@ export default function AdminWorklogsPage() {
                                     <div className="px-8 py-6 border-b border-neutral-100 flex items-center justify-between bg-gray-50/50">
                                         <div>
                                             <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">Today's Submission Detail</h3>
-                                            <p className="text-xs text-gray-400 font-medium mt-1">Submitted: ${selectedTodayLog.date}</p>
+                                            <p className="text-xs text-gray-400 font-medium mt-1">Submitted: {selectedTodayLog.date}</p>
                                         </div>
                                         <button 
                                             onClick={() => setSelectedTodayLog(null)}
@@ -717,7 +667,7 @@ export default function AdminWorklogsPage() {
                                         <div>
                                             <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Work Description</p>
                                             <div className="bg-gray-50 rounded-lg p-5 border border-gray-100/50">
-                                                <p className="text-sm text-gray-700 font-medium leading-relaxed whitespace-pre-wrap">${selectedTodayLog.content}</p>
+                                                <p className="text-sm text-gray-700 font-medium leading-relaxed whitespace-pre-wrap">{selectedTodayLog.content}</p>
                                             </div>
                                         </div>
 

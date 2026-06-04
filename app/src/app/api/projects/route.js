@@ -1,6 +1,7 @@
 import dbConnect from "@/lib/mongodb";
 import ProjectRequest from "@/models/ProjectRequest";
 import User from "@/models/User";
+import ProjectPool from "@/models/ProjectPool";
 import { NextResponse } from "next/server";
 
 export async function GET(req) {
@@ -8,6 +9,38 @@ export async function GET(req) {
         await dbConnect();
 
         const { searchParams } = new URL(req.url);
+        const id = searchParams.get('id');
+
+        if (id) {
+            const project = await ProjectRequest.findById(id).populate('internId', 'fullName profilePicture avatarSeed');
+            if (!project) {
+                return NextResponse.json({ message: "Project not found" }, { status: 404 });
+            }
+
+            // Sync with pool template if preset project
+            if (project.projectType === 'preset' || !project.projectType) {
+                const poolProj = await ProjectPool.findOne({ title: project.projectName });
+                if (poolProj) {
+                    const projectObj = project.toObject();
+                    projectObj.formPhases = poolProj.formPhases || [];
+                    projectObj.topics = poolProj.topics || [];
+                    projectObj.description = poolProj.description || projectObj.description;
+                    if (poolProj.techStack) {
+                        projectObj.techStack = typeof poolProj.techStack === 'string'
+                            ? poolProj.techStack.split(',').map(s => s.trim())
+                            : poolProj.techStack;
+                    }
+                    projectObj.difficulty = poolProj.difficulty || projectObj.difficulty;
+                    projectObj.duration = poolProj.deadline || poolProj.duration || projectObj.duration;
+                    projectObj.documentFile = poolProj.documentFile || projectObj.documentFile;
+                    projectObj.documentLink = poolProj.documentLink || projectObj.documentLink;
+                    return NextResponse.json(projectObj, { status: 200 });
+                }
+            }
+
+            return NextResponse.json(project, { status: 200 });
+        }
+
         const email = searchParams.get('email');
         const role = searchParams.get('role');
 
@@ -43,7 +76,7 @@ export async function POST(req) {
             tokenStandard, walletIntegration, storageUsed, deploymentNetwork, useCase, targetUsers,
             modelUsed, aiTools, vectorDatabase, deploymentPlatform, mlTaskType, algorithms,
             mlFramework, trainingEnvironment, appCategory,
-            formPhases, dynamicFields
+            formPhases, dynamicFields, topics
         } = body;
 
         if (!internEmail || !title || !description) {
@@ -54,6 +87,10 @@ export async function POST(req) {
         if (!user) {
             return NextResponse.json({ message: "User not found" }, { status: 404 });
         }
+
+        const validatedStatus = ['Pending', 'Approved', 'Rejected'].includes(status) 
+            ? status 
+            : (isPreset ? 'Approved' : 'Pending');
 
         const newProject = await ProjectRequest.create({
             internId: user._id,
@@ -76,11 +113,11 @@ export async function POST(req) {
             tokenStandard, walletIntegration, storageUsed, deploymentNetwork, useCase, targetUsers,
             modelUsed, aiTools, vectorDatabase, deploymentPlatform, mlTaskType, algorithms,
             mlFramework, trainingEnvironment, appCategory,
-            formPhases, dynamicFields,
+            formPhases, dynamicFields, topics,
             difficulty: difficulty || 'Medium',
             duration,
             progress: progress || 0,
-            status: status || (isPreset ? 'Approved' : 'Pending'),
+            status: validatedStatus,
             projectType: projectType || (isPreset ? 'preset' : 'custom')
         });
 
@@ -105,7 +142,8 @@ export async function PUT(req) {
             tokenStandard, walletIntegration, storageUsed, deploymentNetwork, useCase, targetUsers,
             modelUsed, aiTools, vectorDatabase, deploymentPlatform, mlTaskType, algorithms,
             mlFramework, trainingEnvironment, appCategory,
-            formPhases, dynamicFields
+            formPhases, dynamicFields, topics,
+            isSubmission
         } = body;
 
         if (!id) {
@@ -123,12 +161,51 @@ export async function PUT(req) {
             mlFramework, trainingEnvironment, appCategory,
             formPhases, dynamicFields
         };
+
+        if (isSubmission) {
+            const existingRequest = await ProjectRequest.findById(id);
+            if (!existingRequest) {
+                return NextResponse.json({ message: "Project not found" }, { status: 404 });
+            }
+            if (existingRequest.lastSubmittedAt) {
+                const timeDiff = Date.now() - new Date(existingRequest.lastSubmittedAt).getTime();
+                const hoursDiff = timeDiff / (1000 * 60 * 60);
+                if (hoursDiff < 24) {
+                    const remainingMs = (24 * 60 * 60 * 1000) - timeDiff;
+                    return NextResponse.json({ 
+                        message: "Submission locked. You can only submit once every 24 hours.", 
+                        remainingMs 
+                    }, { status: 403 });
+                }
+            }
+
+            // Archive the PREVIOUS state of deliverables
+            const oldSubmission = {
+                submittedAt: existingRequest.lastSubmittedAt || existingRequest.updatedAt || new Date(),
+                repoLink: existingRequest.repoLink || "",
+                deployLink: existingRequest.deployLink || "",
+                solution: existingRequest.solution || "",
+                documentFile: existingRequest.documentFile || "",
+                documentLink: existingRequest.documentLink || "",
+                dynamicFields: existingRequest.dynamicFields || {}
+            };
+
+            updateData.submissionHistory = [...(existingRequest.submissionHistory || []), oldSubmission];
+            updateData.lastSubmittedAt = new Date();
+        }
+
         if (category !== undefined) updateData.category = category;
         if (track !== undefined) updateData.track = track;
-        if (status !== undefined) updateData.status = status;
         if (difficulty !== undefined) updateData.difficulty = difficulty;
         if (duration !== undefined) updateData.duration = duration;
         if (adminFeedback !== undefined) updateData.adminFeedback = adminFeedback;
+        if (topics !== undefined) updateData.topics = topics;
+        
+        if (status !== undefined) {
+            if (['Pending', 'Approved', 'Rejected'].includes(status)) {
+                updateData.status = status;
+            }
+        }
 
         const project = await ProjectRequest.findByIdAndUpdate(
             id,

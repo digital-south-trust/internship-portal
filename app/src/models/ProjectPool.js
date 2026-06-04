@@ -45,7 +45,18 @@ const ProjectPoolSchema = new mongoose.Schema({
     mlFramework: String,
     trainingEnvironment: String,
     appCategory: String,
-    customRequirements: [{ label: String, type: String, name: String }],
+    topics: [
+        {
+            title: String,
+            subtopics: [
+                {
+                    title: String,
+                    contentType: { type: String, enum: ['text', 'link', 'image'], default: 'text' },
+                    contentValue: String
+                }
+            ]
+        }
+    ],
     formPhases: [
         {
             name: { type: String, required: true },
@@ -64,4 +75,7 @@ const ProjectPoolSchema = new mongoose.Schema({
     enrolled: { type: Number, default: 0 }
 }, { timestamps: true });
 
+if (mongoose.models.ProjectPool) {
+    delete mongoose.models.ProjectPool;
+}
 export default mongoose.models.ProjectPool || mongoose.model('ProjectPool', ProjectPoolSchema);

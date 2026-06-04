@@ -29,6 +29,7 @@ import {
     AlignLeft
 } from "lucide-react";
 import React, { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "motion/react";
 import { toast } from "react-hot-toast";
 
@@ -151,12 +152,12 @@ const ProjectCard = ({ p, onEdit }) => {
             >
                 <div className="flex justify-between items-start relative z-10">
                     <div className="space-y-1">
-                        <h3 className="text-xl font-black text-gray-900 uppercase leading-none tracking-tighter line-clamp-1 group-hover/card:text-black transition-colors">
+                        <h3 className="text-xl font-bold text-gray-800 uppercase leading-none tracking-tight line-clamp-1 group-hover/card:text-black transition-colors">
                             {p.title}
                         </h3>
-                        <span className="inline-block px-2 py-0.5 bg-gray-100 text-[11px] font-black uppercase text-gray-500 rounded-md tracking-wide">{p.track}</span>
+                        <span className="inline-block px-2 py-0.5 bg-gray-100 text-[11px] font-semibold uppercase text-gray-500 rounded-md tracking-wide">{p.track}</span>
                     </div>
-                    <div className={`px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm flex items-center gap-1.5 ${p.progress === 100
+                    <div className={`px-2.5 py-1 rounded-full text-[9px] font-semibold uppercase tracking-widest border shadow-sm flex items-center gap-1.5 ${p.progress === 100
                         ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                         : p.status === 'Pending'
                             ? 'bg-amber-50 text-amber-600 border-amber-100'
@@ -164,7 +165,6 @@ const ProjectCard = ({ p, onEdit }) => {
                                 ? 'bg-rose-50 text-rose-600 border-rose-100'
                                 : 'bg-blue-50 text-blue-600 border-blue-100'
                         }`}>
-                        {p.progress === 100 && <X className="w-2.5 h-2.5 rotate-45" strokeWidth={3} />}
                         {p.progress === 100
                             ? 'Completed'
                             : p.status === 'Pending'
@@ -177,19 +177,19 @@ const ProjectCard = ({ p, onEdit }) => {
 
                 <div className="flex items-end justify-between relative z-10 pt-6">
                     <div className="space-y-0.5">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Progress</span>
+                        <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Progress</span>
                         <div className="flex items-baseline gap-1">
-                            <span className="text-2xl font-black leading-none" style={{ color: p.colorHex }}>{p.progress ?? 0}</span>
-                            <span className="text-sm font-black text-gray-400">%</span>
+                            <span className="text-2xl font-bold leading-none" style={{ color: p.colorHex }}>{p.progress ?? 0}</span>
+                            <span className="text-sm font-semibold text-gray-400">%</span>
                         </div>
                     </div>
 
                     <div className="text-right space-y-0.5">
                         <div className="flex items-center gap-1.5 justify-end text-gray-400">
                             <CalendarIcon className="w-3.5 h-3.5" />
-                            <span className="text-[10px] font-black uppercase tracking-widest">EOL</span>
+                            
                         </div>
-                        <p className="text-[13px] font-black text-gray-800 uppercase tracking-wide">24 MAR 26</p>
+                        <p className="text-[13px] font-semibold text-gray-800 uppercase tracking-wide">24 MAR 26</p>
                     </div>
                 </div>
                 <div className="absolute bottom-[-10px] right-[-10px] opacity-[0.02] group-hover/card:opacity-[0.05] transition-opacity pointer-events-none transform rotate-12">
@@ -201,6 +201,7 @@ const ProjectCard = ({ p, onEdit }) => {
 };
 
 export default function ProjectsPage() {
+    const router = useRouter();
     const [projects, setProjects] = useState([]);
     const [availablePool, setAvailablePool] = useState([]);
     const [userTrack, setUserTrack] = useState("");
@@ -269,12 +270,15 @@ export default function ProjectsPage() {
                     techStack: (p.techStack && typeof p.techStack === 'string') ? p.techStack.split(',').map(s => s.trim()) : (Array.isArray(p.techStack) ? p.techStack : []),
                     repoLink: p.repoLink,
                     deployLink: p.deployLink,
-                    documentFile: p.documentFile,
-                    documentLink: p.documentLink,
+                    documentFile: p.documentFile || "",
+                    documentLink: p.documentLink || "",
                     category: p.category,
                     solution: p.solution,
                     projectType: p.projectType,
-                    dynamicFields: p.dynamicFields || {}
+                    dynamicFields: p.dynamicFields || {},
+                    difficulty: p.difficulty || "Medium",
+                    duration: p.duration || p.deadline || "1 Month",
+                    topics: p.topics || []
                 })));
             }
         } catch (err) {
@@ -290,10 +294,23 @@ export default function ProjectsPage() {
     const [modalStep, setStep] = useState(1);
     const [projType, setProjType] = useState(null);
 
+    const resetModal = () => {
+        setIsModalOpen(false);
+        setStep(1);
+        setProjType(null);
+        setFormData({
+            id: null, title: "", description: "", color: submissionColors[0],
+            repoLink: "", deployLink: "", solution: "", techStack: [], document: null, progress: 0,
+            dynamicFields: {}, formPhases: [], topics: [], difficulty: "Medium", duration: "1 Month",
+            documentFile: "", documentLink: ""
+        });
+    };
+
     const [formData, setFormData] = useState({
         id: null, title: "", description: "", color: submissionColors[0],
         repoLink: "", deployLink: "", solution: "", techStack: [], document: null, progress: 0,
-        dynamicFields: {}, formPhases: []
+        dynamicFields: {}, formPhases: [], topics: [], difficulty: "Medium", duration: "1 Month",
+        documentFile: "", documentLink: ""
     });
 
     useEffect(() => {
@@ -305,22 +322,52 @@ export default function ProjectsPage() {
                 const isAlreadyAdded = targetProject && projects.some(p => p.title === targetProject.title);
 
                 if (targetProject && !isAlreadyAdded) {
-                    setProjType('preset');
-                    setFormData(prev => ({
-                        ...prev,
-                        title: targetProject.title,
-                        description: targetProject.description,
-                        techStack: targetProject.techStack,
-                        category: targetProject.category,
-                        formPhases: targetProject.formPhases || []
-                    }));
-                    setStep(3);
-                    setIsModalOpen(true);
-                    window.history.replaceState({}, '', '/dashboard/projects');
+                    const email = localStorage.getItem("userEmail");
+                    const runCreate = async () => {
+                        const toastId = toast.loading("Accepting preset assignment...");
+                        try {
+                            const res = await fetch('/api/projects', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    projectName: targetProject.title,
+                                    title: targetProject.title,
+                                    description: targetProject.description,
+                                    techStack: targetProject.techStack || [],
+                                    category: targetProject.category || (userTrack?.toUpperCase() === 'RESEARCH' ? 'RESEARCH' : 'CODING'),
+                                    formPhases: targetProject.formPhases || [],
+                                    topics: targetProject.topics || [],
+                                    difficulty: targetProject.difficulty || "Medium",
+                                    duration: targetProject.deadline || targetProject.duration || "1 Month",
+                                    documentFile: targetProject.documentFile || "",
+                                    documentLink: targetProject.documentLink || "",
+                                    colorHex: "#8b5cf6",
+                                    status: 'Approved',
+                                    internEmail: email,
+                                    progress: 10,
+                                    track: userTrack,
+                                    isPreset: true,
+                                    projectType: 'preset'
+                                })
+                            });
+                            if (res.ok) {
+                                const { project } = await res.json();
+                                toast.success("Preset Assignment Accepted", { id: toastId });
+                                window.history.replaceState({}, '', '/dashboard/projects');
+                                router.push(`/dashboard/projects/${project._id || project.id}`);
+                            } else {
+                                toast.error("Failed to accept preset assignment", { id: toastId });
+                            }
+                        } catch (err) {
+                            console.error(err);
+                            toast.error("Network error accepting assignment", { id: toastId });
+                        }
+                    };
+                    runCreate();
                 } else if (targetProject && isAlreadyAdded) {
                     const existingProject = projects.find(p => p.title === targetProject.title);
                     if (existingProject) {
-                        handleEdit(existingProject);
+                        router.push(`/dashboard/projects/${existingProject.id || existingProject._id}`);
                     }
                     window.history.replaceState({}, '', '/dashboard/projects');
                 }
@@ -331,85 +378,94 @@ export default function ProjectsPage() {
     const isReadOnly = formData.id && formData.progress === 100;
 
     const handleEdit = (project) => {
-        if (project.progress === 100) {
-            toast.error("Intelligence Locked: Completed deployments cannot be modified.");
-            return;
-        }
-
-        const isPreset = project.projectType === 'preset' || (!project.projectType && availablePool.some(s => s.title === project.title));
-
-        setProjType(isPreset ? 'preset' : 'custom');
-        setFormData({
-            ...project,
-            color: submissionColors.find(c => c.hex === project.colorHex) || submissionColors[0],
-            dynamicFields: project.dynamicFields || {}
-        });
-        setStep(isPreset ? 3 : 2);
-        setIsModalOpen(true);
+        router.push(`/dashboard/projects/${project.id || project._id}`);
     };
 
-    const resetModal = () => {
-        setIsModalOpen(false);
-        setStep(1);
-        setProjType(null);
-        setFormData({ id: null, title: "", description: "", color: submissionColors[0], repoLink: "", deployLink: "", solution: "", techStack: [], document: null, progress: 0, dynamicFields: {}, formPhases: [] });
+    const handleAcceptPreset = async (s) => {
+        const email = localStorage.getItem("userEmail");
+        const payload = {
+            projectName: s.title,
+            title: s.title,
+            description: s.description,
+            techStack: s.techStack || [],
+            category: s.category || (userTrack?.toUpperCase() === 'RESEARCH' ? 'RESEARCH' : 'CODING'),
+            formPhases: s.formPhases || [],
+            topics: s.topics || [],
+            difficulty: s.difficulty || 'Medium',
+            duration: s.deadline || s.duration || '1 Month',
+            documentFile: s.documentFile || "",
+            documentLink: s.documentLink || "",
+            colorHex: "#8b5cf6",
+            status: 'Approved',
+            internEmail: email,
+            progress: 10,
+            track: userTrack,
+            isPreset: true,
+            projectType: 'preset'
+        };
+
+        const toastId = toast.loading("Deploying preset project...");
+        try {
+            const res = await fetch('/api/projects', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                const { project } = await res.json();
+                toast.success("Mission Initiated Successfully.", { id: toastId });
+                resetModal();
+                router.push(`/dashboard/projects/${project._id || project.id}`);
+            } else {
+                toast.error("Failed to initiate assignment", { id: toastId });
+            }
+        } catch (err) {
+            console.error(err);
+            toast.error("Error initiating project assignment", { id: toastId });
+        }
     };
 
     const handleSubmission = async (e) => {
         e.preventDefault();
-        if (isReadOnly) return;
         const email = localStorage.getItem("userEmail");
 
         const payload = {
-            ...formData,
             projectName: formData.title,
+            title: formData.title,
+            description: formData.description,
             colorHex: formData.color.hex,
-            dynamicFields: formData.dynamicFields,
-            formPhases: formData.formPhases || (projType === 'custom' ? (trackConfig?.formPhases || []) : [])
+            difficulty: formData.difficulty || "Medium",
+            duration: formData.duration || "1 Month",
+            techStack: formData.techStack || [],
+            formPhases: trackConfig?.formPhases || [],
+            status: 'Pending',
+            internEmail: email,
+            progress: 10,
+            track: userTrack,
+            category: userTrack?.toUpperCase() === 'RESEARCH' ? 'RESEARCH' : 'CODING',
+            isPreset: false,
+            projectType: 'custom'
         };
 
+        const toastId = toast.loading("Initializing custom proposal...");
         try {
-            if (formData.id) {
-                const res = await fetch('/api/projects', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                if (res.ok) {
-                    setProjects(prev => prev.map(p => p.id === formData.id ? { ...p, ...payload, colorHex: formData.color.hex } : p));
-                    toast.success("Intelligence Updated Successfully.");
-                }
+            const res = await fetch('/api/projects', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                const { project } = await res.json();
+                toast.success("Proposal Initiated Successfully.", { id: toastId });
+                resetModal();
+                router.push(`/dashboard/projects/${project._id || project.id}`);
             } else {
-                const res = await fetch('/api/projects', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        ...payload,
-                        internEmail: email,
-                        progress: 10,
-                        track: userTrack,
-                        category: formData.category || (userTrack?.toUpperCase() === 'RESEARCH' ? 'RESEARCH' : 'CODING'),
-                        isPreset: projType === 'preset'
-                    })
-                });
-                if (res.ok) {
-                    const { project } = await res.json();
-                    setProjects(prev => [{
-                        ...project,
-                        id: project._id,
-                        title: project.projectName,
-                        colorHex: project.colorHex
-                    }, ...prev]);
-                    toast.success("Deployment Initiated Successfully.");
-                } else {
-                    toast.error("Deployment failed");
-                }
+                toast.error("Initiation failed", { id: toastId });
             }
         } catch (error) {
             console.error(error);
-            toast.error("Internal Error");
+            toast.error("Internal Error", { id: toastId });
         }
-        resetModal();
     };
 
     const myStatements = availablePool.filter(s => {
@@ -429,7 +485,7 @@ export default function ProjectsPage() {
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <div className="w-1.5 h-8 bg-black rounded-full" />
-                        <h1 className="text-2xl font-black text-black tracking-tighter uppercase leading-none">
+                        <h1 className="text-2xl font-bold text-black tracking-tight uppercase leading-none">
                             Projects Hub
                         </h1>
                     </div>
@@ -444,9 +500,9 @@ export default function ProjectsPage() {
                                 }));
                                 setIsModalOpen(true);
                             }}
-                            className="inline-flex items-center gap-2 bg-black text-white px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/10 group"
+                            className="inline-flex items-center gap-2 bg-black text-white px-6 py-3 rounded-xl font-semibold text-[10px] uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl shadow-black/10 group"
                         >
-                            <Plus className="w-4 h-4" /> Create
+                            Create
                         </button>
                     </div>
                 </div>
@@ -459,8 +515,8 @@ export default function ProjectsPage() {
                                 <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6">
                                     <Rocket className="w-10 h-10 text-gray-200" />
                                 </div>
-                                <h3 className="text-xl font-black text-gray-300 uppercase tracking-widest">No Active Missions</h3>
-                                <p className="text-gray-400 font-bold text-xs mt-2 uppercase">Initiate a project to begin your deployment.</p>
+                                <h3 className="text-xl font-bold text-gray-300 uppercase tracking-widest">No Active Missions</h3>
+                                <p className="text-gray-400 font-medium text-xs mt-2 uppercase">Initiate a project to begin your deployment.</p>
                             </div>
                         ) : (
                             <motion.div initial={{ opacity: 1, y: 0 }} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
@@ -480,23 +536,49 @@ export default function ProjectsPage() {
                             exit={{ opacity: 0, scale: 0.9, y: 40 }}
                             className="relative w-full max-w-5xl bg-white rounded-[3rem] p-10 shadow-[0_80px_160px_-30px_rgba(0,0,0,0.6)] overflow-hidden"
                         >
-                            <div className="flex justify-between items-center mb-10 relative z-10">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10 pb-6 border-b border-gray-100 relative z-10">
                                 <div className="flex items-center gap-6">
-                                    {modalStep > 1 && (
-                                        <button onClick={() => setStep(prev => prev - 1)} className="p-4 bg-gray-50 hover:bg-gray-100 rounded-2xl transition-all">
-                                            <ChevronLeft className="w-5 h-5" />
+                                    {modalStep > 1 && !formData.id && (
+                                        <button type="button" onClick={() => setStep(prev => prev - 1)} className="p-4 bg-gray-50 hover:bg-gray-100 rounded-2xl transition-all">
+                                            <ChevronLeft className="w-5 h-5 text-gray-600" />
                                         </button>
                                     )}
                                     <div>
-                                        <h3 className="text-3xl font-black text-gray-900 tracking-tighter uppercase leading-none">
+                                        <h3 className="text-2xl font-bold text-gray-900 uppercase leading-none tracking-tight">
                                             {formData.id ? "System Asset Control" : (modalStep === 1 ? "Projects" : projType === 'custom' ? "Custom Intel" : (modalStep === 2 ? "Mission Command" : "Assigned Scope"))}
                                         </h3>
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.5em] mt-3 ml-1">Stage {modalStep} of {formData.id ? 2 : (projType === 'preset' ? 3 : 2)}</p>
+                                        {formData.title && modalStep > 1 && (
+                                            <h4 className="text-lg font-semibold text-gray-700 uppercase tracking-wide mt-2">
+                                                {formData.title}
+                                            </h4>
+                                        )}
+                                        <p className="text-[9px] font-medium text-gray-400 uppercase tracking-[0.3em] mt-2 ml-1">
+                                            Stage {modalStep} of {formData.id ? 2 : (projType === 'preset' ? 3 : 2)}
+                                        </p>
                                     </div>
                                 </div>
-                                <button onClick={resetModal} className="p-4 bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-100 transition-all">
-                                    <X className="w-6 h-6" />
-                                </button>
+
+                                <div className="flex items-center gap-8 self-end md:self-auto">
+                                    {modalStep > 1 && (
+                                        <div className="flex flex-col items-start md:items-end gap-1.5">
+                                            <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-[0.2em]">Interface Theme</span>
+                                            <div className="flex gap-2">
+                                                {submissionColors.map(c => (
+                                                    <button 
+                                                        key={c.name} 
+                                                        type="button" 
+                                                        onClick={() => !isReadOnly && setFormData({ ...formData, color: c })} 
+                                                        className={`w-6 h-6 rounded-lg ${c.blob} transition-all ${isReadOnly ? 'cursor-not-allowed opacity-50' : ''} ${formData.color.name === c.name ? 'ring-2 ring-black/10 scale-110 shadow-md' : 'hover:scale-105'}`} 
+                                                        disabled={isReadOnly} 
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                    <button type="button" onClick={resetModal} className="p-4 bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-100 transition-all">
+                                        <X className="w-6 h-6" />
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="max-h-[75vh] overflow-y-auto pr-6 custom-scrollbar relative z-10 scroll-smooth">
@@ -509,7 +591,7 @@ export default function ProjectsPage() {
                                             <div className="w-20 h-20 bg-white rounded-[1.5rem] flex items-center justify-center mb-8 group-hover:scale-110 shadow-lg transition-all">
                                                 <Terminal className="w-10 h-10 text-gray-400 group-hover:text-black" />
                                             </div>
-                                            <h4 className="text-xl font-black text-gray-900 uppercase tracking-tighter">Custom Project</h4>
+                                            <h4 className="text-xl font-bold text-gray-900 uppercase tracking-tight">Custom Project</h4>
                                             <p className="text-[12px] text-gray-400 font-medium mt-4 leading-relaxed max-w-[200px]">Propose a unique scope tailored to your strengths.</p>
                                         </div>
                                         <div
@@ -519,339 +601,127 @@ export default function ProjectsPage() {
                                             <div className="w-20 h-20 bg-white rounded-[1.5rem] flex items-center justify-center mb-8 group-hover:scale-110 shadow-lg transition-all">
                                                 <Target className="w-10 h-10 text-gray-400 group-hover:text-emerald-500" />
                                             </div>
-                                            <h4 className="text-xl font-black text-gray-900 uppercase tracking-tighter">Problem Pool</h4>
+                                            <h4 className="text-xl font-bold text-gray-900 uppercase tracking-tight">Problem Pool</h4>
                                             <p className="text-[12px] text-gray-400 font-medium mt-4 leading-relaxed max-w-[200px]">Deploy solutions for pre-validated challenges.</p>
                                         </div>
                                     </div>
-                                ) : (
-                                    <form onSubmit={handleSubmission} className="space-y-12 pb-8 px-2">
-                                        {projType === 'custom' ? (
-                                            <div className="space-y-10">
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                                    <div className="space-y-2">
-                                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">Project Title</label>
-                                                        <input required disabled={isReadOnly} className="w-full bg-gray-50 border-0 rounded-[1.5rem] px-6 py-4 text-sm font-bold focus:ring-8 focus:ring-black/5 outline-none disabled:opacity-50" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Project Name" />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">Signature Theme</label>
-                                                        <div className="flex gap-3">
-                                                            {submissionColors.map(c => (
-                                                                <button key={c.name} type="button" disabled={isReadOnly} onClick={() => setFormData({ ...formData, color: c })} className={`w-10 h-10 rounded-xl ${c.blob} transition-all ${formData.color.name === c.name ? 'ring-4 ring-black/5 scale-110 shadow-lg' : 'hover:scale-105'}`} />
-                                                            ))}
-                                                        </div>
-                                                    </div>
+                                ) : projType === 'custom' ? (
+                                    <form onSubmit={handleSubmission} className="space-y-8 pb-8 px-2">
+                                        <div className="space-y-6">
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-semibold text-gray-400 uppercase tracking-[0.3em] ml-2">Project Name</label>
+                                                <input required className="w-full bg-gray-50 border border-gray-100 rounded-[1.5rem] px-6 py-4 text-sm font-semibold focus:ring-8 focus:ring-black/5 outline-none" value={formData.title} onChange={e => setFormData({ ...formData, title: e.target.value })} placeholder="Project Name" />
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                 <label className="text-[9px] font-semibold text-gray-400 uppercase tracking-[0.3em] ml-2">Technical Description</label>
+                                                 <textarea required rows="10" className="w-full bg-gray-50 border border-gray-100 rounded-[2rem] px-8 py-6 text-sm font-semibold focus:ring-8 focus:ring-black/5 outline-none resize-none min-h-[200px]" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Project scope and mission goals..." />
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100/50">
+                                                <div className="space-y-2">
+                                                    <label className="text-[9px] font-semibold text-gray-400 uppercase tracking-[0.3em] ml-2">Difficulty</label>
+                                                    <select 
+                                                        value={formData.difficulty || "Medium"}
+                                                        onChange={e => setFormData({ ...formData, difficulty: e.target.value })}
+                                                        className="w-full bg-gray-50 border border-gray-100 rounded-[1.5rem] px-6 py-4 text-sm font-semibold focus:ring-8 focus:ring-black/5 outline-none cursor-pointer"
+                                                    >
+                                                        <option value="Beginner">Beginner</option>
+                                                        <option value="Intermediate">Intermediate</option>
+                                                        <option value="Advanced">Advanced</option>
+                                                    </select>
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">Technical Description</label>
-                                                    <textarea required rows="3" disabled={isReadOnly} className="w-full bg-gray-50 border-0 rounded-[2rem] px-8 py-6 text-sm font-bold focus:ring-8 focus:ring-black/5 outline-none resize-none disabled:opacity-50" value={formData.description} onChange={e => setFormData({ ...formData, description: e.target.value })} placeholder="Project scope and mission goals..." />
-                                                </div>
-
-                                                {/* Dynamic Mission Architecture (Phases from Admin Track) */}
-                                                {(formData.formPhases || []).length > 0 && (
-                                                    <div className="space-y-10 pt-6 border-t border-gray-100/50">
-                                                        {(formData.formPhases || []).map((phase, pi) => (
-                                                            <div key={pi} className="space-y-6">
-                                                                <div className="space-y-1 ml-2">
-                                                                    <div className="flex items-center gap-4">
-                                                                        <label className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.4em] shrink-0">{phase.name || `Phase ${pi + 1}`}</label>
-                                                                        <div className="h-px bg-indigo-100 flex-1" />
-                                                                    </div>
-                                                                    {phase.description && (
-                                                                        <p className="text-[10px] font-bold text-gray-400 leading-relaxed">{phase.description}</p>
-                                                                    )}
-                                                                </div>
-                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                                                    {phase.fields.map((field, fi) => (
-                                                                        <div key={fi} className="space-y-2">
-                                                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">{field.label}</label>
-                                                                            {field.type === 'textarea' ? (
-                                                                                <textarea 
-                                                                                    disabled={isReadOnly}
-                                                                                    rows="2"
-                                                                                    className="w-full bg-gray-50 border-0 rounded-[1.5rem] px-6 py-4 text-sm font-bold focus:ring-8 focus:ring-indigo-500/5 outline-none resize-none disabled:opacity-50"
-                                                                                    value={formData.dynamicFields?.[field.label] || ""}
-                                                                                    onChange={e => setFormData({ 
-                                                                                        ...formData, 
-                                                                                        dynamicFields: { 
-                                                                                            ...(formData.dynamicFields || {}), 
-                                                                                            [field.label]: e.target.value 
-                                                                                        } 
-                                                                                    })}
-                                                                                    placeholder={`Specify ${field.label}...`}
-                                                                                />
-                                                                            ) : (
-                                                                                <input 
-                                                                                    disabled={isReadOnly}
-                                                                                    type={field.type === 'link' ? 'url' : 'text'}
-                                                                                    className="w-full bg-gray-50 border-0 rounded-[1.5rem] px-6 py-4 text-sm font-bold focus:ring-8 focus:ring-indigo-500/5 outline-none disabled:opacity-50"
-                                                                                    value={formData.dynamicFields?.[field.label] || ""}
-                                                                                    onChange={e => setFormData({ 
-                                                                                        ...formData, 
-                                                                                        dynamicFields: { 
-                                                                                            ...(formData.dynamicFields || {}), 
-                                                                                            [field.label]: e.target.value 
-                                                                                        } 
-                                                                                    })}
-                                                                                    placeholder={field.type === 'file' ? 'Link to asset' : `Enter ${field.label}...`}
-                                                                                />
-                                                                            )}
-                                                                        </div>
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                )}
-
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                                    <div className="space-y-2">
-                                                        <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">Tech Stack Utilization</label>
-                                                        <div className="flex flex-wrap gap-1.5 pt-1">
-                                                            {(TRACK_TECH_STACKS[userTrack] || TRACK_TECH_STACKS["Web Development"]).map(tech => (
-                                                                <button
-                                                                    key={tech}
-                                                                    type="button"
-                                                                    disabled={isReadOnly}
-                                                                    onClick={() => {
-                                                                        const currentStack = Array.isArray(formData.techStack) ? formData.techStack : [];
-                                                                        const exists = currentStack.includes(tech);
-                                                                        const newStack = exists ? currentStack.filter(t => t !== tech) : [...currentStack, tech];
-                                                                        setFormData({ ...formData, techStack: newStack });
-                                                                    }}
-                                                                    className={`px-3 py-1.5 rounded-lg text-[8px] font-bold uppercase transition-all border ${(Array.isArray(formData.techStack) ? formData.techStack : []).includes(tech) ? 'bg-black text-white border-black shadow-md' : 'bg-white text-gray-400 border-gray-100 hover:border-gray-300'}`}
-                                                                >
-                                                                    {tech}
-                                                                </button>
-                                                            ))}
-                                                        </div>
-                                                    </div>
-                                                    <div className="space-y-4">
-                                                        <div className="space-y-2">
-                                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">GitHub / Documentation</label>
-                                                            <input disabled={isReadOnly} className="w-full bg-gray-50 border-0 rounded-[1.5rem] px-6 py-4 text-sm font-bold focus:ring-8 focus:ring-black/5 outline-none disabled:opacity-50" value={formData.repoLink || ""} onChange={e => setFormData({ ...formData, repoLink: e.target.value })} placeholder="Cloud URL / Docs Link" />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">Live Demo / Artifact</label>
-                                                            <input disabled={isReadOnly} className="w-full bg-gray-50 border-0 rounded-[1.5rem] px-6 py-4 text-sm font-bold focus:ring-8 focus:ring-black/5 outline-none disabled:opacity-50" value={formData.deployLink || ""} onChange={e => setFormData({ ...formData, deployLink: e.target.value })} placeholder="Vercel / Drive / Live URL" />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">Implementation Roadmap</label>
-                                                    <textarea required rows="4" disabled={isReadOnly} className="w-full bg-gray-50 border-0 rounded-[2rem] px-8 py-6 text-sm font-bold focus:ring-8 focus:ring-black/5 outline-none resize-none disabled:opacity-50" value={formData.solution} onChange={e => setFormData({ ...formData, solution: e.target.value })} placeholder="Describe the steps you will take to achieve the mission objectives..." />
+                                                    <label className="text-[9px] font-semibold text-gray-400 uppercase tracking-[0.3em] ml-2">Duration</label>
+                                                    <input 
+                                                        required 
+                                                        className="w-full bg-gray-50 border border-gray-100 rounded-[1.5rem] px-6 py-4 text-sm font-semibold focus:ring-8 focus:ring-black/5 outline-none"
+                                                        value={formData.duration || ""}
+                                                        onChange={e => setFormData({ ...formData, duration: e.target.value })}
+                                                        placeholder="e.g. 1 Month"
+                                                    />
                                                 </div>
                                             </div>
-                                        ) : modalStep === 2 ? (
-                                            <div className="space-y-12 mb-10">
-                                                {!formData.id && (
-                                                    <div className="space-y-4 w-full">
-                                                        <div className="flex items-center justify-between">
-                                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">Select Mission Statement</label>
-                                                            <span className="text-[8px] font-bold text-gray-400 italic">Pre-approved problem pool for your track</span>
-                                                        </div>
-                                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6">
-                                                            {myStatements.map(s => {
-                                                                const isAlreadyAdded = projects.some(p => p.title === s.title);
-                                                                const hasOtherPreset = projects.some(p => (p.projectType === 'preset' || availablePool.some(pool => pool.title === p.title)) && p.title !== s.title);
-                                                                const isDisabled = isReadOnly || isAlreadyAdded || hasOtherPreset;
-
-                                                                return (
-                                                                    <div
-                                                                        key={s.id}
-                                                                        onClick={() => {
-                                                                            if (!isDisabled) {
-                                                                                setFormData({ ...formData, ...s, id: null, formPhases: s.formPhases || [] });
-                                                                                setStep(3);
-                                                                            }
-                                                                        }}
-                                                                        className={`p-8 rounded-[2.5rem] flex flex-col justify-between border-2 transition-all group/s ${isAlreadyAdded
-                                                                            ? 'opacity-70 cursor-default shadow-none bg-gray-50/50'
-                                                                            : hasOtherPreset
-                                                                                ? 'opacity-50 cursor-not-allowed grayscale bg-gray-50/80'
-                                                                                : 'cursor-pointer'
-                                                                            } ${formData.title === s.title ? 'bg-black text-white border-black shadow-2xl scale-[1.02]' : 'bg-gray-50 border-gray-100 hover:border-black/50 hover:bg-white shadow-sm'}`}
-                                                                    >
-                                                                        <div>
-                                                                            <div className="flex justify-between items-start mb-4 gap-4">
-                                                                                <h4 className="text-xl font-black uppercase tracking-tighter leading-tight">{s.title}</h4>
-                                                                                {isAlreadyAdded && <CheckCircle2 className={`w-8 h-8 shrink-0 ${formData.title === s.title ? 'text-white' : 'text-emerald-500'}`} />}
-                                                                            </div>
-                                                                            <p className={`text-sm font-semibold mb-8 leading-relaxed line-clamp-2 ${formData.title === s.title ? 'text-gray-300' : 'text-gray-500'}`}>{s.description}</p>
-                                                                            <div className="flex flex-wrap gap-2 text-[9px] font-black uppercase tracking-widest mb-8">
-                                                                                {(s.techStack || []).map(t => (
-                                                                                    <span key={t} className={`px-2.5 py-1 rounded-md shadow-sm border ${formData.title === s.title ? 'bg-white/10 text-white border-transparent' : 'bg-white text-gray-600 border-gray-200'}`}>{t}</span>
-                                                                                ))}
-                                                                            </div>
-                                                                        </div>
-                                                                        <button
-                                                                            type="button"
-                                                                            disabled={isDisabled}
-                                                                            className={`w-full py-4 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.2em] transition-all shadow-sm ${isAlreadyAdded
-                                                                                ? 'bg-emerald-500 text-white shadow-emerald-500/20 cursor-default'
-                                                                                : formData.title === s.title
-                                                                                    ? 'bg-white text-black'
-                                                                                    : isDisabled
-                                                                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                                                                        : 'bg-black text-white group-hover/s:scale-105 active:scale-95'
-                                                                                }`}
-                                                                        >
-                                                                            {isAlreadyAdded ? 'Active Mission' : 'Accept Assignment'}
-                                                                        </button>
-                                                                    </div>
-                                                                );
-                                                            })}
-
-                                                            {myStatements.length === 0 && (
-                                                                <div className="col-span-full py-20 bg-gray-50/50 rounded-[3rem] border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
-                                                                    <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-6">
-                                                                        <Rocket className="w-8 h-8 text-gray-200" />
-                                                                    </div>
-                                                                    <h4 className="text-xl font-black text-gray-900 uppercase tracking-tighter mb-2">No statements found</h4>
-                                                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Awaiting deployment for {userTrack}</p>
-                                                                </div>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <div className="space-y-12">
-                                                <AnimatePresence mode="wait">
-                                                    {formData.title && (
-                                                        <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -30 }} className="space-y-10">
-                                                            <div className="space-y-4 w-full">
-                                                                <div className="flex items-center justify-between ml-2">
-                                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em]">Protocol Details</label>
-                                                                    {!formData.id && (
-                                                                        <button type="button" onClick={() => setStep(2)} className="text-[9px] font-black text-black uppercase tracking-widest px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl transition-all">Switch Statement</button>
-                                                                    )}
-                                                                </div>
-                                                                <div className="p-8 rounded-[2.5rem] bg-gray-50 border border-gray-100 shadow-sm relative overflow-hidden">
-                                                                    <div className="absolute top-0 right-0 p-8 opacity-5 pointer-events-none">
-                                                                        <Target className="w-32 h-32 -mr-8 -mt-8" />
-                                                                    </div>
-                                                                    <div className="space-y-8">
-                                                                        <div>
-                                                                            <h4 className="text-2xl font-black uppercase tracking-tighter text-gray-900 mb-2">{formData.title}</h4>
-                                                                            <p className="text-sm font-bold text-gray-500 leading-relaxed max-w-2xl">{formData.description}</p>
-                                                                        </div>
-
-                                                                        {/* Dynamic Mission Architecture */}
-                                                                        {(formData.formPhases || []).length > 0 && (
-                                                                            <div className="space-y-10 pt-8 border-t border-gray-100/50">
-                                                                                {(formData.formPhases || []).map((phase, pi) => (
-                                                                                    <div key={pi} className="space-y-6">
-                                                                                        <div className="space-y-1 ml-2">
-                                                                                            <div className="flex items-center gap-4">
-                                                                                                <label className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.4em] shrink-0 font-bold">{phase.name || `Phase ${pi + 1}`}</label>
-                                                                                                <div className="h-px bg-indigo-100 flex-1" />
-                                                                                            </div>
-                                                                                            {phase.description && (
-                                                                                                <p className="text-[10px] font-bold text-gray-400 leading-relaxed">{phase.description}</p>
-                                                                                            )}
-                                                                                        </div>
-                                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                                                                            {phase.fields.map((field, fi) => (
-                                                                                                <div key={fi} className="space-y-2">
-                                                                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">{field.label}</label>
-                                                                                                    {field.type === 'textarea' ? (
-                                                                                                        <textarea 
-                                                                                                            disabled={isReadOnly}
-                                                                                                            rows="2"
-                                                                                                            className="w-full bg-white border border-gray-100 rounded-[1.5rem] px-6 py-4 text-sm font-bold focus:ring-8 focus:ring-indigo-500/5 outline-none resize-none disabled:opacity-50"
-                                                                                                            value={formData.dynamicFields?.[field.label] || ""}
-                                                                                                            onChange={e => setFormData({ 
-                                                                                                                ...formData, 
-                                                                                                                dynamicFields: { 
-                                                                                                                    ...(formData.dynamicFields || {}), 
-                                                                                                                    [field.label]: e.target.value 
-                                                                                                                } 
-                                                                                                            })}
-                                                                                                            placeholder={`Provide ${field.label}...`}
-                                                                                                        />
-                                                                                                    ) : (
-                                                                                                        <input 
-                                                                                                            disabled={isReadOnly}
-                                                                                                            type={field.type === 'link' ? 'url' : 'text'}
-                                                                                                            className="w-full bg-white border border-gray-100 rounded-[1.5rem] px-6 py-4 text-sm font-bold focus:ring-8 focus:ring-indigo-500/5 outline-none disabled:opacity-50"
-                                                                                                            value={formData.dynamicFields?.[field.label] || ""}
-                                                                                                            onChange={e => setFormData({ 
-                                                                                                                ...formData, 
-                                                                                                                dynamicFields: { 
-                                                                                                                    ...(formData.dynamicFields || {}), 
-                                                                                                                    [field.label]: e.target.value 
-                                                                                                                } 
-                                                                                                            })}
-                                                                                                            placeholder={field.type === 'file' ? 'Asset Link / Path' : `Enter ${field.label}...`}
-                                                                                                        />
-                                                                                                    )}
-                                                                                                </div>
-                                                                                            ))}
-                                                                                        </div>
-                                                                                    </div>
-                                                                                ))}
-                                                                            </div>
-                                                                        )}
-
-                                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-gray-100/50">
-                                                                            <div className="space-y-2">
-                                                                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">Assigned Tech Stack</label>
-                                                                                <div className="flex flex-wrap gap-2">
-                                                                                    {(formData.techStack || []).map(t => (
-                                                                                        <span key={t} className="px-3 py-1.5 rounded-lg bg-black text-white text-[9px] font-bold uppercase tracking-widest shadow-sm">{t}</span>
-                                                                                    ))}
-                                                                                </div>
-                                                                            </div>
-                                                                            <div className="space-y-4">
-                                                                                <div className="space-y-2">
-                                                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">Work Repository</label>
-                                                                                    <input disabled={isReadOnly} className="w-full bg-white border border-gray-100 rounded-[1.5rem] px-6 py-4 text-sm font-bold focus:ring-8 focus:ring-black/5 outline-none disabled:opacity-50" value={formData.repoLink || ""} onChange={e => setFormData({ ...formData, repoLink: e.target.value })} placeholder="Deployment URL" />
-                                                                                </div>
-                                                                                <div className="space-y-2">
-                                                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">Live Demo URL</label>
-                                                                                    <input disabled={isReadOnly} className="w-full bg-white border border-gray-100 rounded-[1.5rem] px-6 py-4 text-sm font-bold focus:ring-8 focus:ring-black/5 outline-none disabled:opacity-50" value={formData.deployLink || ""} onChange={e => setFormData({ ...formData, deployLink: e.target.value })} placeholder="Artifact URL" />
-                                                                                </div>
-                                                                            </div>
-                                                                        </div>
-
-                                                                        <div className="space-y-2 pt-6 border-t border-gray-100/50">
-                                                                            <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">Solution Architecture</label>
-                                                                            <textarea required rows="4" disabled={isReadOnly} className="w-full bg-white border border-gray-100 rounded-[2rem] px-8 py-6 text-sm font-bold focus:ring-8 focus:ring-black/5 outline-none resize-none disabled:opacity-50" value={formData.solution} onChange={e => setFormData({ ...formData, solution: e.target.value })} placeholder="Explain your plan for this statement..." />
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-
-                                                            <div className="space-y-2 mb-8 mt-6">
-                                                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-[0.3em] ml-2">Interface Theme</label>
-                                                                <div className="flex gap-3">
-                                                                    {submissionColors.map(c => (
-                                                                        <button key={c.name} type="button" onClick={() => !isReadOnly && setFormData({ ...formData, color: c })} className={`w-10 h-10 rounded-xl ${c.blob} transition-all ${isReadOnly ? 'cursor-not-allowed opacity-50' : ''} ${formData.color.name === c.name ? 'ring-4 ring-black/5 scale-110 shadow-lg' : 'hover:scale-105'}`} disabled={isReadOnly} />
-                                                                    ))}
-                                                                </div>
-                                                            </div>
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
-                                            </div>
-                                        )}
-                                        <div className="pt-8 flex gap-6 sticky bottom-0 bg-white py-6 border-t border-gray-50 z-20">
-                                            <button type="button" onClick={resetModal} className="flex-1 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 hover:text-black transition-colors">Cancel</button>
-                                            {!(projType === 'preset' && modalStep === 2) && (
-                                                <button 
-                                                    type="submit" 
-                                                    disabled={!formData.title} 
-                                                    className="flex-[3] py-5 bg-black text-white rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.4em] shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
-                                                >
-                                                    {formData.id ? (
-                                                        <><CheckCircle2 className="w-4 h-4 text-emerald-500" /> Sync Intelligence</>
-                                                    ) : (
-                                                        <><Zap className="w-4 h-4 text-emerald-500 " /> Submit for Review</>
-                                                    )}
-                                                </button>
-                                            )}
+                                        </div>
+                                        <div className="pt-8 flex gap-6 border-t border-gray-50">
+                                            <button type="button" onClick={resetModal} className="flex-1 py-4 text-[10px] font-semibold uppercase tracking-[0.2em] text-gray-400 hover:text-black transition-colors">Cancel</button>
+                                            <button 
+                                                type="submit" 
+                                                disabled={!formData.title} 
+                                                className="flex-[3] py-5 bg-black text-white rounded-[1.5rem] text-[10px] font-semibold uppercase tracking-[0.4em] shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                                            >
+                                                Deploy Custom Mission
+                                            </button>
                                         </div>
                                     </form>
+                                ) : (
+                                    <div className="space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-[9px] font-semibold text-gray-400 uppercase tracking-[0.3em] ml-2">Select Mission Statement</label>
+                                            <span className="text-[8px] font-bold text-gray-400 italic">Pre-approved problem pool for your track</span>
+                                        </div>
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-6 max-h-[50vh] overflow-y-auto pr-2 custom-scrollbar">
+                                            {myStatements.map(s => {
+                                                const isAlreadyAdded = projects.some(p => p.title === s.title);
+                                                const hasOtherPreset = projects.some(p => p.projectType === 'preset' || availablePool.some(pool => pool.title === p.title));
+                                                const isDisabled = isAlreadyAdded || hasOtherPreset;
+
+                                                return (
+                                                    <div
+                                                        key={s.id}
+                                                        onClick={() => {
+                                                            if (!isDisabled) {
+                                                                handleAcceptPreset(s);
+                                                            }
+                                                        }}
+                                                        className={`p-8 rounded-[2.5rem] flex flex-col justify-between border-2 transition-all group/s ${isAlreadyAdded
+                                                            ? 'opacity-70 cursor-default shadow-none bg-gray-50/50 border-gray-100'
+                                                            : hasOtherPreset
+                                                                ? 'opacity-50 cursor-not-allowed grayscale bg-gray-50/80 border-gray-100'
+                                                                : 'cursor-pointer bg-gray-50 border-gray-100 hover:border-black/50 hover:bg-white shadow-sm'}`}
+                                                    >
+                                                        <div>
+                                                            <div className="flex justify-between items-start mb-4 gap-4">
+                                                                <h4 className="text-xl font-bold uppercase tracking-tight leading-tight text-gray-800">{s.title}</h4>
+                                                                {isAlreadyAdded && <span className="text-[8px] font-semibold px-2 py-0.5 rounded border border-emerald-100 bg-emerald-50 text-emerald-600 uppercase tracking-wider">Active Mission</span>}
+                                                            </div>
+                                                            <p className="text-sm font-normal mb-8 leading-relaxed line-clamp-3 text-gray-500">{s.description}</p>
+                                                            <div className="flex flex-wrap gap-2 text-[9px] font-semibold uppercase tracking-widest mb-8">
+                                                                {(s.techStack || []).map(t => (
+                                                                    <span key={t} className="px-2.5 py-1 rounded-md shadow-sm border bg-white text-gray-600 border-gray-200">{t}</span>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            disabled={isDisabled}
+                                                            className={`w-full py-4 rounded-[1.5rem] text-[10px] font-semibold uppercase tracking-[0.2em] transition-all shadow-sm ${isAlreadyAdded
+                                                                ? 'bg-emerald-500 text-white shadow-emerald-500/20 cursor-default'
+                                                                : isDisabled
+                                                                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                                    : 'bg-black text-white group-hover/s:scale-105 active:scale-95'
+                                                                }`}
+                                                        >
+                                                            {isAlreadyAdded ? 'Active Mission' : 'Accept Assignment'}
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+
+                                            {myStatements.length === 0 && (
+                                                <div className="col-span-full py-20 bg-gray-50/50 rounded-[3rem] border-2 border-dashed border-gray-200 flex flex-col items-center justify-center text-center">
+                                                    <div className="w-16 h-16 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-6">
+                                                        <Rocket className="w-8 h-8 text-gray-200" />
+                                                    </div>
+                                                    <h4 className="text-xl font-bold text-gray-900 uppercase tracking-tighter mb-2">No statements found</h4>
+                                                    <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-widest">Awaiting deployment for {userTrack}</p>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="pt-4 flex justify-end">
+                                            <button type="button" onClick={resetModal} className="px-6 py-3 bg-gray-100 text-gray-600 font-semibold rounded-xl text-[10px] uppercase tracking-widest hover:bg-gray-200 transition-all">Cancel</button>
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                         </motion.div>
