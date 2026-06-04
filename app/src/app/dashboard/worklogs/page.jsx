@@ -190,6 +190,9 @@ export default function InternWorklogsPage() {
                     <div className="bg-white border border-gray-200 px-5 py-3 rounded-lg shadow-sm text-right shrink-0 flex flex-col justify-center">
                         <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block mb-0.5">Attendance</span>
                         <span className="text-2xl font-black text-black leading-none">{attendancePercentage}%</span>
+                        <span className="text-[10px] text-gray-400 font-medium mt-1">
+                            ({logs.filter(l => l.status === 'Present').length} of {logs.length} sessions filled)
+                        </span>
                     </div>
                 </div>
             </header>

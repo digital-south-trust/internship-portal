@@ -6,6 +6,16 @@ export async function GET(req) {
     try {
         await dbConnect();
         const { searchParams } = new URL(req.url);
+        const id = searchParams.get('id');
+
+        if (id) {
+            const project = await ProjectPool.findById(id);
+            if (!project) {
+                return NextResponse.json({ message: "Project not found" }, { status: 404 });
+            }
+            return NextResponse.json(project, { status: 200 });
+        }
+
         const trackParam = searchParams.get('track');
 
         let query = {};

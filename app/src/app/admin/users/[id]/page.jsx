@@ -6,7 +6,7 @@ import {
     ArrowLeft, Mail, Calendar, Phone, Award, Activity, User,
     CheckCircle, RefreshCw, UserCog, ChevronDown, ShieldOff, ShieldCheck, X, AlertTriangle,
     Github, ExternalLink, KeyRound, Copy, Eye, EyeOff, Edit, CreditCard,
-    Plus, Trash2, Type, AlignLeft, Link as LinkIcon, FileText
+    Plus, Trash2, Type, AlignLeft, Link as LinkIcon, FileText, BookOpen, Search
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
@@ -45,6 +45,7 @@ export default function InternDetailsPage() {
     const [editCategory, setEditCategory] = useState("");
     const [editTrack, setEditTrack] = useState("");
     const [editFormPhases, setEditFormPhases] = useState([]);
+    const [editTopics, setEditTopics] = useState([]);
     const [editStatus, setEditStatus] = useState("");
 
     // Delete Confirmation state
@@ -86,8 +87,16 @@ export default function InternDetailsPage() {
     const [newProjectDifficulty, setNewProjectDifficulty] = useState("Medium");
     const [newProjectDuration, setNewProjectDuration] = useState("1 Month");
     const [newProjectFormPhases, setNewProjectFormPhases] = useState([]);
+    const [newProjectTopics, setNewProjectTopics] = useState([]);
     const [tracksList, setTracksList] = useState([]);
     const [savingNewProject, setSavingNewProject] = useState(false);
+
+    // Assign project wizard states
+    const [assignStep, setAssignStep] = useState(1); // 1 = choice, 2 = template list, 3 = form
+    const [projectPool, setProjectPool] = useState([]);
+    const [loadingPool, setLoadingPool] = useState(false);
+    const [poolSearch, setPoolSearch] = useState("");
+    const [poolTrackFilter, setPoolTrackFilter] = useState("All");
 
     // Tab switching logic for dual-role users
     const [profileTab, setProfileTab] = useState("");
@@ -110,6 +119,7 @@ export default function InternDetailsPage() {
         setEditCategory(project.category || '');
         setEditTrack(project.track || '');
         setEditFormPhases(project.formPhases || []);
+        setEditTopics(project.topics || []);
         setEditStatus(project.status || 'Pending');
         setIsEditingProject(false);
     };
@@ -290,6 +300,37 @@ export default function InternDetailsPage() {
         setNewProjectFormPhases(newList);
     };
 
+    const handleAddNewProjectTopic = () => setNewProjectTopics([...newProjectTopics, { title: "", subtopics: [] }]);
+    const handleRemoveNewProjectTopic = (ti) => setNewProjectTopics(newProjectTopics.filter((_, i) => i !== ti));
+    
+    const handleNewProjectTopicTitleChange = (ti, title) => {
+        const newList = [...newProjectTopics];
+        newList[ti] = { ...newList[ti], title };
+        setNewProjectTopics(newList);
+    };
+
+    const handleAddNewProjectSubtopic = (ti) => {
+        const newList = [...newProjectTopics];
+        newList[ti] = { ...newList[ti] };
+        newList[ti].subtopics = [...(newList[ti].subtopics || []), { title: "", contentType: "text", contentValue: "" }];
+        setNewProjectTopics(newList);
+    };
+
+    const handleRemoveNewProjectSubtopic = (ti, si) => {
+        const newList = [...newProjectTopics];
+        newList[ti] = { ...newList[ti] };
+        newList[ti].subtopics = newList[ti].subtopics.filter((_, i) => i !== si);
+        setNewProjectTopics(newList);
+    };
+
+    const handleNewProjectSubtopicChange = (ti, si, key, val) => {
+        const newList = [...newProjectTopics];
+        newList[ti] = { ...newList[ti] };
+        newList[ti].subtopics = [...newList[ti].subtopics];
+        newList[ti].subtopics[si] = { ...newList[ti].subtopics[si], [key]: val };
+        setNewProjectTopics(newList);
+    };
+
     const handleEditAddPhase = () => setEditFormPhases([...editFormPhases, { name: "New Phase", description: "", fields: [] }]);
     const handleEditRemovePhase = (pi) => setEditFormPhases(editFormPhases.filter((_, i) => i !== pi));
     
@@ -327,6 +368,37 @@ export default function InternDetailsPage() {
         setEditFormPhases(newList);
     };
 
+    const handleEditAddTopic = () => setEditTopics([...editTopics, { title: "", subtopics: [] }]);
+    const handleEditRemoveTopic = (ti) => setEditTopics(editTopics.filter((_, i) => i !== ti));
+    
+    const handleEditTopicTitleChange = (ti, title) => {
+        const newList = [...editTopics];
+        newList[ti] = { ...newList[ti], title };
+        setEditTopics(newList);
+    };
+
+    const handleEditAddSubtopic = (ti) => {
+        const newList = [...editTopics];
+        newList[ti] = { ...newList[ti] };
+        newList[ti].subtopics = [...(newList[ti].subtopics || []), { title: "", contentType: "text", contentValue: "" }];
+        setEditTopics(newList);
+    };
+
+    const handleEditRemoveSubtopic = (ti, si) => {
+        const newList = [...editTopics];
+        newList[ti] = { ...newList[ti] };
+        newList[ti].subtopics = newList[ti].subtopics.filter((_, i) => i !== si);
+        setEditTopics(newList);
+    };
+
+    const handleEditSubtopicChange = (ti, si, key, val) => {
+        const newList = [...editTopics];
+        newList[ti] = { ...newList[ti] };
+        newList[ti].subtopics = [...newList[ti].subtopics];
+        newList[ti].subtopics[si] = { ...newList[ti].subtopics[si], [key]: val };
+        setEditTopics(newList);
+    };
+
     const handleAddProjectSubmit = async (e) => {
         e.preventDefault();
         if (!newProjectName.trim() || !newProjectDescription.trim()) {
@@ -349,6 +421,7 @@ export default function InternDetailsPage() {
                 difficulty: newProjectDifficulty,
                 duration: newProjectDuration,
                 formPhases: newProjectFormPhases,
+                topics: newProjectTopics,
                 status: 'Approved',
                 projectType: 'custom',
                 progress: 0
@@ -714,12 +787,16 @@ export default function InternDetailsPage() {
                                 setNewProjectDescription("");
                                 setNewProjectDuration("1 Month");
                                 setNewProjectDifficulty("Medium");
+                                setNewProjectTopics([]);
                                 const internTrack = tracksList.find(t => t.name.toLowerCase() === user?.track?.toLowerCase());
                                 if (internTrack) {
                                     setNewProjectFormPhases(internTrack.formPhases || []);
                                 } else {
                                     setNewProjectFormPhases([]);
                                 }
+                                setAssignStep(1);
+                                setPoolSearch("");
+                                setPoolTrackFilter(user?.track || "All");
                                 setShowAddProjectModal(true);
                             }}
                             className="bg-black text-white px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-neutral-800 transition-all flex items-center gap-2 shadow-lg shadow-black/10"
@@ -802,7 +879,7 @@ export default function InternDetailsPage() {
                                             <div className="space-y-6">
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div className="space-y-1 bg-gray-50 rounded-2xl p-4">
-                                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Project Title</span>
+                                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400">Project Name</span>
                                                         <p className="text-sm font-black text-gray-900">{editTitle}</p>
                                                     </div>
                                                     <div className="space-y-1 bg-gray-50 rounded-2xl p-4">
@@ -835,6 +912,50 @@ export default function InternDetailsPage() {
                                                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Detailed Description</span>
                                                     <p className="text-sm text-gray-600 font-medium leading-relaxed bg-gray-50 rounded-2xl p-5 border border-gray-50 whitespace-pre-line">{editDescription}</p>
                                                 </div>
+
+                                                {/* Study Topics & Reference Materials View (Read-Only) */}
+                                                {editTopics && editTopics.length > 0 && (
+                                                    <div className="space-y-4">
+                                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Study Topics & Reference Materials</span>
+                                                        <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar bg-gray-50/50 p-4 rounded-2xl border border-gray-100">
+                                                            {editTopics.map((topic, ti) => (
+                                                                <div key={ti} className="space-y-3 bg-white p-4 rounded-xl border border-gray-150 shadow-sm">
+                                                                    <div>
+                                                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Topic Name</span>
+                                                                        <h4 className="text-[11px] font-black text-black uppercase tracking-tight mt-0.5">{topic.title || `Topic ${ti + 1}`}</h4>
+                                                                    </div>
+                                                                    <div className="space-y-3 border-t border-gray-200/60 pt-2.5">
+                                                                        {topic.subtopics && topic.subtopics.map((sub, si) => (
+                                                                            <div key={si} className="bg-gray-50/70 p-3 rounded-lg border border-gray-100 space-y-2">
+                                                                                <div>
+                                                                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Subtopic Title</span>
+                                                                                    <span className="text-xs font-bold text-gray-800 uppercase block mt-0.5">{sub.title}</span>
+                                                                                </div>
+                                                                                <div className="pt-1.5 border-t border-gray-200/50">
+                                                                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Content / Resources</span>
+                                                                                    <div className="text-xs mt-1">
+                                                                                        {sub.contentType === 'text' && (
+                                                                                            <p className="text-gray-600 whitespace-pre-wrap bg-white p-2 rounded border border-gray-150 shadow-sm">{sub.contentValue}</p>
+                                                                                        )}
+                                                                                        {sub.contentType === 'link' && (
+                                                                                            <a href={sub.contentValue} target="_blank" rel="noopener noreferrer" className="text-black font-semibold underline hover:text-gray-600 break-all block bg-white p-2 rounded border border-gray-150 shadow-sm">{sub.contentValue} &rarr;</a>
+                                                                                        )}
+                                                                                        {sub.contentType === 'image' && (
+                                                                                            <div className="space-y-1 bg-white p-2 rounded border border-gray-150 shadow-sm">
+                                                                                                <img src={sub.contentValue} alt={sub.title} className="max-h-[120px] w-auto rounded border border-gray-200" />
+                                                                                                <a href={sub.contentValue} target="_blank" rel="noopener noreferrer" className="text-[9px] text-black font-semibold underline hover:text-gray-600 block mt-1">Open Image</a>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
 
                                                 {/* Links */}
                                                 <div className="flex gap-3 flex-wrap">
@@ -884,7 +1005,7 @@ export default function InternDetailsPage() {
                                             <div className="space-y-6">
                                                 <div className="grid grid-cols-2 gap-4">
                                                     <div className="space-y-1.5 col-span-2">
-                                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Project Title</label>
+                                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Project Name</label>
                                                         <input 
                                                             type="text" 
                                                             required
@@ -945,15 +1066,133 @@ export default function InternDetailsPage() {
                                                 </div>
 
                                                 <div className="space-y-1.5">
-                                                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Detailed Description</label>
-                                                    <textarea 
-                                                        required
-                                                        rows={5}
-                                                        value={editDescription} 
-                                                        onChange={e => setEditDescription(e.target.value)}
-                                                        className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-[2rem] px-6 py-5 text-sm font-semibold transition-all outline-none resize-none font-medium" 
-                                                    />
-                                                </div>
+                                                     <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Detailed Description</label>
+                                                     <textarea 
+                                                         required
+                                                         rows={12}
+                                                         value={editDescription} 
+                                                         onChange={e => setEditDescription(e.target.value)}
+                                                         className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-[2rem] px-6 py-5 text-sm font-semibold transition-all outline-none resize-none font-medium min-h-[240px]" 
+                                                     />
+                                                 </div>
+
+                                                 {/* Study Topics & Resources Edit Mode */}
+                                                 <div className="space-y-6 pt-6 border-t border-gray-100 mt-4">
+                                                     <div className="flex justify-between items-center mb-4">
+                                                         <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em] border-l-4 border-black pl-3">Study Topics & Resources</h4>
+                                                         <button 
+                                                             type="button" 
+                                                             onClick={handleEditAddTopic} 
+                                                             className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md"
+                                                         >
+                                                             <Plus className="w-3 h-3 text-[#ccff00]" /> Add Topic
+                                                         </button>
+                                                     </div>
+
+                                                     <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                                         {editTopics.length === 0 ? (
+                                                             <div className="p-6 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                                                 <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">No study topics added yet</p>
+                                                                 <p className="text-[9px] text-gray-400 mt-1">Add topics to guide the intern during this project.</p>
+                                                             </div>
+                                                         ) : (
+                                                             editTopics.map((topic, ti) => (
+                                                                 <div key={ti} className="bg-gray-50/80 rounded-2xl p-4 border border-gray-100 space-y-4">
+                                                                     <div className="space-y-1">
+                                                                         <label className="block text-[8px] font-black text-black uppercase tracking-[0.2em] border-b border-black/10 pb-1">Topic Title</label>
+                                                                         <input 
+                                                                             value={topic.title} 
+                                                                             onChange={(e) => handleEditTopicTitleChange(ti, e.target.value)} 
+                                                                             placeholder="Topic Title (e.g., Intro to Blockchain)" 
+                                                                             className="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-[11px] font-black text-black uppercase tracking-widest outline-none w-full shadow-sm" 
+                                                                         />
+                                                                     </div>
+                                                                     <div className="flex justify-between items-center pt-1 border-t border-gray-200/40">
+                                                                         <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Subtopics</span>
+                                                                         <div className="flex items-center gap-3">
+                                                                             <button 
+                                                                                 type="button" 
+                                                                                 onClick={() => handleEditAddSubtopic(ti)} 
+                                                                                 className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1.5 bg-black text-white rounded-lg hover:scale-105 transition-all"
+                                                                             >
+                                                                                 + Subtopic
+                                                                             </button>
+                                                                             <button 
+                                                                                 type="button" 
+                                                                                 onClick={() => handleEditRemoveTopic(ti)} 
+                                                                                 className="text-rose-400 hover:text-rose-600 transition-all p-1"
+                                                                             >
+                                                                                 <Trash2 className="w-4 h-4" />
+                                                                             </button>
+                                                                         </div>
+                                                                     </div>
+
+                                                                     <div className="space-y-3 pt-2">
+                                                                         {topic.subtopics && topic.subtopics.map((sub, si) => (
+                                                                             <div key={si} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
+                                                                                 <div className="flex justify-between items-center pb-2 border-b border-gray-50">
+                                                                                     <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Subtopic #{si + 1}</span>
+                                                                                     <button 
+                                                                                         type="button" 
+                                                                                         onClick={() => handleEditRemoveSubtopic(ti, si)} 
+                                                                                         className="text-gray-300 hover:text-rose-500 transition-all"
+                                                                                     >
+                                                                                         <X className="w-4 h-4" />
+                                                                                     </button>
+                                                                                 </div>
+
+                                                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                                     <div className="space-y-1">
+                                                                                         <label className="text-[8px] text-gray-400 uppercase tracking-widest">Subtopic Title</label>
+                                                                                         <input 
+                                                                                             value={sub.title} 
+                                                                                             onChange={(e) => handleEditSubtopicChange(ti, si, 'title', e.target.value)} 
+                                                                                             placeholder="Subtopic Title..." 
+                                                                                             className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[10px] font-semibold outline-none shadow-sm" 
+                                                                                         />
+                                                                                     </div>
+
+                                                                                     <div className="space-y-1">
+                                                                                         <label className="text-[8px] text-gray-400 uppercase tracking-widest">Content Type</label>
+                                                                                         <select 
+                                                                                             value={sub.contentType} 
+                                                                                             onChange={(e) => handleEditSubtopicChange(ti, si, 'contentType', e.target.value)} 
+                                                                                             className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[8px] font-semibold uppercase outline-none shadow-sm cursor-pointer"
+                                                                                         >
+                                                                                             <option value="text">Text Instruction</option>
+                                                                                             <option value="link">Hyperlink / Reference</option>
+                                                                                             <option value="image">Image URL</option>
+                                                                                         </select>
+                                                                                     </div>
+
+                                                                                     <div className="space-y-1 col-span-2">
+                                                                                         <label className="text-[8px] text-gray-400 uppercase tracking-widest">Content Value</label>
+                                                                                         {sub.contentType === 'text' ? (
+                                                                                             <textarea 
+                                                                                                 value={sub.contentValue} 
+                                                                                                 onChange={(e) => handleEditSubtopicChange(ti, si, 'contentValue', e.target.value)} 
+                                                                                                 placeholder="Explain details..." 
+                                                                                                 rows={3}
+                                                                                                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[10px] font-semibold outline-none resize-none shadow-sm" 
+                                                                                             />
+                                                                                         ) : (
+                                                                                             <input 
+                                                                                                 value={sub.contentValue} 
+                                                                                                 onChange={(e) => handleEditSubtopicChange(ti, si, 'contentValue', e.target.value)} 
+                                                                                                 placeholder={sub.contentType === 'link' ? "https://example.com/doc" : "https://example.com/image.png"} 
+                                                                                                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[10px] font-semibold outline-none shadow-sm" 
+                                                                                             />
+                                                                                         )}
+                                                                                     </div>
+                                                                                 </div>
+                                                                             </div>
+                                                                         ))}
+                                                                     </div>
+                                                                 </div>
+                                                             ))
+                                                         )}
+                                                     </div>
+                                                 </div>
 
                                                 {/* Progress slider */}
                                                 <div className="space-y-1.5">
@@ -1020,7 +1259,7 @@ export default function InternDetailsPage() {
                                                 ) : (
                                                     editFormPhases.map((phase, pIdx) => (
                                                         <div key={pIdx} className="space-y-2 pb-3 border-b border-gray-100 last:border-0 last:pb-0 bg-gray-50/50 p-4 rounded-2xl">
-                                                            <p className="text-xs font-black text-indigo-600 uppercase tracking-wide">{phase.name}</p>
+                                                            <p className="text-xs font-black text-black uppercase tracking-wide">{phase.name}</p>
                                                             {phase.description && <p className="text-[10px] font-medium text-gray-400">{phase.description}</p>}
                                                             <div className="space-y-1.5 pl-2 pt-1">
                                                                 {phase.fields && phase.fields.length > 0 ? (
@@ -1028,13 +1267,13 @@ export default function InternDetailsPage() {
                                                                         <div key={fIdx} className="space-y-2 bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
                                                                             <div className="flex justify-between items-center text-[10px] font-bold text-gray-600">
                                                                                 <span>{field.label}</span>
-                                                                                <span className="text-[8px] font-black text-indigo-400 uppercase tracking-widest bg-indigo-50/50 px-2 py-0.5 rounded">[{field.type}]</span>
+                                                                                <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest bg-gray-100 px-2 py-0.5 rounded">[{field.type}]</span>
                                                                             </div>
                                                                             {selectedProject?.dynamicFields?.[field.label] ? (
                                                                                 <div className="pt-2 border-t border-gray-50">
                                                                                     {field.type === 'link' ? (
                                                                                         <a href={selectedProject.dynamicFields[field.label]} target="_blank" rel="noopener noreferrer"
-                                                                                            className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1 break-all">
+                                                                                            className="text-xs font-bold text-black hover:underline flex items-center gap-1 break-all">
                                                                                             <ExternalLink className="w-3.5 h-3.5 shrink-0" /> {selectedProject.dynamicFields[field.label]}
                                                                                         </a>
                                                                                     ) : field.type === 'file' ? (
@@ -1076,13 +1315,13 @@ export default function InternDetailsPage() {
                                                                         value={phase.name} 
                                                                         onChange={(e) => handleEditPhaseNameChange(pi, e.target.value)} 
                                                                         placeholder="Topic / Area Title" 
-                                                                        className="bg-transparent text-[11px] font-black text-indigo-500 uppercase tracking-widest outline-none w-full mb-1 border-b border-dashed border-gray-200/50 focus:border-indigo-400" 
+                                                                        className="bg-transparent text-[11px] font-black text-black uppercase tracking-widest outline-none w-full mb-1 border-b border-dashed border-gray-200/50 focus:border-black" 
                                                                     />
                                                                     <input 
                                                                         value={phase.description || ""} 
                                                                         onChange={(e) => handleEditPhaseDescriptionChange(pi, e.target.value)} 
                                                                         placeholder="Instructions..." 
-                                                                        className="bg-transparent text-[8px] font-medium text-gray-400 outline-none w-full border-b border-dashed border-gray-200/50 focus:border-indigo-400" 
+                                                                        className="bg-transparent text-[8px] font-medium text-gray-400 outline-none w-full border-b border-dashed border-gray-200/50 focus:border-black" 
                                                                     />
                                                                 </div>
                                                                 <button 
@@ -1099,11 +1338,11 @@ export default function InternDetailsPage() {
                                                                     <div key={fi} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
                                                                         <div className="flex justify-between items-center pb-2 border-b border-gray-50">
                                                                             <div className="flex items-center gap-2">
-                                                                                <div className="p-1.5 bg-indigo-50 rounded-lg">
-                                                                                    {field.type === 'text' && <Type className="w-3 h-3 text-indigo-600" />}
-                                                                                    {field.type === 'textarea' && <AlignLeft className="w-3 h-3 text-indigo-600" />}
-                                                                                    {field.type === 'link' && <LinkIcon className="w-3 h-3 text-indigo-600" />}
-                                                                                    {field.type === 'file' && <FileText className="w-3 h-3 text-indigo-600" />}
+                                                                                <div className="p-1.5 bg-gray-100 rounded-lg">
+                                                                                    {field.type === 'text' && <Type className="w-3 h-3 text-gray-800" />}
+                                                                                    {field.type === 'textarea' && <AlignLeft className="w-3 h-3 text-gray-800" />}
+                                                                                    {field.type === 'link' && <LinkIcon className="w-3 h-3 text-gray-800" />}
+                                                                                    {field.type === 'file' && <FileText className="w-3 h-3 text-gray-800" />}
                                                                                 </div>
                                                                                 <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Requirement #{fi + 1}</span>
                                                                             </div>
@@ -1145,9 +1384,9 @@ export default function InternDetailsPage() {
                                                                 ))}
                                                                 
                                                                 <div className="grid grid-cols-3 gap-2">
-                                                                    <button type="button" onClick={() => handleEditAddFieldToPhase(pi, 'text')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-indigo-500 transition-all flex items-center justify-center gap-1.5"><Type className="w-2.5 h-2.5" /> Text</button>
-                                                                    <button type="button" onClick={() => handleEditAddFieldToPhase(pi, 'link')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-indigo-500 transition-all flex items-center justify-center gap-1.5"><LinkIcon className="w-2.5 h-2.5" /> Link</button>
-                                                                    <button type="button" onClick={() => handleEditAddFieldToPhase(pi, 'file')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-indigo-500 transition-all flex items-center justify-center gap-1.5"><FileText className="w-2.5 h-2.5" /> File</button>
+                                                                    <button type="button" onClick={() => handleEditAddFieldToPhase(pi, 'text')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-black transition-all flex items-center justify-center gap-1.5"><Type className="w-2.5 h-2.5" /> Text</button>
+                                                                    <button type="button" onClick={() => handleEditAddFieldToPhase(pi, 'link')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-black transition-all flex items-center justify-center gap-1.5"><LinkIcon className="w-2.5 h-2.5" /> Link</button>
+                                                                    <button type="button" onClick={() => handleEditAddFieldToPhase(pi, 'file')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-black transition-all flex items-center justify-center gap-1.5"><FileText className="w-2.5 h-2.5" /> File</button>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -1219,7 +1458,8 @@ export default function InternDetailsPage() {
                                                         adminFeedback: adminNote, 
                                                         duration: editDuration, 
                                                         difficulty: editDifficulty,
-                                                        formPhases: editFormPhases
+                                                        formPhases: editFormPhases,
+                                                        topics: editTopics
                                                     })
                                                 });
                                                 if (res.ok) {
@@ -1723,7 +1963,9 @@ export default function InternDetailsPage() {
                             <div className="p-8 border-b border-gray-50 flex items-center justify-between bg-gray-50/50">
                                 <div className="flex items-center gap-4">
                                     <div>
-                                        <h3 className="text-lg font-black uppercase tracking-tight  border-l-7 border-black pl-3">Assign Project</h3>
+                                        <h3 className="text-lg font-black uppercase tracking-tight border-l-7 border-black pl-3">
+                                            {assignStep === 1 ? "Assign Project - Select Method" : assignStep === 2 ? "Assign Project - Select Template" : "Assign Project - Configure Details"}
+                                        </h3>
                                         <p className="text-[10px] font-black font-medium text-gray-400 uppercase tracking-widest">Exclusively for {user.fullName}</p>
                                     </div>
                                 </div>
@@ -1732,212 +1974,529 @@ export default function InternDetailsPage() {
                                 </button>
                             </div>
 
-                            {/* Scrollable Form */}
-                            <form onSubmit={handleAddProjectSubmit} className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    {/* Left Column: Project Identity */}
-                                    <div className="space-y-6">
-                                        <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em] border-l-4 border-black pl-3 mb-4">Project Identity</h4>
-                                        
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-1.5 col-span-2">
-                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Project Title</label>
-                                                <input 
-                                                    type="text" 
-                                                    required
-                                                    value={newProjectName} 
-                                                    onChange={e => setNewProjectName(e.target.value)}
-                                                    placeholder="Project Name..."
-                                                    className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm  transition-all outline-none" 
-                                                />
-                                            </div>
-                                            
-                                            <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1"> Category</label>
-                                                <input 
-                                                    type="text" 
-                                                    disabled
-                                                    value={tracksList.find(t => t.name.toLowerCase() === user?.track?.toLowerCase())?.category || "CODING"} 
-                                                    className="w-full bg-gray-100 font-medium border border-transparent rounded-2xl px-5 py-4 text-sm font-black text-gray-400 outline-none cursor-not-allowed uppercase" 
-                                                />
-                                            </div>
-                                            
-                                            <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Specific Track</label>
-                                                <input 
-                                                    type="text" 
-                                                    disabled
-                                                    value={user?.track || "Unassigned"} 
-                                                    className="w-full bg-gray-100 border border-transparent rounded-2xl px-5 py-4 text-sm font-black text-gray-400 outline-none cursor-not-allowed font-medium" 
-                                                />
-                                            </div>
-                                            
-                                            <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Difficulty</label>
-                                                <select 
-                                                    value={newProjectDifficulty} 
-                                                    onChange={e => setNewProjectDifficulty(e.target.value)}
-                                                    className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm transition-all outline-none cursor-pointer"
-                                                >
-                                                    <option value="Beginner">Beginner</option>
-                                                    <option value="Intermediate">Intermediate</option>
-                                                    <option value="Advanced">Advanced</option>
-                                                    <option value="Easy">Easy</option>
-                                                    <option value="Medium">Medium</option>
-                                                    <option value="Hard">Hard</option>
-                                                </select>
-                                            </div>
-                                            
-                                            <div className="space-y-1.5">
-                                                <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Duration</label>
-                                                <input 
-                                                    type="text" 
-                                                    required
-                                                    value={newProjectDuration} 
-                                                    onChange={e => setNewProjectDuration(e.target.value)}
-                                                    placeholder="e.g. 1 Month, 3 Weeks"
-                                                    className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm transition-all outline-none" 
-                                                />
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-1.5">
-                                            <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Detailed Description</label>
-                                            <textarea 
-                                                required
-                                                rows={5}
-                                                value={newProjectDescription} 
-                                                onChange={e => setNewProjectDescription(e.target.value)}
-                                                placeholder="Detailed mission briefing..."
-                                                className="w-full bg-gray-50 border  font-medium border-transparent focus:border-black/5 focus:bg-white rounded-[2rem] px-6 py-5 text-sm  transition-all outline-none resize-none" 
-                                            />
-                                        </div>
+                            {/* Wizard Steps */}
+                            {assignStep === 1 ? (
+                                /* STEP 1: CHOICE SCREEN */
+                                <div className="flex-1 p-10 flex flex-col items-center justify-center space-y-8 bg-gray-50/20">
+                                    <div className="text-center space-y-2 max-w-lg">
+                                        <h4 className="text-2xl font-black text-gray-900 tracking-tight uppercase">How would you like to assign this project?</h4>
+                                        <p className="text-xs text-gray-400 font-bold uppercase tracking-wider">Choose a template from the global pool or compose a custom statement from scratch.</p>
                                     </div>
+                                    
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl pt-4">
+                                        {/* Card 1: Existing Project */}
+                                        <button 
+                                            type="button"
+                                            onClick={async () => {
+                                                setAssignStep(2);
+                                                setLoadingPool(true);
+                                                try {
+                                                    const res = await fetch('/api/admin/projects/pool');
+                                                    if (res.ok) {
+                                                        const data = await res.json();
+                                                        setProjectPool(data || []);
+                                                    }
+                                                } catch (err) {
+                                                    toast.error("Failed to load project pool templates.");
+                                                } finally {
+                                                    setLoadingPool(false);
+                                                }
+                                            }}
+                                            className="group p-8 bg-white border border-gray-100 hover:border-black rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col items-center text-center space-y-6 cursor-pointer transform hover:-translate-y-1 active:scale-98"
+                                        >
+                                            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all shadow-md">
+                                                <BookOpen className="w-8 h-8" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <h5 className="text-lg font-black text-gray-900 uppercase tracking-tight">Existing Project</h5>
+                                                <p className="text-xs text-gray-400 font-medium leading-relaxed">
+                                                    Select an existing project from the global pool (added from /admin/projects). Automatically imports descriptions and Requirement Architecture.
+                                                </p>
+                                            </div>
+                                        </button>
 
-                                    {/* Right Column: Requirement Architecture */}
-                                    <div className="space-y-6">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em] border-l-4 border-black pl-3">Requirement Architecture</h4>
-                                            <button 
-                                                type="button" 
-                                                onClick={handleAddPhase} 
-                                                className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md"
-                                            >
-                                                <Plus className="w-3 h-3 text-[#ccff00]" /> Add Phase
-                                            </button>
-                                        </div>
-
-                                        <div className="space-y-4">
-                                            {newProjectFormPhases.length === 0 ? (
-                                                <div className="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-                                                    <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">No requirements configured yet</p>
-                                                    <p className="text-[10px] text-gray-400 mt-1">Configure phases for student deliverables.</p>
-                                                </div>
-                                            ) : (
-                                                newProjectFormPhases.map((phase, pi) => (
-                                                    <div key={pi} className="bg-gray-50/80 rounded-2xl p-4 border border-gray-100 space-y-3">
-                                                        <div className="flex justify-between items-center">
-                                                            <div className="flex-1">
-                                                                <input 
-                                                                    value={phase.name} 
-                                                                    onChange={(e) => handlePhaseNameChange(pi, e.target.value)} 
-                                                                    placeholder="Topic / Area Title" 
-                                                                    className="bg-transparent text-[11px] font-black text-indigo-500 uppercase tracking-widest outline-none w-full mb-1" 
-                                                                />
-                                                                <input 
-                                                                    value={phase.description || ""} 
-                                                                    onChange={(e) => handlePhaseDescriptionChange(pi, e.target.value)} 
-                                                                    placeholder="Instructions..." 
-                                                                    className="bg-transparent text-[8px] font-medium text-gray-400 outline-none w-full" 
-                                                                />
-                                                            </div>
-                                                            <button 
-                                                                type="button" 
-                                                                onClick={() => handleRemovePhase(pi)} 
-                                                                className="text-rose-400 hover:text-rose-600 transition-all p-1"
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                        
-                                                        <div className="space-y-3 pt-2">
-                                                            {phase.fields && phase.fields.map((field, fi) => (
-                                                                <div key={fi} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
-                                                                    <div className="flex justify-between items-center pb-2 border-b border-gray-50">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <div className="p-1.5 bg-indigo-50 rounded-lg">
-                                                                                {field.type === 'text' && <Type className="w-3 h-3 text-indigo-600" />}
-                                                                                {field.type === 'textarea' && <AlignLeft className="w-3 h-3 text-indigo-600" />}
-                                                                                {field.type === 'link' && <LinkIcon className="w-3 h-3 text-indigo-600" />}
-                                                                                {field.type === 'file' && <FileText className="w-3 h-3 text-indigo-600" />}
-                                                                            </div>
-                                                                            <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Requirement #{fi + 1}</span>
-                                                                        </div>
-                                                                        <button 
-                                                                            type="button" 
-                                                                            onClick={() => handleRemoveFieldFromPhase(pi, fi)} 
-                                                                            className="text-gray-300 hover:text-rose-500 transition-all"
-                                                                        >
-                                                                            <X className="w-4 h-4" />
-                                                                        </button>
-                                                                    </div>
-                                                                    
-                                                                    <div className="grid grid-cols-2 gap-4">
-                                                                        <div className="space-y-1">
-                                                                            <label className="text-[8px]  text-gray-400 uppercase tracking-widest">Label / Prompt</label>
-                                                                            <input 
-                                                                                value={field.label} 
-                                                                                onChange={(e) => handleFieldChange(pi, fi, 'label', e.target.value)} 
-                                                                                placeholder="E.g. GitHub URL" 
-                                                                                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[10px] font-semibold outline-none shadow-sm" 
-                                                                            />
-                                                                        </div>
-                                                                        
-                                                                        <div className="space-y-1">
-                                                                            <label className="text-[8px]  text-gray-400 uppercase tracking-widest">Input Format</label>
-                                                                            <select 
-                                                                                value={field.type} 
-                                                                                onChange={(e) => handleFieldChange(pi, fi, 'type', e.target.value)} 
-                                                                                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[8px] font-semibold uppercase outline-none shadow-sm cursor-pointer"
-                                                                            >
-                                                                                <option value="text">Single Line</option>
-                                                                                <option value="textarea">Deep Block</option>
-                                                                                <option value="link">Hyperlink</option>
-                                                                                <option value="file">Asset/Doc</option>
-                                                                            </select>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
-                                                            
-                                                            <div className="grid grid-cols-3 gap-2">
-                                                                <button type="button" onClick={() => handleAddFieldToPhase(pi, 'text')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-indigo-500 transition-all flex items-center justify-center gap-1.5"><Type className="w-2.5 h-2.5" /> Text</button>
-                                                                <button type="button" onClick={() => handleAddFieldToPhase(pi, 'link')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-indigo-500 transition-all flex items-center justify-center gap-1.5"><LinkIcon className="w-2.5 h-2.5" /> Link</button>
-                                                                <button type="button" onClick={() => handleAddFieldToPhase(pi, 'file')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-indigo-500 transition-all flex items-center justify-center gap-1.5"><FileText className="w-2.5 h-2.5" /> File</button>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))
-                                            )}
-                                        </div>
+                                        {/* Card 2: New Project */}
+                                        <button 
+                                            type="button"
+                                            onClick={() => {
+                                                setNewProjectName("");
+                                                setNewProjectDescription("");
+                                                setNewProjectDuration("1 Month");
+                                                setNewProjectDifficulty("Medium");
+                                                setNewProjectTopics([]);
+                                                const internTrack = tracksList.find(t => t.name.toLowerCase() === user?.track?.toLowerCase());
+                                                if (internTrack) {
+                                                    setNewProjectFormPhases(internTrack.formPhases || []);
+                                                } else {
+                                                    setNewProjectFormPhases([]);
+                                                }
+                                                setAssignStep(3);
+                                            }}
+                                            className="group p-8 bg-white border border-gray-100 hover:border-black rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col items-center text-center space-y-6 cursor-pointer transform hover:-translate-y-1 active:scale-98"
+                                        >
+                                            <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all shadow-md">
+                                                <Plus className="w-8 h-8" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <h5 className="text-lg font-black text-gray-900 uppercase tracking-tight">New Project</h5>
+                                                <p className="text-xs text-gray-400 font-medium leading-relaxed">
+                                                    Compose a completely new project exclusively for this intern. Define custom objectives, track configurations, and deliverables from scratch.
+                                                </p>
+                                            </div>
+                                        </button>
                                     </div>
                                 </div>
-                            </form>
+                            ) : assignStep === 2 ? (
+                                /* STEP 2: PROJECT POOL TEMPLATES LIST */
+                                <div className="flex-1 p-8 flex flex-col overflow-hidden max-h-[70vh]">
+                                    {/* Filter / Search Bar */}
+                                    <div className="flex flex-col md:flex-row gap-4 mb-6 shrink-0 items-center justify-between">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setAssignStep(1)}
+                                            className="flex items-center gap-1.5 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                        >
+                                            <ArrowLeft className="w-3.5 h-3.5" /> Back
+                                        </button>
+                                        
+                                        <div className="flex flex-1 gap-4 w-full justify-end">
+                                            {/* Search */}
+                                            <div className="relative flex-1 max-w-md">
+                                                <input 
+                                                    type="text" 
+                                                    value={poolSearch} 
+                                                    onChange={e => setPoolSearch(e.target.value)}
+                                                    placeholder="Search templates by title or description..."
+                                                    className="w-full bg-gray-50 border border-gray-100 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold focus:outline-none focus:ring-2 focus:ring-black focus:bg-white transition-all"
+                                                />
+                                                <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3.5" />
+                                            </div>
 
-                            {/* Footer */}
-                            <div className="p-8 border-t border-gray-50 flex gap-4 bg-gray-50/50">
-                                <button type="button" onClick={() => setShowAddProjectModal(false)}
-                                    className="flex-1 py-4 bg-white border border-gray-200 text-gray-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all">
-                                    Cancel
-                                </button>
-                                <button 
-                                    onClick={handleAddProjectSubmit}
-                                    disabled={savingNewProject}
-                                    className="flex-1 py-4 bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10 disabled:opacity-50"
-                                >
-                                    {savingNewProject ? 'Adding...' : 'Save Project'}
-                                </button>
-                            </div>
+                                            {/* Track Filter */}
+                                            <select
+                                                value={poolTrackFilter}
+                                                onChange={e => setPoolTrackFilter(e.target.value)}
+                                                className="bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-xs font-black uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-black cursor-pointer"
+                                            >
+                                                <option value="All">All Tracks</option>
+                                                {tracksList.map(t => (
+                                                    <option key={t._id} value={t.name}>{t.name}</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Scrollable Templates Grid */}
+                                    <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-6">
+                                        {loadingPool ? (
+                                            <div className="flex justify-center items-center py-24">
+                                                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-black" />
+                                            </div>
+                                        ) : (() => {
+                                            const getNormalizedTrack = (trackName) => {
+                                                if (!trackName) return "";
+                                                const name = trackName.toLowerCase();
+                                                if (name.includes("blockchain")) return "blockchain";
+                                                if (name.includes("gen") || name.includes("generative")) return "genai";
+                                                if (name.includes("app dev") || name.includes("app development") || name.includes("mobile")) return "appdev";
+                                                if (name.includes("ai/ml") || name.includes("artificial intelligence") || name.includes("machine learning")) return "aiml";
+                                                return name;
+                                            };
+
+                                            const filteredPool = projectPool.filter(template => {
+                                                const matchesSearch = poolSearch === "" || 
+                                                    template.title?.toLowerCase().includes(poolSearch.toLowerCase()) || 
+                                                    template.description?.toLowerCase().includes(poolSearch.toLowerCase());
+                                                
+                                                const matchesTrack = poolTrackFilter === "All" || 
+                                                    getNormalizedTrack(template.track) === getNormalizedTrack(poolTrackFilter);
+                                                
+                                                return matchesSearch && matchesTrack;
+                                            });
+
+                                            if (filteredPool.length === 0) {
+                                                return (
+                                                    <div className="text-center py-20 bg-gray-50 rounded-[2rem] border border-dashed border-gray-200">
+                                                        <BookOpen className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+                                                        <p className="text-sm font-bold text-gray-400">No matching templates found.</p>
+                                                        <p className="text-[10px] text-gray-400 mt-1 uppercase tracking-widest">Try resetting search query or track filter.</p>
+                                                    </div>
+                                                );
+                                            }
+
+                                            return (
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                                    {filteredPool.map(template => (
+                                                        <div 
+                                                            key={template._id}
+                                                            onClick={() => {
+                                                                setNewProjectName(template.title || "");
+                                                                setNewProjectDescription(template.description || "");
+                                                                setNewProjectDifficulty(template.difficulty || "Medium");
+                                                                setNewProjectDuration(template.deadline || "1 Month");
+                                                                setNewProjectFormPhases(template.formPhases || []);
+                                                                setNewProjectTopics(template.topics || []);
+                                                                setAssignStep(3);
+                                                            }}
+                                                            className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md hover:border-black/20 transition-all cursor-pointer flex flex-col justify-between group"
+                                                        >
+                                                            <div>
+                                                                <div className="flex justify-between items-start gap-4 mb-3">
+                                                                    <h5 className="font-black text-gray-900 group-hover:text-black uppercase tracking-tight text-sm line-clamp-1">{template.title}</h5>
+                                                                    <span className="text-[8px] font-black text-gray-700 uppercase tracking-widest bg-gray-100 px-2 py-0.5 rounded shrink-0 border border-gray-200/50">{template.difficulty}</span>
+                                                                </div>
+                                                                <p className="text-xs font-semibold text-gray-500 line-clamp-2 leading-relaxed mb-4">{template.description}</p>
+                                                            </div>
+                                                            <div className="flex items-center justify-between pt-4 border-t border-gray-50 text-[9px] font-black text-gray-400 uppercase tracking-wider">
+                                                                <span className="truncate max-w-[150px]">{template.track}</span>
+                                                                <span>{template.deadline || "1 Month"}</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+                            ) : (
+                                /* STEP 3: CONFIGURE DETAILS & CONFIRM */
+                                <>
+                                    <form onSubmit={handleAddProjectSubmit} className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            {/* Left Column: Project Identity */}
+                                            <div className="space-y-6">
+                                                <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em] border-l-4 border-black pl-3 mb-4">Project Identity</h4>
+                                                
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-1.5 col-span-2">
+                                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Project Name</label>
+                                                        <input 
+                                                            type="text" 
+                                                            required
+                                                            value={newProjectName} 
+                                                            onChange={e => setNewProjectName(e.target.value)}
+                                                            placeholder="Project Name..."
+                                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm  transition-all outline-none" 
+                                                        />
+                                                    </div>
+                                                    
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1"> Category</label>
+                                                        <input 
+                                                            type="text" 
+                                                            disabled
+                                                            value={tracksList.find(t => t.name.toLowerCase() === user?.track?.toLowerCase())?.category || "CODING"} 
+                                                            className="w-full bg-gray-100 font-medium border border-transparent rounded-2xl px-5 py-4 text-sm font-black text-gray-400 outline-none cursor-not-allowed uppercase" 
+                                                        />
+                                                    </div>
+                                                    
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Specific Track</label>
+                                                        <input 
+                                                            type="text" 
+                                                            disabled
+                                                            value={user?.track || "Unassigned"} 
+                                                            className="w-full bg-gray-100 border border-transparent rounded-2xl px-5 py-4 text-sm font-black text-gray-400 outline-none cursor-not-allowed font-medium" 
+                                                        />
+                                                    </div>
+                                                    
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Difficulty</label>
+                                                        <select 
+                                                            value={newProjectDifficulty} 
+                                                            onChange={e => setNewProjectDifficulty(e.target.value)}
+                                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm transition-all outline-none cursor-pointer"
+                                                        >
+                                                            <option value="Beginner">Beginner</option>
+                                                            <option value="Intermediate">Intermediate</option>
+                                                            <option value="Advanced">Advanced</option>
+                                                            <option value="Easy">Easy</option>
+                                                            <option value="Medium">Medium</option>
+                                                            <option value="Hard">Hard</option>
+                                                        </select>
+                                                    </div>
+                                                    
+                                                    <div className="space-y-1.5">
+                                                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Duration</label>
+                                                        <input 
+                                                            type="text" 
+                                                            required
+                                                            value={newProjectDuration} 
+                                                            onChange={e => setNewProjectDuration(e.target.value)}
+                                                            placeholder="e.g. 1 Month, 3 Weeks"
+                                                            className="w-full bg-gray-50 border border-transparent focus:border-black/5 focus:bg-white rounded-2xl px-5 py-4 text-sm transition-all outline-none" 
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-1.5">
+                                                    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-400 ml-1">Detailed Description</label>
+                                                    <textarea 
+                                                        required
+                                                        rows={12}
+                                                        value={newProjectDescription} 
+                                                        onChange={e => setNewProjectDescription(e.target.value)}
+                                                        placeholder="Detailed mission briefing..."
+                                                        className="w-full bg-gray-50 border font-medium border-transparent focus:border-black/5 focus:bg-white rounded-[2rem] px-6 py-5 text-sm transition-all outline-none resize-none min-h-[240px]" 
+                                                    />
+                                                </div>
+
+                                                {/* Study Topics & Resources */}
+                                                <div className="space-y-6 pt-6 border-t border-gray-100 mt-4">
+                                                    <div className="flex justify-between items-center mb-4">
+                                                        <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em] border-l-4 border-black pl-3">Study Topics & Resources</h4>
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={handleAddNewProjectTopic} 
+                                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md"
+                                                        >
+                                                            <Plus className="w-3 h-3 text-[#ccff00]" /> Add Topic
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="space-y-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                                        {newProjectTopics.length === 0 ? (
+                                                            <div className="p-6 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                                                <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">No study topics added yet</p>
+                                                                <p className="text-[9px] text-gray-400 mt-1">Add topics to guide the intern during the project.</p>
+                                                            </div>
+                                                        ) : (
+                                                            newProjectTopics.map((topic, ti) => (
+                                                                <div key={ti} className="bg-gray-50/80 rounded-2xl p-4 border border-gray-100 space-y-4">
+                                                                    <div className="space-y-1">
+                                                                        <label className="block text-[8px] font-black text-black uppercase tracking-[0.2em] border-b border-black/10 pb-1">Topic Title</label>
+                                                                        <input 
+                                                                            value={topic.title} 
+                                                                            onChange={(e) => handleNewProjectTopicTitleChange(ti, e.target.value)} 
+                                                                            placeholder="Topic Title (e.g., Intro to Blockchain)" 
+                                                                            className="bg-white border border-gray-200 rounded-xl px-4 py-2.5 text-[11px] font-black text-black uppercase tracking-widest outline-none w-full shadow-sm" 
+                                                                        />
+                                                                    </div>
+                                                                    <div className="flex justify-between items-center pt-1 border-t border-gray-200/40">
+                                                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Subtopics</span>
+                                                                        <div className="flex items-center gap-3">
+                                                                            <button 
+                                                                                type="button" 
+                                                                                onClick={() => handleAddNewProjectSubtopic(ti)} 
+                                                                                className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1.5 bg-black text-white rounded-lg hover:scale-105 transition-all"
+                                                                            >
+                                                                                + Subtopic
+                                                                            </button>
+                                                                            <button 
+                                                                                type="button" 
+                                                                                onClick={() => handleRemoveNewProjectTopic(ti)} 
+                                                                                className="text-rose-400 hover:text-rose-650 transition-all p-1"
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" />
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="space-y-3 pt-2">
+                                                                        {topic.subtopics && topic.subtopics.map((sub, si) => (
+                                                                            <div key={si} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
+                                                                                <div className="flex justify-between items-center pb-2 border-b border-gray-50">
+                                                                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Subtopic #{si + 1}</span>
+                                                                                    <button 
+                                                                                        type="button" 
+                                                                                        onClick={() => handleRemoveNewProjectSubtopic(ti, si)} 
+                                                                                        className="text-gray-300 hover:text-rose-500 transition-all"
+                                                                                    >
+                                                                                        <X className="w-4 h-4" />
+                                                                                    </button>
+                                                                                </div>
+
+                                                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                                                    <div className="space-y-1">
+                                                                                        <label className="text-[8px] text-gray-400 uppercase tracking-widest">Subtopic Title</label>
+                                                                                        <input 
+                                                                                            value={sub.title} 
+                                                                                            onChange={(e) => handleNewProjectSubtopicChange(ti, si, 'title', e.target.value)} 
+                                                                                            placeholder="Subtopic Title..." 
+                                                                                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[10px] font-semibold outline-none shadow-sm" 
+                                                                                        />
+                                                                                    </div>
+
+                                                                                    <div className="space-y-1">
+                                                                                        <label className="text-[8px] text-gray-400 uppercase tracking-widest">Content Type</label>
+                                                                                        <select 
+                                                                                            value={sub.contentType} 
+                                                                                            onChange={(e) => handleNewProjectSubtopicChange(ti, si, 'contentType', e.target.value)} 
+                                                                                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[8px] font-semibold uppercase outline-none shadow-sm cursor-pointer"
+                                                                                        >
+                                                                                            <option value="text">Text Instruction</option>
+                                                                                            <option value="link">Hyperlink / Reference</option>
+                                                                                            <option value="image">Image URL</option>
+                                                                                        </select>
+                                                                                    </div>
+
+                                                                                    <div className="space-y-1 col-span-2">
+                                                                                        <label className="text-[8px] text-gray-400 uppercase tracking-widest">Content Value</label>
+                                                                                        {sub.contentType === 'text' ? (
+                                                                                            <textarea 
+                                                                                                value={sub.contentValue} 
+                                                                                                onChange={(e) => handleNewProjectSubtopicChange(ti, si, 'contentValue', e.target.value)} 
+                                                                                                placeholder="Explain details..." 
+                                                                                                rows="3"
+                                                                                                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[10px] font-semibold outline-none resize-none shadow-sm" 
+                                                                                            />
+                                                                                        ) : (
+                                                                                            <input 
+                                                                                                value={sub.contentValue} 
+                                                                                                onChange={(e) => handleNewProjectSubtopicChange(ti, si, 'contentValue', e.target.value)} 
+                                                                                                placeholder={sub.contentType === 'link' ? "https://example.com/doc" : "https://example.com/image.png"} 
+                                                                                                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[10px] font-semibold outline-none shadow-sm" 
+                                                                                            />
+                                                                                        )}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Right Column: Requirement Architecture */}
+                                            <div className="space-y-6">
+                                                <div className="flex justify-between items-center mb-4">
+                                                    <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em] border-l-4 border-black pl-3">Requirement Architecture</h4>
+                                                    <button 
+                                                        type="button" 
+                                                        onClick={handleAddPhase} 
+                                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white rounded-lg text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all shadow-md"
+                                                    >
+                                                        <Plus className="w-3 h-3 text-[#ccff00]" /> Add Phase
+                                                    </button>
+                                                </div>
+
+                                                <div className="space-y-4">
+                                                    {newProjectFormPhases.length === 0 ? (
+                                                        <div className="p-8 text-center bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+                                                            <p className="text-xs text-gray-400 font-medium uppercase tracking-wide">No requirements configured yet</p>
+                                                            <p className="text-[10px] text-gray-400 mt-1">Configure phases for student deliverables.</p>
+                                                        </div>
+                                                    ) : (
+                                                        newProjectFormPhases.map((phase, pi) => (
+                                                            <div key={pi} className="bg-gray-50/80 rounded-2xl p-4 border border-gray-100 space-y-3">
+                                                                <div className="flex justify-between items-center">
+                                                                    <div className="flex-1">
+                                                                        <input 
+                                                                            value={phase.name} 
+                                                                            onChange={(e) => handlePhaseNameChange(pi, e.target.value)} 
+                                                                            placeholder="Topic / Area Title" 
+                                                                            className="bg-transparent text-[11px] font-black text-black uppercase tracking-widest outline-none w-full mb-1" 
+                                                                        />
+                                                                        <input 
+                                                                            value={phase.description || ""} 
+                                                                            onChange={(e) => handlePhaseDescriptionChange(pi, e.target.value)} 
+                                                                            placeholder="Instructions..." 
+                                                                            className="bg-transparent text-[8px] font-medium text-gray-400 outline-none w-full" 
+                                                                        />
+                                                                    </div>
+                                                                    <button 
+                                                                        type="button" 
+                                                                        onClick={() => handleRemovePhase(pi)} 
+                                                                        className="text-rose-400 hover:text-rose-600 transition-all p-1"
+                                                                    >
+                                                                        <Trash2 className="w-4 h-4" />
+                                                                    </button>
+                                                                </div>
+                                                                
+                                                                <div className="space-y-3 pt-2">
+                                                                    {phase.fields && phase.fields.map((field, fi) => (
+                                                                        <div key={fi} className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm space-y-3">
+                                                                            <div className="flex justify-between items-center pb-2 border-b border-gray-50">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <div className="p-1.5 bg-gray-100 rounded-lg">
+                                                                                        {field.type === 'text' && <Type className="w-3 h-3 text-black" />}
+                                                                                        {field.type === 'textarea' && <AlignLeft className="w-3 h-3 text-black" />}
+                                                                                        {field.type === 'link' && <LinkIcon className="w-3 h-3 text-black" />}
+                                                                                        {field.type === 'file' && <FileText className="w-3 h-3 text-black" />}
+                                                                                    </div>
+                                                                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Requirement #{fi + 1}</span>
+                                                                                </div>
+                                                                                <button 
+                                                                                    type="button" 
+                                                                                    onClick={() => handleRemoveFieldFromPhase(pi, fi)} 
+                                                                                    className="text-gray-300 hover:text-rose-500 transition-all"
+                                                                                >
+                                                                                    <X className="w-4 h-4" />
+                                                                                </button>
+                                                                            </div>
+                                                                            
+                                                                            <div className="grid grid-cols-2 gap-4">
+                                                                                <div className="space-y-1">
+                                                                                    <label className="text-[8px]  text-gray-400 uppercase tracking-widest">Label / Prompt</label>
+                                                                                    <input 
+                                                                                        value={field.label} 
+                                                                                        onChange={(e) => handleFieldChange(pi, fi, 'label', e.target.value)} 
+                                                                                        placeholder="E.g. GitHub URL" 
+                                                                                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[10px] font-semibold outline-none shadow-sm" 
+                                                                                    />
+                                                                                </div>
+                                                                                
+                                                                                <div className="space-y-1">
+                                                                                    <label className="text-[8px]  text-gray-400 uppercase tracking-widest">Input Format</label>
+                                                                                    <select 
+                                                                                        value={field.type} 
+                                                                                        onChange={(e) => handleFieldChange(pi, fi, 'type', e.target.value)} 
+                                                                                        className="w-full bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-[8px] font-semibold uppercase outline-none shadow-sm cursor-pointer"
+                                                                                    >
+                                                                                        <option value="text">Single Line</option>
+                                                                                        <option value="textarea">Deep Block</option>
+                                                                                        <option value="link">Hyperlink</option>
+                                                                                        <option value="file">Asset/Doc</option>
+                                                                                    </select>
+                                                                                </div>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                    
+                                                                    <div className="grid grid-cols-3 gap-2">
+                                                                        <button type="button" onClick={() => handleAddFieldToPhase(pi, 'text')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-black hover:border-gray-400 transition-all flex items-center justify-center gap-1.5"><Type className="w-2.5 h-2.5" /> Text</button>
+                                                                        <button type="button" onClick={() => handleAddFieldToPhase(pi, 'link')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-black hover:border-gray-400 transition-all flex items-center justify-center gap-1.5"><LinkIcon className="w-2.5 h-2.5" /> Link</button>
+                                                                        <button type="button" onClick={() => handleAddFieldToPhase(pi, 'file')} className="py-1.5 border border-dashed border-gray-200 rounded-xl text-[8px] font-semibold text-gray-400 hover:text-black hover:border-gray-400 transition-all flex items-center justify-center gap-1.5"><FileText className="w-2.5 h-2.5" /> File</button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </form>
+
+                                    {/* Footer */}
+                                    <div className="p-8 border-t border-gray-50 flex gap-4 bg-gray-50/50">
+                                        <button 
+                                            type="button" 
+                                            onClick={() => {
+                                                // Go back to template selection or choice step
+                                                const hasTemplateOrigin = projectPool.some(t => t.title === newProjectName);
+                                                if (hasTemplateOrigin) {
+                                                    setAssignStep(2);
+                                                } else {
+                                                    setAssignStep(1);
+                                                }
+                                            }}
+                                            className="flex-1 py-4 bg-white border border-gray-200 text-gray-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all"
+                                        >
+                                            Back
+                                        </button>
+                                        <button 
+                                            onClick={handleAddProjectSubmit}
+                                            disabled={savingNewProject}
+                                            className="flex-1 py-4 bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/10 disabled:opacity-50"
+                                        >
+                                            {savingNewProject ? 'Adding...' : 'Save Project'}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
                         </motion.div>
                     </motion.div>
                 )}
