@@ -921,18 +921,15 @@ export default function InternDetailsPage() {
                                                             {editTopics.map((topic, ti) => (
                                                                 <div key={ti} className="space-y-3 bg-white p-4 rounded-xl border border-gray-150 shadow-sm">
                                                                     <div>
-                                                                        <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Topic Name</span>
-                                                                        <h4 className="text-[11px] font-black text-black uppercase tracking-tight mt-0.5">{topic.title || `Topic ${ti + 1}`}</h4>
+                                                                        <h4 className="text-[11px] font-bold text-black uppercase tracking-tight mt-0.5">{topic.title || `Topic ${ti + 1}`}</h4>
                                                                     </div>
                                                                     <div className="space-y-3 border-t border-gray-200/60 pt-2.5">
                                                                         {topic.subtopics && topic.subtopics.map((sub, si) => (
                                                                             <div key={si} className="bg-gray-50/70 p-3 rounded-lg border border-gray-100 space-y-2">
                                                                                 <div>
-                                                                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Subtopic Title</span>
-                                                                                    <span className="text-xs font-bold text-gray-800 uppercase block mt-0.5">{sub.title}</span>
+                                                                                    <span className="text-xs font-semibold text-gray-800 uppercase block mt-0.5">{sub.title}</span>
                                                                                 </div>
                                                                                 <div className="pt-1.5 border-t border-gray-200/50">
-                                                                                    <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest block">Content / Resources</span>
                                                                                     <div className="text-xs mt-1">
                                                                                         {sub.contentType === 'text' && (
                                                                                             <p className="text-gray-600 whitespace-pre-wrap bg-white p-2 rounded border border-gray-150 shadow-sm">{sub.contentValue}</p>
