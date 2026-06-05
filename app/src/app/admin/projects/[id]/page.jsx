@@ -274,8 +274,7 @@ export default function AdminProjectDetail() {
                     
                     {/* Left Column - Classification & Basic Details */}
                     <div className="lg:col-span-6 bg-white rounded-[2rem] border border-gray-100 shadow-xl shadow-gray-200/10 p-8 space-y-6">
-                        <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em] border-l-4 border-black pl-3 mb-6">Project Metadata</h4>
-                        
+                         
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-1.5">
                                 <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest ml-1">Asset Category</label>

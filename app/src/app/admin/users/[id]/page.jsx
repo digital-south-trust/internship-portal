@@ -109,19 +109,7 @@ export default function InternDetailsPage() {
     }, [user]);
 
     const openProject = (project) => {
-        setSelectedProject(project);
-        setEditProgress(project.progress || 0);
-        setAdminNote(project.adminFeedback || '');
-        setEditDuration(project.duration || '');
-        setEditDifficulty(project.difficulty || 'Medium');
-        setEditTitle(project.projectName || '');
-        setEditDescription(project.description || '');
-        setEditCategory(project.category || '');
-        setEditTrack(project.track || '');
-        setEditFormPhases(project.formPhases || []);
-        setEditTopics(project.topics || []);
-        setEditStatus(project.status || 'Pending');
-        setIsEditingProject(false);
+        router.push(`/admin/users/${id}/project/${project._id}`);
     };
 
     useEffect(() => {
@@ -399,29 +387,27 @@ export default function InternDetailsPage() {
         setEditTopics(newList);
     };
 
-    const handleAddProjectSubmit = async (e) => {
-        e.preventDefault();
-        if (!newProjectName.trim() || !newProjectDescription.trim()) {
-            toast.error("Please fill in project name and description.");
-            return;
-        }
-
-        const internTrack = tracksList.find(t => t.name.toLowerCase() === user.track?.toLowerCase());
+    const createProjectAndRedirect = async (details) => {
+        const title = details.title || "New Custom Project";
+        const description = details.description || "Project briefing and deliverables to be defined.";
+        
+        const internTrack = tracksList.find(t => t.name.toLowerCase() === user?.track?.toLowerCase());
         const category = internTrack ? internTrack.category : 'CODING';
+        const defaultPhases = internTrack ? (internTrack.formPhases || []) : [];
 
         setSavingNewProject(true);
         try {
             const payload = {
                 internEmail: user.email,
-                title: newProjectName,
-                description: newProjectDescription,
+                title: title,
+                description: description,
                 colorHex: '#8b5cf6',
                 track: user.track,
                 category: category,
-                difficulty: newProjectDifficulty,
-                duration: newProjectDuration,
-                formPhases: newProjectFormPhases,
-                topics: newProjectTopics,
+                difficulty: details.difficulty || "Medium",
+                duration: details.duration || "1 Month",
+                formPhases: details.formPhases || defaultPhases,
+                topics: details.topics || [],
                 status: 'Approved',
                 projectType: 'custom',
                 progress: 0
@@ -435,9 +421,10 @@ export default function InternDetailsPage() {
 
             if (res.ok) {
                 const data = await res.json();
-                setProjects(prev => [data.project || data, ...prev]);
-                toast.success('Project added successfully!');
+                const createdProject = data.project || data;
+                toast.success('Project assigned successfully!');
                 setShowAddProjectModal(false);
+                router.push(`/admin/users/${id}/project/${createdProject._id}`);
             } else {
                 const err = await res.json();
                 toast.error(err.message || 'Failed to add project');
@@ -449,6 +436,7 @@ export default function InternDetailsPage() {
             setSavingNewProject(false);
         }
     };
+
 
     const calculateEndDate = (joinDate, duration) => {
         if (!joinDate || !duration) return 'N/A';
@@ -1984,6 +1972,7 @@ export default function InternDetailsPage() {
                                         {/* Card 1: Existing Project */}
                                         <button 
                                             type="button"
+                                            disabled={savingNewProject}
                                             onClick={async () => {
                                                 setAssignStep(2);
                                                 setLoadingPool(true);
@@ -1999,7 +1988,7 @@ export default function InternDetailsPage() {
                                                     setLoadingPool(false);
                                                 }
                                             }}
-                                            className="group p-8 bg-white border border-gray-100 hover:border-black rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col items-center text-center space-y-6 cursor-pointer transform hover:-translate-y-1 active:scale-98"
+                                            className="group p-8 bg-white border border-gray-100 hover:border-black rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col items-center text-center space-y-6 cursor-pointer transform hover:-translate-y-1 active:scale-98 disabled:opacity-50"
                                         >
                                             <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all shadow-md">
                                                 <BookOpen className="w-8 h-8" />
@@ -2015,21 +2004,16 @@ export default function InternDetailsPage() {
                                         {/* Card 2: New Project */}
                                         <button 
                                             type="button"
+                                            disabled={savingNewProject}
                                             onClick={() => {
-                                                setNewProjectName("");
-                                                setNewProjectDescription("");
-                                                setNewProjectDuration("1 Month");
-                                                setNewProjectDifficulty("Medium");
-                                                setNewProjectTopics([]);
-                                                const internTrack = tracksList.find(t => t.name.toLowerCase() === user?.track?.toLowerCase());
-                                                if (internTrack) {
-                                                    setNewProjectFormPhases(internTrack.formPhases || []);
-                                                } else {
-                                                    setNewProjectFormPhases([]);
-                                                }
-                                                setAssignStep(3);
+                                                createProjectAndRedirect({
+                                                    title: "New Custom Project",
+                                                    description: "Project briefing and deliverables to be defined.",
+                                                    difficulty: "Medium",
+                                                    duration: "1 Month"
+                                                });
                                             }}
-                                            className="group p-8 bg-white border border-gray-100 hover:border-black rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col items-center text-center space-y-6 cursor-pointer transform hover:-translate-y-1 active:scale-98"
+                                            className="group p-8 bg-white border border-gray-100 hover:border-black rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col items-center text-center space-y-6 cursor-pointer transform hover:-translate-y-1 active:scale-98 disabled:opacity-50"
                                         >
                                             <div className="w-16 h-16 bg-emerald-50 text-emerald-600 rounded-3xl flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all shadow-md">
                                                 <Plus className="w-8 h-8" />
@@ -2124,31 +2108,34 @@ export default function InternDetailsPage() {
                                             return (
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                     {filteredPool.map(template => (
-                                                        <div 
+                                                        <button 
                                                             key={template._id}
+                                                            type="button"
+                                                            disabled={savingNewProject}
                                                             onClick={() => {
-                                                                setNewProjectName(template.title || "");
-                                                                setNewProjectDescription(template.description || "");
-                                                                setNewProjectDifficulty(template.difficulty || "Medium");
-                                                                setNewProjectDuration(template.deadline || "1 Month");
-                                                                setNewProjectFormPhases(template.formPhases || []);
-                                                                setNewProjectTopics(template.topics || []);
-                                                                setAssignStep(3);
+                                                                createProjectAndRedirect({
+                                                                    title: template.title || "",
+                                                                    description: template.description || "",
+                                                                    difficulty: template.difficulty || "Medium",
+                                                                    duration: template.deadline || "1 Month",
+                                                                    formPhases: template.formPhases || [],
+                                                                    topics: template.topics || []
+                                                                });
                                                             }}
-                                                            className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md hover:border-black/20 transition-all cursor-pointer flex flex-col justify-between group"
+                                                            className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-md hover:border-black/20 transition-all cursor-pointer flex flex-col justify-between text-left group w-full disabled:opacity-50"
                                                         >
                                                             <div>
-                                                                <div className="flex justify-between items-start gap-4 mb-3">
-                                                                    <h5 className="font-black text-gray-900 group-hover:text-black uppercase tracking-tight text-sm line-clamp-1">{template.title}</h5>
+                                                                <div className="flex justify-between items-start gap-4 mb-3 w-full">
+                                                                    <h5 className="font-black text-gray-900 group-hover:text-black uppercase tracking-tight text-sm line-clamp-1 flex-1">{template.title}</h5>
                                                                     <span className="text-[8px] font-black text-gray-700 uppercase tracking-widest bg-gray-100 px-2 py-0.5 rounded shrink-0 border border-gray-200/50">{template.difficulty}</span>
                                                                 </div>
                                                                 <p className="text-xs font-semibold text-gray-500 line-clamp-2 leading-relaxed mb-4">{template.description}</p>
                                                             </div>
-                                                            <div className="flex items-center justify-between pt-4 border-t border-gray-50 text-[9px] font-black text-gray-400 uppercase tracking-wider">
+                                                            <div className="flex items-center justify-between pt-4 border-t border-gray-50 text-[9px] font-black text-gray-400 uppercase tracking-wider w-full">
                                                                 <span className="truncate max-w-[150px]">{template.track}</span>
                                                                 <span>{template.deadline || "1 Month"}</span>
                                                             </div>
-                                                        </div>
+                                                        </button>
                                                     ))}
                                                 </div>
                                             );

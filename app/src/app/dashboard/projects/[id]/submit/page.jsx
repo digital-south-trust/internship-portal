@@ -96,15 +96,6 @@ export default function SubmitDeliverables() {
         setSaving(true);
 
         const formPhases = project.formPhases || [];
-        const totalFields = formPhases.reduce((acc, p) => acc + (p.fields?.length || 0), 0);
-        let completed = 0;
-        formPhases.forEach(p => {
-            p.fields?.forEach(f => {
-                if (dynamicFields[f.label]?.trim()) completed++;
-            });
-        });
-        const calculatedProgress = totalFields > 0 ? Math.min(100, Math.round((completed / totalFields) * 100)) : 100;
-
         const payload = {
             id: id,
             title: project.projectName,
@@ -117,7 +108,6 @@ export default function SubmitDeliverables() {
             dynamicFields,
             formPhases: formPhases,
             topics: project.topics || [],
-            progress: calculatedProgress,
             status: project.status,
             isSubmission: true
         };
@@ -183,7 +173,7 @@ export default function SubmitDeliverables() {
                     <div>
                         <div className="flex items-center gap-2">
                             <h1 className="text-xl font-bold text-black tracking-tight uppercase leading-none">
-                               Submission Workspace
+                               Submission WorkBook
                             </h1>
                     
                         </div>
@@ -201,7 +191,7 @@ export default function SubmitDeliverables() {
                     </button>
                     {timeLeft > 0 ? (
                         <div className="px-4 py-2.5 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5">
-                            <Clock className="w-3.5 h-3.5" /> Locked: {formatTimeLeft(timeLeft)}
+                            <Clock className="w-3.5 h-3.5" /> submitted: {formatTimeLeft(timeLeft)}
                         </div>
                     ) : (
                         <button
@@ -209,7 +199,7 @@ export default function SubmitDeliverables() {
                             className="px-5 py-2.5 bg-black text-white hover:bg-gray-800 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 shadow-md"
                             id="submit_btn"
                         >
-                            <Rocket className="w-3.5 h-3.5 text-[#ccff00]" /> Submit
+                            <Rocket className="w-3.5 h-3.5 " /> Submit
                         </button>
                     )}
                 </div>
