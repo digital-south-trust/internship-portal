@@ -221,7 +221,7 @@ export async function DELETE(req) {
                 Question.deleteMany({ examId: { $in: examIds } }),
                 // Remove the exams
                 Exam.deleteMany({ track: trackName }),
-                // Remove project requests
+            
                 ProjectRequest.deleteMany({ track: trackName }),
                 // Remove related LiveBook topics
                 LiveBookTopic.deleteMany({ course: { $in: courseTitles } }),

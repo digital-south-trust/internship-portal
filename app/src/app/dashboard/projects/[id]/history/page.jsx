@@ -65,9 +65,9 @@ export default function SubmissionHistoryExplorer() {
     const selectedSubmission = history[selectedIndex];
 
     return (
-        <div className="animate-in fade-in duration-500 min-h-screen bg-white flex flex-col">
+        <div className="animate-in fade-in duration-500 h-screen bg-white flex flex-col -mx-8 -mt-8 -mb-8 overflow-hidden">
             {/* Standardized Tactical Header */}
-            <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-3xl -mx-8 -mt-8 px-8 py-5 border-b border-gray-100 shadow-sm flex items-center justify-between mb-0">
+            <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-3xl px-8 py-5 border-b border-gray-100 shadow-sm flex items-center justify-between">
                 <div className="flex items-center gap-4">
                     <button 
                         onClick={() => router.push(`/dashboard/projects/${id}`)}
@@ -82,22 +82,14 @@ export default function SubmissionHistoryExplorer() {
                             <h1 className="text-xl font-bold text-black tracking-tight uppercase leading-none">
                                 Submission History
                             </h1>
-                            <span className="inline-block px-2 py-0.5 bg-gray-100 text-[10px] font-semibold uppercase text-gray-500 rounded-md tracking-wide">
+                            
+                        </div>
+                        <span className="inline-block px-2 py-0.5 bg-gray-100 text-[10px] font-semibold uppercase text-gray-500 rounded-md tracking-wide">
                                 {project.projectName}
                             </span>
                         </div>
-                        <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-widest mt-1">ID: {id}</p>
-                    </div>
                 </div>
 
-                <div>
-                    <button
-                        onClick={() => router.push(`/dashboard/projects/${id}`)}
-                        className="px-5 py-2.5 bg-black text-white hover:bg-gray-800 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md"
-                    >
-                        Back to Workspace
-                    </button>
-                </div>
             </header>
 
             {/* Split Pane Explorer */}
@@ -110,9 +102,9 @@ export default function SubmissionHistoryExplorer() {
                     <p className="text-xs text-gray-450 font-bold uppercase mt-1">Submit your first deliverable phase to log updates here.</p>
                 </div>
             ) : (
-                <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-[calc(100vh-80px)]">
+                <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
                     {/* Left Pane (List of updates, 30% width) */}
-                    <div className="w-full md:w-[30%] border-r border-gray-150 overflow-y-auto bg-gray-50/50 p-6 space-y-3">
+                    <div className="w-full md:w-[30%] border-r border-gray-150 overflow-y-auto bg-gray-50/50 p-6 space-y-3 custom-scrollbar">
                         <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest block ml-1 mb-4">Submission Logs</span>
                         <div className="space-y-2">
                             {history.map((hist, idx) => {
@@ -121,10 +113,10 @@ export default function SubmissionHistoryExplorer() {
                                     <button
                                         key={idx}
                                         onClick={() => setSelectedIndex(idx)}
-                                        className={`w-full text-left p-5 rounded-2xl border transition-all flex flex-col gap-1 ${
+                                        className={`w-full text-left p-5 rounded-2xl  transition-all flex flex-col gap-1 ${
                                             isActive 
-                                            ? 'bg-white border-black shadow-md ring-2 ring-black/5' 
-                                            : 'bg-white/60 hover:bg-white border-gray-100'
+                                            ? 'bg-white  shadow-md ring-2 ring-black/5' 
+                                            : 'bg-white/60 hover:bg-white '
                                         }`}
                                     >
                                         <div className="flex justify-between items-center w-full">

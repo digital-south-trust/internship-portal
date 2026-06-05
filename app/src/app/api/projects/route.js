@@ -143,6 +143,7 @@ export async function PUT(req) {
             modelUsed, aiTools, vectorDatabase, deploymentPlatform, mlTaskType, algorithms,
             mlFramework, trainingEnvironment, appCategory,
             formPhases, dynamicFields, topics,
+            projectType,
             isSubmission
         } = body;
 
@@ -152,7 +153,7 @@ export async function PUT(req) {
 
         const updateData = { 
             projectName: title, description, colorHex, techStack, repoLink, deployLink, documentFile, 
-            documentLink, solution, progress, 
+            documentLink, solution, 
             realWorld, matters, existingSolutions, objectives, features, apis, dataset, blockchainNetwork,
             smartContractLang, targetPlatform, researchBackground, hypothesis, innovation, relevance,
             researchOutput, startDate, endDate, milestones,
@@ -161,6 +162,10 @@ export async function PUT(req) {
             mlFramework, trainingEnvironment, appCategory,
             formPhases, dynamicFields
         };
+
+        if (!isSubmission && progress !== undefined) {
+            updateData.progress = progress;
+        }
 
         if (isSubmission) {
             const existingRequest = await ProjectRequest.findById(id);
@@ -179,18 +184,18 @@ export async function PUT(req) {
                 }
             }
 
-            // Archive the PREVIOUS state of deliverables
-            const oldSubmission = {
-                submittedAt: existingRequest.lastSubmittedAt || existingRequest.updatedAt || new Date(),
-                repoLink: existingRequest.repoLink || "",
-                deployLink: existingRequest.deployLink || "",
-                solution: existingRequest.solution || "",
-                documentFile: existingRequest.documentFile || "",
-                documentLink: existingRequest.documentLink || "",
-                dynamicFields: existingRequest.dynamicFields || {}
+            // Archive the submitted state of deliverables
+            const newSubmission = {
+                submittedAt: new Date(),
+                repoLink: repoLink || "",
+                deployLink: deployLink || "",
+                solution: solution || "",
+                documentFile: documentFile || "",
+                documentLink: documentLink || "",
+                dynamicFields: dynamicFields || {}
             };
 
-            updateData.submissionHistory = [...(existingRequest.submissionHistory || []), oldSubmission];
+            updateData.submissionHistory = [...(existingRequest.submissionHistory || []), newSubmission];
             updateData.lastSubmittedAt = new Date();
         }
 
@@ -200,6 +205,7 @@ export async function PUT(req) {
         if (duration !== undefined) updateData.duration = duration;
         if (adminFeedback !== undefined) updateData.adminFeedback = adminFeedback;
         if (topics !== undefined) updateData.topics = topics;
+        if (projectType !== undefined) updateData.projectType = projectType;
         
         if (status !== undefined) {
             if (['Pending', 'Approved', 'Rejected'].includes(status)) {

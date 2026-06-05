@@ -80,7 +80,7 @@ export default function InternProjectDetail() {
             <div className="flex h-screen items-center justify-center bg-white">
                 <div className="flex flex-col items-center gap-2">
                     <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-full animate-spin" />
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Loading Assigned Scope...</p>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Loading Assigned Scope</p>
                 </div>
             </div>
         );
@@ -185,7 +185,7 @@ export default function InternProjectDetail() {
                                                     <div>
                                                         <h5 className="text-xs font-semibold text-black uppercase tracking-tight">{sub.title}</h5>
                                                     </div>
-                                                    <div className="pt-2.5 border-t border-gray-200/50">
+                                                    <div className="pt-2.5  border-gray-200/50">
                                                         <div className="text-xs text-gray-700 font-normal">
                                                             {sub.contentType === 'text' && (
                                                                 <p className="leading-relaxed whitespace-pre-wrap bg-white p-3 rounded-xl border border-gray-150 text-gray-600 shadow-sm">{sub.contentValue}</p>
@@ -231,7 +231,7 @@ export default function InternProjectDetail() {
                                         disabled
                                         className="px-6 py-3 bg-gray-100 text-gray-400 rounded-xl text-[10px] font-black uppercase tracking-widest cursor-not-allowed flex items-center gap-1.5 border border-gray-200"
                                     >
-                                        <Clock className="w-3.5 h-3.5" /> Locked: {formatTimeLeft(timeLeft)}
+                                        <Clock className="w-3.5 h-3.5" /> submitted: {formatTimeLeft(timeLeft)}
                                     </button>
                                 ) : (
                                     <button
