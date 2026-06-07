@@ -35,7 +35,7 @@ export async function GET(req) {
             query.track = { $regex: new RegExp(regexPattern, 'i') };
         }
 
-        const projects = await ProjectPool.find(query).sort({ createdAt: -1 });
+        const projects = await ProjectPool.find(query).sort({ createdAt: -1 }).lean();
         return NextResponse.json(projects, { status: 200 });
     } catch (error) {
         return NextResponse.json({ message: "Error fetching pool" }, { status: 500 });

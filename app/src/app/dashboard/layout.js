@@ -67,7 +67,7 @@ export default function DashboardLayout({ children }) {
                         if (!window.location.pathname.includes('/complete-profile')) {
                             // 2. Check selection status
                             // Check both selectionStatus field and status field for backwards compatibility
-                            const isActuallySelected = user.selectionStatus === 'Selected' || ['SELECTED', 'PROFILE_PENDING', 'VERIFIED', 'ACTIVE'].includes(user.status);
+                            const isActuallySelected = user.selectionStatus === 'Selected' || ['SELECTED', 'PROFILE_PENDING', 'VERIFIED', 'ACTIVE', 'Active'].includes(user.status);
                             
                             if (user.selectionStatus === 'Pending Selection (24h Buffer)' && !isActuallySelected) {
                                 toast.error("Assessment submitted. Result will be announced after 24 hours.");

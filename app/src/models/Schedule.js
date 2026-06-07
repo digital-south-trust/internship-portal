@@ -45,5 +45,8 @@ const ScheduleSchema = new mongoose.Schema({
     }
 });
 
+ScheduleSchema.index({ userId: 1 });
+ScheduleSchema.index({ date: -1 });
+
 // Since Next.js clears modules on hot reload, avoid redefining model
 export default mongoose.models.Schedule || mongoose.model('Schedule', ScheduleSchema);

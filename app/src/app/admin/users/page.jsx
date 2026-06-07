@@ -1108,7 +1108,8 @@ function SelectionBadge({ status }) {
         'REJECTED': 'bg-gray-100 text-gray-300 border-transparent',
         'PROFILE_PENDING': 'bg-white text-gray-400 border-gray-100',
         'VERIFIED': 'bg-white text-black border-black/20',
-        'ACTIVE': 'bg-black text-white border-transparent shadow-md'
+        'ACTIVE': 'bg-black text-white border-transparent shadow-md',
+        'Active': 'bg-black text-white border-transparent shadow-md'
     };
     const style = config[status] || 'bg-white text-gray-400 border-gray-100';
     return (
