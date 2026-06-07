@@ -108,6 +108,11 @@ const ProjectRequestSchema = new mongoose.Schema({
     }
 }, { timestamps: true });
 
+ProjectRequestSchema.index({ internEmail: 1 });
+ProjectRequestSchema.index({ internId: 1 });
+ProjectRequestSchema.index({ requestedAt: -1 });
+ProjectRequestSchema.index({ status: 1 });
+
 if (mongoose.models.ProjectRequest) {
     delete mongoose.models.ProjectRequest;
 }

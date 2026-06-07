@@ -118,7 +118,7 @@ export default function InternDetailsPage() {
             try {
                 const [userRes, adminsRes, tracksRes] = await Promise.all([
                     fetch(`/api/admin/users/${id}`),
-                    fetch('/api/admin/users'),
+                    fetch('/api/admin/users?roleFilter=admin'),
                     fetch('/api/admin/tracks')
                 ]);
                 if (userRes.ok) {
@@ -132,7 +132,7 @@ export default function InternDetailsPage() {
                 }
                 if (adminsRes.ok) {
                     const data = await adminsRes.json();
-                    setAdmins((data.users || []).filter(u => u.role === 'admin'));
+                    setAdmins(data.users || []);
                 }
                 if (tracksRes.ok) {
                     const data = await tracksRes.json();
@@ -240,17 +240,16 @@ export default function InternDetailsPage() {
             const res = await fetch(`/api/admin/users/${id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: 'Active' })
+                body: JSON.stringify({ status: 'ACTIVE' })
             });
             if (res.ok) {
                 toast.success(`${user.fullName} reactivated.`);
-                setUser(prev => ({ ...prev, status: 'Active' }));
+                setUser(prev => ({ ...prev, status: 'ACTIVE' }));
             } else {
                 toast.error('Failed to reactivate');
             }
         } catch { toast.error('Error'); }
     };
-
     const handleAddPhase = () => setNewProjectFormPhases([...newProjectFormPhases, { name: "New Phase", description: "", fields: [] }]);
     const handleRemovePhase = (pi) => setNewProjectFormPhases(newProjectFormPhases.filter((_, i) => i !== pi));
     
@@ -484,7 +483,7 @@ export default function InternDetailsPage() {
             data.push({
                 name: monthLabel,
                 uv: recruits.length, // Total recruits
-                pv: recruits.filter(u => u.status === 'Active' || u.status === 'SELECTED' || u.status === 'VERIFIED').length // Active recruits
+                pv: recruits.filter(u => ['ACTIVE', 'Active', 'SELECTED', 'VERIFIED'].includes(u.status)).length // Active recruits
             });
         }
         return data;
@@ -538,11 +537,11 @@ export default function InternDetailsPage() {
                                     {user.role}
                                 </span>
                                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold ${isTerminated || isCancelled ? 'text-red-700 bg-red-50 border border-red-100' :
-                                    user.status === 'Active' ? 'text-green-700 bg-green-50 border border-green-100' :
+                                    ['ACTIVE', 'Active', 'VERIFIED'].includes(user.status) ? 'text-green-700 bg-green-50 border border-green-100' :
                                         'text-gray-500 bg-gray-100 border border-gray-200'
                                     }`}>
-                                    <div className={`w-1.5 h-1.5 rounded-full ${isTerminated || isCancelled ? 'bg-red-500' : user.status === 'Active' ? 'bg-green-500' : 'bg-gray-400'}`} />
-                                    {isCancelled ? 'Cancelled' : user.status || 'Active'}
+                                    <div className={`w-1.5 h-1.5 rounded-full ${isTerminated || isCancelled ? 'bg-red-500' : ['ACTIVE', 'Active', 'VERIFIED'].includes(user.status) ? 'bg-green-500' : 'bg-gray-400'}`} />
+                                    {isCancelled ? 'Cancelled' : user.status || 'ACTIVE'}
                                 </span>
                             </div>
                             <p className="text-sm font-bold text-gray-400 flex items-center gap-2">

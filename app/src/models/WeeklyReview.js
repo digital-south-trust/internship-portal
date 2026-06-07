@@ -18,4 +18,7 @@ const WeeklyReviewSchema = new mongoose.Schema({
     reminder1hSent: { type: Boolean, default: false },
 }, { timestamps: true });
 
+WeeklyReviewSchema.index({ internId: 1 });
+WeeklyReviewSchema.index({ scheduledDate: -1 });
+
 export default mongoose.models.WeeklyReview || mongoose.model('WeeklyReview', WeeklyReviewSchema);

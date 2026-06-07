@@ -70,7 +70,7 @@ export async function POST(req) {
 export async function GET() {
     try {
         await dbConnect();
-        const ambassadors = await Ambassador.find({}).sort({ createdAt: -1 });
+        const ambassadors = await Ambassador.find({}).select('-password').sort({ createdAt: -1 }).lean();
         return NextResponse.json(ambassadors);
     } catch (error) {
         return NextResponse.json({ message: 'Fetch Failure' }, { status: 500 });

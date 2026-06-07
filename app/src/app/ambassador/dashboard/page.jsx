@@ -96,7 +96,7 @@ export default function AmbassadorDashboard() {
             data.push({
                 name: monthLabel,
                 uv: recruits.length, // Total recruits
-                pv: recruits.filter(u => u.status === 'Active' || u.status === 'SELECTED' || u.status === 'VERIFIED').length // Active recruits
+                pv: recruits.filter(u => ['ACTIVE', 'Active', 'SELECTED', 'VERIFIED'].includes(u.status)).length // Active recruits
             });
         }
         return data;
@@ -299,7 +299,7 @@ export default function AmbassadorDashboard() {
                                         </div>
                                         <div className="text-right">
                                             <span className={`text-[7px] font-black uppercase px-2 py-1 rounded-md border 
-                                                ${user.status === 'ACTIVE' ? 'bg-black text-white border-transparent' : 'bg-white text-gray-400 border-gray-100'}`}>
+                                                ${['ACTIVE', 'Active', 'VERIFIED', 'SELECTED'].includes(user.status) ? 'bg-black text-white border-transparent' : 'bg-white text-gray-400 border-gray-100'}`}>
                                                 {user.status}
                                             </span>
                                         </div>

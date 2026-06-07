@@ -45,7 +45,7 @@ const DEFAULT_PHASES = {
 export async function GET() {
     try {
         await dbConnect();
-        let tracks = await Track.find({});
+        let tracks = await Track.find({}).lean();
 
         // Auto-seed if empty
         if (tracks.length === 0) {
@@ -80,16 +80,15 @@ export async function GET() {
                 }
             }
             await Track.insertMany(initialTracks);
-            tracks = await Track.find({}); // Re-fetch
+            tracks = await Track.find({}).lean(); // Re-fetch
         }
 
         // Apply defaults if they are missing (for existing tracks)
         const tracksWithDefaults = tracks.map(track => {
-            const trackObj = track.toObject();
-            if (!trackObj.formPhases || trackObj.formPhases.length === 0) {
-                return { ...trackObj, formPhases: DEFAULT_PHASES[trackObj.category] || DEFAULT_PHASES.CODING };
+            if (!track.formPhases || track.formPhases.length === 0) {
+                return { ...track, formPhases: DEFAULT_PHASES[track.category] || DEFAULT_PHASES.CODING };
             }
-            return trackObj;
+            return track;
         });
 
         console.log(`API [GET] /api/admin/tracks: Found ${tracksWithDefaults.length} tracks.`);

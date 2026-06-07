@@ -14,7 +14,7 @@ export async function GET(req) {
         const { searchParams } = new URL(req.url);
         const internId = searchParams.get('internId');
         const query = internId ? { internId } : {};
-        const reviews = await WeeklyReview.find(query).sort({ scheduledDate: 1, scheduledTime: 1 });
+        const reviews = await WeeklyReview.find(query).sort({ scheduledDate: 1, scheduledTime: 1 }).lean();
         return NextResponse.json(reviews, { status: 200 });
     } catch (err) {
         console.error(err);

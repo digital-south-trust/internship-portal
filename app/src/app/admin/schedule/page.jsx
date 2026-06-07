@@ -12,8 +12,8 @@ import { FullScreenCalendar } from "@/components/ui/fullscreen-calendar";
 export default function AdminSchedulePage() {
     const [mounted, setMounted] = useState(false);
     useEffect(() => setMounted(true), []);
-    const router = useRouter();
-    const { users: allUsersFromApi } = useUsers(1, 100);
+        const router = useRouter();
+    const { users: allUsersFromApi } = useUsers(1, 100, "", "intern");
     const [users, setUsers] = useState([]);
     const [selectedUser, setSelectedUser] = useState("");
     const [date, setDate] = useState("");
@@ -47,7 +47,14 @@ export default function AdminSchedulePage() {
 
     useEffect(() => {
         if (allUsersFromApi) {
-            setUsers(allUsersFromApi.filter(u => u.role?.toLowerCase() === 'intern' && u.selectionStatus === 'Selected'));
+            setUsers(allUsersFromApi.filter(u => 
+                u.role?.toLowerCase() === 'intern' && 
+                (
+                    u.selectionStatus === 'Selected' || 
+                    u.selectionStatus === 'Access given by admin' || 
+                    ['SELECTED', 'VERIFIED', 'ACTIVE', 'Active'].includes(u.status)
+                )
+            ));
         }
     }, [allUsersFromApi]);
 

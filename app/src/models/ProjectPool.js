@@ -75,6 +75,9 @@ const ProjectPoolSchema = new mongoose.Schema({
     enrolled: { type: Number, default: 0 }
 }, { timestamps: true });
 
+ProjectPoolSchema.index({ track: 1 });
+ProjectPoolSchema.index({ createdAt: -1 });
+
 if (mongoose.models.ProjectPool) {
     delete mongoose.models.ProjectPool;
 }

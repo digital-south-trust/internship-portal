@@ -148,6 +148,7 @@ UserSchema.index({ track: 1 });
 UserSchema.index({ selectionStatus: 1 });
 UserSchema.index({ assignedAdmin: 1 });
 UserSchema.index({ role: 1, createdAt: -1 });
+UserSchema.index({ createdAt: -1 });
 
 if (mongoose.models.User) {
     delete mongoose.models.User;
