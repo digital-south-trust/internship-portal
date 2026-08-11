@@ -37,6 +37,15 @@ import { toast } from "react-hot-toast";
 
 const dicebear = (seed) => `https://api.dicebear.com/7.x/micah/svg?seed=${encodeURIComponent(seed)}&backgroundColor=transparent`;
 
+const formatDateTime = (dateStr) => {
+    if (!dateStr) return 'Not Set';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return 'Not Set';
+    const date = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const time = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return `${date} ${time}`;
+};
+
 function UnifiedAssessmentsContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -802,6 +811,7 @@ Correct Answer: B`}
                                         <tr className="border-b border-gray-50">
                                             <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest">Candidate</th>
                                             <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Track</th>
+                                            <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Attempted At</th>
                                             <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Identity</th>
                                             <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Score</th>
                                             <th className="px-8 py-5 text-[10px] font-black uppercase text-gray-400 tracking-widest text-center">Verdict</th>
@@ -834,6 +844,7 @@ Correct Answer: B`}
                                                     </div>
                                                 </td>
                                                 <td className="px-8 py-6 text-center text-[9px] font-black uppercase tracking-widest text-gray-500">{s.track}</td>
+                                                <td className="px-8 py-6 text-center text-[9px] font-black uppercase tracking-widest text-gray-500">{formatDateTime(s.assessmentDate)}</td>
                                                 <td className="px-8 py-6 text-center">{s.aadhaarCard ? <button onClick={() => setViewingAadhaarUser(s)} className="px-3 py-1.5 bg-gray-50 text-[9px] font-black uppercase tracking-widest rounded-lg border border-gray-100 hover:bg-black hover:text-white transition-all"><Shield className="w-3 h-3 mr-2 inline" /> Aadhaar</button> : <span className="text-[10px] text-gray-200">--</span>}</td>
                                                 <td className="px-8 py-6 text-center text-2xl font-black tracking-tighter">{Math.round(s.assessmentScore)}%</td>
                                                 <td className="px-8 py-6 text-center"><SelectionBadge status={s.selectionStatus === 'Selected' ? 'SELECTED' : s.selectionStatus === 'Rejected' ? 'REJECTED' : 'NEW'} label={s.selectionStatus?.split(' ')[0]} /></td>
@@ -1033,6 +1044,7 @@ function UserDetailView({ data, loading, onBack, onStatusUpdate }) {
                         <CompactTile icon={RefreshCw} label="Duration" value={user.duration ? `${user.duration} Months` : 'Not Set'} />
                         <CompactTile icon={Calendar} label="Joined" value={formatDate(user.createdAt)} />
                         <CompactTile icon={ShieldCheck} label="Identity" value={user.aadhaarCard ? 'Verified' : 'Pending'} />
+                        <CompactTile icon={Calendar} label="Exam Attempted" value={formatDateTime(user.assessmentDate || (assessment && assessment.submittedAt))} />
                     </div>
                 </div>
 
