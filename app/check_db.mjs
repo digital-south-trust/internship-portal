@@ -4,8 +4,11 @@ import mongoose from 'mongoose';
 
 async function check() {
     try {
-        const uri = "mongodb+srv://gauthamramum_db_user:1234@cluster0.ptajmsu.mongodb.net/?appName=Cluster0"; 
-        console.log('Connecting to DB...');
+        const uri = process.env.mongo_uri || process.env.MONGODB_URI; 
+        if (!uri) {
+            console.error('Please set mongo_uri or MONGODB_URI in your environment');
+            process.exit(1);
+        }
         await mongoose.connect(uri);
         
         const tracks = await Track.find({});
