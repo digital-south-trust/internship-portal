@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# Testing & Coverage
+coverage/
+
+# Next.js & Builds
+.next/
+out/
+build/
+dist/
+
+# Misc & OS
+.DS_Store
+Thumbs.db
+*.pem
+
+# Environment files
+.env*
+!.env.example
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Vercel & IDE
+.vercel
+*.tsbuildinfo
+.idea/
+.vscode/
